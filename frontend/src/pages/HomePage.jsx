@@ -1,7 +1,35 @@
-import { Link } from 'react-router-dom';
-import { destinations, packages, quickStats } from '../services/travelData';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { packages, quickStats } from '../services/travelData';
+import DestinationCard from '../components/DestinationCard';
+import destinationService from '../services/destinationService';
 
 function HomePage() {
+  const navigate = useNavigate();
+  const [popularDestinations, setPopularDestinations] = useState([]);
+  const [searchWhere, setSearchWhere] = useState('');
+
+  useEffect(() => {
+    async function loadPopular() {
+      try {
+        const data = await destinationService.getPopularDestinations();
+        setPopularDestinations(data || []);
+      } catch (err) {
+        console.warn('Failed to load popular destinations on home:', err.message);
+      }
+    }
+    loadPopular();
+  }, []);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    if (searchWhere.trim()) {
+      navigate(`/destinations?search=${encodeURIComponent(searchWhere.trim())}`);
+    } else {
+      navigate('/destinations');
+    }
+  };
+
   return (
     <>
       <section className="hero-section">
@@ -51,10 +79,15 @@ function HomePage() {
 
       <section className="search-section">
         <div className="container">
-          <div className="search-panel">
+          <form className="search-panel" onSubmit={handleSearchSubmit}>
             <div className="search-field">
               <label>Destination</label>
-              <input type="text" placeholder="Where to?" />
+              <input
+                type="text"
+                value={searchWhere}
+                onChange={(e) => setSearchWhere(e.target.value)}
+                placeholder="Where to? (e.g. Bali, Paris, Tokyo)"
+              />
             </div>
             <div className="search-field">
               <label>Departure</label>
@@ -63,40 +96,42 @@ function HomePage() {
             <div className="search-field">
               <label>Travelers</label>
               <select>
+                <option>1 Traveler</option>
                 <option>2 Travelers</option>
                 <option>3 Travelers</option>
-                <option>4 Travelers</option>
+                <option>4+ Travelers</option>
               </select>
             </div>
-            <button className="btn btn-primary">Search</button>
-          </div>
+            <button type="submit" className="btn btn-primary">
+              Search
+            </button>
+          </form>
         </div>
       </section>
 
+      {/* Popular Destinations Section */}
       <section className="section">
         <div className="container">
-          <div className="section-heading">
-            <span className="eyebrow">Popular destinations</span>
-            <h2>Top picks for your next escape</h2>
+          <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <span className="eyebrow">Popular destinations</span>
+              <h2>Top picks for your next escape</h2>
+            </div>
+            <Link to="/destinations" style={{ color: '#0284c7', fontWeight: '600', textDecoration: 'none' }}>
+              View All Destinations ➜
+            </Link>
           </div>
 
-          <div className="card-grid">
-            {destinations.map((place) => (
-              <article key={place.id} className="destination-card">
-                <img src={place.image} alt={place.name} />
-                <div className="card-body">
-                  <div className="card-topline">
-                    <h3>{place.name}</h3>
-                    <span>{place.rating} ★</span>
-                  </div>
-                  <p>{place.country}</p>
-                  <div className="card-meta">
-                    <span>{place.price}</span>
-                    <Link to="/booking">Book now</Link>
-                  </div>
-                </div>
-              </article>
-            ))}
+          <div className="card-grid" style={{ marginTop: '1.5rem' }}>
+            {popularDestinations.length > 0 ? (
+              popularDestinations.map((place) => (
+                <DestinationCard key={place.id} destination={place} />
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '2rem' }}>
+                <Link to="/destinations" className="btn btn-primary">Browse All Destinations</Link>
+              </div>
+            )}
           </div>
         </div>
       </section>

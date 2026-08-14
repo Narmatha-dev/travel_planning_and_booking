@@ -9,7 +9,8 @@
     "db:setup": "node scripts/setupDatabase.js",
     "db:verify": "node scripts/verifyDatabase.js",
     "db:validate": "node scripts/validateSqlFiles.js",
-    "test:auth": "node scripts/testAuth.js"
+    "test:auth": "node scripts/testAuth.js",
+    "test:destinations": "node scripts/testDestinations.js"
   },
   "keywords": [
     "travel",

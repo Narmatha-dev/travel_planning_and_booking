@@ -168,7 +168,29 @@ npm run test:auth
 ### Frontend Authentication
 - **Axios HTTP Client**: Automatically attaches Bearer tokens to requests.
 - **Context State**: Global auth state (`user`, `token`, `isAuthenticated`, `login`, `register`, `logout`).
-- **Protected Routes**: `/profile`, `/my-trips`, and `/booking` are protected and redirect to `/login` for unauthenticated visitors.
+## Destination Management & Search (Phase 6)
+
+The application provides a destination discovery engine:
+
+### API Endpoints
+- `GET /api/destinations` - List active destinations with category, price level, rating, and sorting filters.
+- `GET /api/destinations/search?q=...` - Multi-field search across destination name, city, country, and category.
+- `GET /api/destinations/popular` - Returns top-rated & featured destinations.
+- `GET /api/destinations/:id` - Full details by ID or slug with linked packages and traveler reviews.
+- `POST /api/destinations/:id/favorite` - Protected: Add destination to user wishlist/favorites.
+- `DELETE /api/destinations/:id/favorite` - Protected: Remove destination from wishlist/favorites.
+
+### Testing Destination Module
+```bash
+cd backend
+npm run test:destinations
+```
+
+### Frontend Components
+- `<DestinationCard>`: Displays image, rating, category badge, dynamic favorite button, price preview, and details link.
+- `<DestinationSearchBar>`: Keyword search input with clear button and category chips.
+- `<DestinationFilters>`: Price level, rating, and sort controls.
+- `<DestinationDetailPage>`: Full page destination view with gallery, climate/best time stats, packages, and reviews.
 
 ## Git Commands
 
@@ -176,5 +198,5 @@ Stage and commit changes:
 
 ```bash
 git add .
-git commit -m "Implement user authentication"
+git commit -m "Implement destination module"
 ```

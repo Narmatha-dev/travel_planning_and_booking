@@ -176,24 +176,28 @@ const swaggerDocument = {
       get: {
         tags: ['Destinations'],
         summary: 'List destinations',
-        description: 'Returns active destinations with optional category and keyword search filters.',
+        description: 'Returns active destinations with optional category, price level, min rating, and sorting filters.',
         parameters: [
           {
             name: 'category',
             in: 'query',
-            schema: { type: 'string', enum: ['beach', 'mountain', 'cultural', 'adventure', 'city_break', 'luxury'] },
+            schema: { type: 'string', enum: ['all', 'beach', 'mountain', 'cultural', 'adventure', 'city_break', 'luxury'] },
             description: 'Filter by destination category',
           },
           {
-            name: 'search',
+            name: 'priceLevel',
             in: 'query',
-            schema: { type: 'string' },
-            description: 'Search keyword matching city, country, or destination name',
+            schema: { type: 'string', enum: ['budget', 'moderate', 'expensive', 'luxury'] },
           },
           {
-            name: 'limit',
+            name: 'minRating',
             in: 'query',
-            schema: { type: 'integer', default: 20 },
+            schema: { type: 'number' },
+          },
+          {
+            name: 'sortBy',
+            in: 'query',
+            schema: { type: 'string', enum: ['popularity', 'rating', 'price_asc', 'price_desc'] },
           },
         ],
         responses: {
@@ -203,10 +207,81 @@ const swaggerDocument = {
         },
       },
     },
+    '/api/destinations/search': {
+      get: {
+        tags: ['Destinations'],
+        summary: 'Search destinations by keyword',
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Keyword matching destination name, city, country, description, or category',
+            example: 'Bali',
+          },
+          {
+            name: 'category',
+            in: 'query',
+            schema: { type: 'string' },
+          },
+        ],
+        responses: {
+          '200': { description: 'Search results list' },
+        },
+      },
+    },
+    '/api/destinations/popular': {
+      get: {
+        tags: ['Destinations'],
+        summary: 'Get top popular and featured destinations',
+        responses: {
+          '200': { description: 'Popular destinations list' },
+        },
+      },
+    },
+    '/api/destinations/{id}/favorite': {
+      post: {
+        tags: ['Destinations'],
+        summary: 'Add destination to favorites',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+            example: 1,
+          },
+        ],
+        responses: {
+          '201': { description: 'Added to favorites' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+      delete: {
+        tags: ['Destinations'],
+        summary: 'Remove destination from favorites',
+        security: [{ BearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+            example: 1,
+          },
+        ],
+        responses: {
+          '200': { description: 'Removed from favorites' },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
     '/api/destinations/{identifier}': {
       get: {
         tags: ['Destinations'],
-        summary: 'Get destination by ID or slug',
+        summary: 'Get destination details by ID or slug',
         parameters: [
           {
             name: 'identifier',
@@ -218,7 +293,7 @@ const swaggerDocument = {
           },
         ],
         responses: {
-          '200': { description: 'Destination details retrieved' },
+          '200': { description: 'Destination details with packages and reviews' },
           '404': { description: 'Destination not found' },
         },
       },
