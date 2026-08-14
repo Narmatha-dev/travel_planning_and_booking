@@ -1,0 +1,23 @@
+{
+  "name": "travel-planning-booking-backend",
+  "version": "1.0.0",
+  "description": "Backend API for the Travel Planning & Booking System",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "travel",
+    "booking",
+    "express",
+    "api"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.0.1",
+    "express": "^5.1.0"
+  }
+}
