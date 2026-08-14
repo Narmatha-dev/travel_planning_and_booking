@@ -1,23 +1,24 @@
 # Travel Planning & Booking System
 
-A full-stack travel planning and booking application built with React.js, Vite, Express.js, and MySQL. This repository contains the frontend client and backend API for the Phase 1 project setup.
+A full-stack travel planning and booking application built with React.js, Vite, Express.js, and MySQL.
 
 ## Project Overview
 
 This system allows users to:
 
 - Search and compare travel destinations
-- Plan trips with itineraries
-- Book flights, hotels, and activities
-- Manage bookings and reservations
-- View travel details in a modern web interface
+- Plan trips with day-by-day itineraries
+- Book packages, hotels, flights, and activities
+- Manage bookings, reservations, and wishlist favorites
+- View travel details in a modern responsive interface
 
 ## Tech Stack
 
-- Frontend: React.js + Vite + JavaScript
-- Backend: Node.js + Express.js
-- Database: MySQL
-- Version Control: Git + GitHub
+- **Frontend**: React.js + Vite + React Router + CSS3
+- **Backend**: Node.js + Express.js
+- **Database**: MySQL (InnoDB, UTF-8 MB4)
+- **Security**: BCrypt password hashing, CORS, environment isolation
+- **Version Control**: Git + GitHub
 
 ## Project Structure
 
@@ -25,15 +26,60 @@ This system allows users to:
 travel-planning-booking-system/
 ├── frontend/
 │   ├── src/
+│   │   ├── components/
+│   │   ├── context/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── App.jsx
+│   │   └── main.jsx
 │   └── package.json
 ├── backend/
-│   ├── config/
-│   │   └── db.js
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── environment.js
+│   │   │   └── db.js
+│   │   ├── controllers/
+│   │   │   ├── healthController.js
+│   │   │   ├── authController.js
+│   │   │   ├── destinationController.js
+│   │   │   ├── packageController.js
+│   │   │   ├── tripController.js
+│   │   │   └── bookingController.js
+│   │   ├── middleware/
+│   │   │   ├── logger.js
+│   │   │   ├── notFoundHandler.js
+│   │   │   └── errorHandler.js
+│   │   ├── models/
+│   │   │   ├── userModel.js
+│   │   │   ├── destinationModel.js
+│   │   │   ├── packageModel.js
+│   │   │   ├── tripModel.js
+│   │   │   └── bookingModel.js
+│   │   ├── routes/
+│   │   │   ├── healthRoutes.js
+│   │   │   ├── authRoutes.js
+│   │   │   ├── destinationRoutes.js
+│   │   │   ├── packageRoutes.js
+│   │   │   ├── tripRoutes.js
+│   │   │   ├── bookingRoutes.js
+│   │   │   └── index.js
+│   │   ├── services/
+│   │   │   ├── authService.js
+│   │   │   ├── destinationService.js
+│   │   │   ├── packageService.js
+│   │   │   ├── tripService.js
+│   │   │   └── bookingService.js
+│   │   ├── utils/
+│   │   │   ├── apiResponse.js
+│   │   │   └── asyncHandler.js
+│   │   └── server.js
 │   ├── scripts/
 │   │   ├── setupDatabase.js
 │   │   ├── verifyDatabase.js
 │   │   └── validateSqlFiles.js
-│   ├── server.js
+│   ├── .env
+│   ├── .env.example
+│   ├── .gitignore
 │   └── package.json
 ├── database/
 │   ├── schema.sql
@@ -47,75 +93,14 @@ travel-planning-booking-system/
 
 ## Prerequisites
 
-Before starting, make sure you have the following installed:
-
 - Node.js (v18 or newer recommended)
 - npm
 - Git
 - MySQL (v8.0+ or MariaDB)
-- VS Code
 
-## Database Setup (Phase 3)
+## Backend Setup (Phase 4)
 
-The system uses a relational MySQL database named `travel_booking_db` with 10 tables:
-`users`, `destinations`, `packages`, `trips`, `trip_itineraries`, `bookings`, `payments`, `reviews`, `favorites`, and `notifications`.
-
-### 1. Automated Setup via Node.js
-Ensure your MySQL server is running, then run:
-
-```bash
-cd backend
-npm run db:setup
-```
-
-### 2. Verification
-To verify table records and relational integrity:
-
-```bash
-cd backend
-npm run db:verify
-```
-
-To validate SQL syntax and table definitions offline:
-
-```bash
-cd backend
-npm run db:validate
-```
-
-### 3. Direct SQL Execution
-You can also execute the scripts directly using MySQL CLI or MySQL Workbench:
-- `database/schema.sql` (Creates database and 10 tables)
-- `database/seed.sql` (Loads sample records with bcrypt hashed passwords)
-- `database/verify.sql` (Runs verification and integrity checks)
-
-## Open in VS Code
-
-Open the project root folder:
-
-```text
-c:\Users\priya\Downloads\travel_planning_and_booking
-```
-
-## Frontend Setup
-
-From the project root, run:
-
-```bash
-cd frontend
-npm install
-npm run dev -- --host 0.0.0.0
-```
-
-Open the local URL shown in the terminal, typically:
-
-```text
-http://localhost:5173/
-```
-
-## Backend Setup
-
-From the project root, run:
+From the project root:
 
 ```bash
 cd backend
@@ -123,54 +108,52 @@ npm install
 npm start
 ```
 
-The API should run on:
+Backend API will start on: `http://localhost:5000/`
 
-```text
-http://localhost:5000/
+### Health Check API
+- **Endpoint**: `GET http://localhost:5000/api/health`
+- **Response**:
+```json
+{
+  "status": "success",
+  "message": "Travel Booking API is running"
+}
 ```
 
-## Health Check & DB Status
+## Database Setup (Phase 3)
 
-- Backend health endpoint: `http://localhost:5000/api/health`
-- Database schema status: `http://localhost:5000/api/db-status`
+The system uses a relational MySQL database named `travel_booking_db` with 10 tables:
+`users`, `destinations`, `packages`, `trips`, `trip_itineraries`, `bookings`, `payments`, `reviews`, `favorites`, and `notifications`.
+
+```bash
+# Automated setup (creates schema and seeds records)
+cd backend
+npm run db:setup
+
+# Verify tables & relations
+npm run db:verify
+
+# Offline SQL syntax & schema validation
+npm run db:validate
+```
+
+## Frontend Setup
+
+From the project root:
+
+```bash
+cd frontend
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+Frontend runs on: `http://localhost:5173/`
 
 ## Git Commands
 
-Initialize the repository (if needed):
-
-```bash
-git init
-git checkout -b main
-```
-
-Add and commit:
+Stage and commit changes:
 
 ```bash
 git add .
-git commit -m "Create MySQL database schema"
+git commit -m "Setup Node Express backend"
 ```
-
-Create a GitHub repository and push:
-
-```bash
-git remote add origin https://github.com/<your-username>/travel-planning-booking-system.git
-git branch -M main
-git push -u origin main
-```
-
-If you use GitHub CLI:
-
-```bash
-gh repo create travel-planning-booking-system --public --source=. --remote=origin --push
-```
-
-## Notes
-
-- Powershell may block npm scripts on some Windows machines. If that happens, run commands through Command Prompt:
-
-```bash
-cmd /c "cd /d c:\Users\priya\Downloads\travel_planning_and_booking\frontend && npm run dev -- --host 0.0.0.0"
-```
-
-- Phase 3 implements the complete MySQL relational database schema with 10 tables, bcrypt security, foreign key constraints, and automation scripts.
-- Do not proceed to Phase 4 until confirmation.
