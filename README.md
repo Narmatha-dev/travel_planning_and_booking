@@ -24,7 +24,22 @@ This system allows users to:
 ```text
 travel-planning-booking-system/
 ├── frontend/
+│   ├── src/
+│   └── package.json
 ├── backend/
+│   ├── config/
+│   │   └── db.js
+│   ├── scripts/
+│   │   ├── setupDatabase.js
+│   │   ├── verifyDatabase.js
+│   │   └── validateSqlFiles.js
+│   ├── server.js
+│   └── package.json
+├── database/
+│   ├── schema.sql
+│   ├── seed.sql
+│   ├── verify.sql
+│   └── README.md
 ├── .gitignore
 ├── README.md
 └── .git/
@@ -37,8 +52,42 @@ Before starting, make sure you have the following installed:
 - Node.js (v18 or newer recommended)
 - npm
 - Git
-- MySQL (for future phases)
+- MySQL (v8.0+ or MariaDB)
 - VS Code
+
+## Database Setup (Phase 3)
+
+The system uses a relational MySQL database named `travel_booking_db` with 10 tables:
+`users`, `destinations`, `packages`, `trips`, `trip_itineraries`, `bookings`, `payments`, `reviews`, `favorites`, and `notifications`.
+
+### 1. Automated Setup via Node.js
+Ensure your MySQL server is running, then run:
+
+```bash
+cd backend
+npm run db:setup
+```
+
+### 2. Verification
+To verify table records and relational integrity:
+
+```bash
+cd backend
+npm run db:verify
+```
+
+To validate SQL syntax and table definitions offline:
+
+```bash
+cd backend
+npm run db:validate
+```
+
+### 3. Direct SQL Execution
+You can also execute the scripts directly using MySQL CLI or MySQL Workbench:
+- `database/schema.sql` (Creates database and 10 tables)
+- `database/seed.sql` (Loads sample records with bcrypt hashed passwords)
+- `database/verify.sql` (Runs verification and integrity checks)
 
 ## Open in VS Code
 
@@ -80,13 +129,10 @@ The API should run on:
 http://localhost:5000/
 ```
 
-## Health Check
+## Health Check & DB Status
 
-Backend health endpoint:
-
-```text
-http://localhost:5000/api/health
-```
+- Backend health endpoint: `http://localhost:5000/api/health`
+- Database schema status: `http://localhost:5000/api/db-status`
 
 ## Git Commands
 
@@ -101,7 +147,7 @@ Add and commit:
 
 ```bash
 git add .
-git commit -m "Initial project setup"
+git commit -m "Create MySQL database schema"
 ```
 
 Create a GitHub repository and push:
@@ -126,5 +172,5 @@ gh repo create travel-planning-booking-system --public --source=. --remote=origi
 cmd /c "cd /d c:\Users\priya\Downloads\travel_planning_and_booking\frontend && npm run dev -- --host 0.0.0.0"
 ```
 
-- Phase 1 focuses on project structure, frontend/backend initialization, Git setup, and successful verification.
-- Phase 2 will begin only after confirmation.
+- Phase 3 implements the complete MySQL relational database schema with 10 tables, bcrypt security, foreign key constraints, and automation scripts.
+- Do not proceed to Phase 4 until confirmation.
