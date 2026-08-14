@@ -8,7 +8,8 @@
     "dev": "nodemon src/server.js",
     "db:setup": "node scripts/setupDatabase.js",
     "db:verify": "node scripts/verifyDatabase.js",
-    "db:validate": "node scripts/validateSqlFiles.js"
+    "db:validate": "node scripts/validateSqlFiles.js",
+    "test:auth": "node scripts/testAuth.js"
   },
   "keywords": [
     "travel",
@@ -23,6 +24,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.0.1",
     "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.12.0",
     "swagger-ui-express": "^5.0.1"
   }

@@ -149,11 +149,32 @@ npm run dev -- --host 0.0.0.0
 
 Frontend runs on: `http://localhost:5173/`
 
+## User Authentication (Phase 5)
+
+The application features full-stack JWT authentication with salted bcrypt password hashing:
+
+### API Endpoints
+- `POST /api/auth/register` - Registers a new user, validates inputs, hashes password, and returns a JWT token.
+- `POST /api/auth/login` - Authenticates credentials and returns a JWT token.
+- `GET /api/auth/profile` - Protected endpoint returning user details (Requires `Authorization: Bearer <token>`).
+- `PUT /api/auth/profile` - Protected endpoint to update user profile.
+
+### Testing Authentication
+```bash
+cd backend
+npm run test:auth
+```
+
+### Frontend Authentication
+- **Axios HTTP Client**: Automatically attaches Bearer tokens to requests.
+- **Context State**: Global auth state (`user`, `token`, `isAuthenticated`, `login`, `register`, `logout`).
+- **Protected Routes**: `/profile`, `/my-trips`, and `/booking` are protected and redirect to `/login` for unauthenticated visitors.
+
 ## Git Commands
 
 Stage and commit changes:
 
 ```bash
 git add .
-git commit -m "Setup Node Express backend"
+git commit -m "Implement user authentication"
 ```

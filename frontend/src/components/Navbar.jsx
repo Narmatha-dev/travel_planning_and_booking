@@ -1,15 +1,21 @@
-import { Link, NavLink } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 
-const navItems = [
+const publicNavItems = [
   { to: '/', label: 'Home' },
   { to: '/destinations', label: 'Destinations' },
   { to: '/trip-planner', label: 'Trip Planner' },
-  { to: '/booking', label: 'Booking' },
-  { to: '/my-trips', label: 'My Trips' },
-  { to: '/profile', label: 'Profile' },
 ];
 
 function Navbar() {
+  const { user, isAuthenticated, logout } = useAppContext();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/');
+  };
+
   return (
     <header className="navbar">
       <div className="container nav-container">
@@ -19,7 +25,7 @@ function Navbar() {
         </Link>
 
         <nav className="main-nav" aria-label="Main navigation">
-          {navItems.map((item) => (
+          {publicNavItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -30,15 +36,74 @@ function Navbar() {
               {item.label}
             </NavLink>
           ))}
+
+          {isAuthenticated && (
+            <>
+              <NavLink
+                to="/booking"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                Booking
+              </NavLink>
+              <NavLink
+                to="/my-trips"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                My Trips
+              </NavLink>
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                Profile
+              </NavLink>
+            </>
+          )}
         </nav>
 
         <div className="nav-actions">
-          <Link to="/login" className="btn btn-secondary">
-            Login
-          </Link>
-          <Link to="/register" className="btn btn-primary">
-            Register
-          </Link>
+          {isAuthenticated && user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }}>
+                <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>
+                  {user.full_name || user.name}
+                </span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  padding: '0.15rem 0.5rem',
+                  borderRadius: '9999px',
+                  background: user.role === 'admin' ? '#fef3c7' : '#e0e7ff',
+                  color: user.role === 'admin' ? '#92400e' : '#3730a3',
+                  fontWeight: '600',
+                  textTransform: 'uppercase'
+                }}>
+                  {user.role || 'Traveler'}
+                </span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="btn btn-secondary"
+                style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="btn btn-secondary">
+                Login
+              </Link>
+              <Link to="/register" className="btn btn-primary">
+                Register
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>

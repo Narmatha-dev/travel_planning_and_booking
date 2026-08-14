@@ -1,31 +1,206 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 
 function RegisterPage() {
+  const { register, authError, setAuthError } = useAppContext();
+  const navigate = useNavigate();
+
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phoneNumber: '',
+    role: 'traveler',
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState('');
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (localError) setLocalError('');
+    if (authError) setAuthError(null);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!formData.fullName.trim()) {
+      setLocalError('Please enter your full name');
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setLocalError('Please enter your email address');
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setLocalError('Password must be at least 6 characters long');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setLocalError('Passwords do not match');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setLocalError('');
+
+    const result = await register({
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      password: formData.password,
+      phoneNumber: formData.phoneNumber.trim(),
+      role: formData.role,
+    });
+
+    setIsSubmitting(false);
+
+    if (result.success) {
+      navigate('/profile', { replace: true });
+    } else {
+      setLocalError(result.message || 'Registration failed');
+    }
+  };
+
   return (
     <section className="auth-section">
-      <div className="auth-card">
-        <h2>Create account</h2>
-        <p>Start planning your next adventure today.</p>
+      <div className="auth-card" style={{ maxWidth: '480px' }}>
+        <h2>Create an Account</h2>
+        <p>Join thousands of travelers planning their dream journeys.</p>
 
-        <form className="auth-form">
+        {(localError || authError) && (
+          <div className="alert alert-error" style={{
+            background: '#fee2e2',
+            color: '#991b1b',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            marginBottom: '1.25rem',
+            fontSize: '0.9rem',
+            border: '1px solid #f87171'
+          }}>
+            ⚠️ {localError || authError}
+          </div>
+        )}
+
+        <form className="auth-form" onSubmit={handleSubmit}>
           <label>
-            Full name
-            <input type="text" placeholder="Your name" />
+            Full Name *
+            <input
+              type="text"
+              name="fullName"
+              value={formData.fullName}
+              onChange={handleChange}
+              placeholder="e.g. Alicia Carter"
+              required
+            />
           </label>
+
           <label>
-            Email
-            <input type="email" placeholder="you@example.com" />
+            Email Address *
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+            />
           </label>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <label>
+              Phone Number (Optional)
+              <input
+                type="tel"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                placeholder="+1-555-0199"
+              />
+            </label>
+
+            <label>
+              I am joining as:
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                style={{
+                  width: '100%',
+                  padding: '0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  background: '#fff',
+                  fontSize: '0.95rem'
+                }}
+              >
+                <option value="traveler">✈️ Traveler</option>
+                <option value="agent">💼 Travel Agent</option>
+              </select>
+            </label>
+          </div>
+
           <label>
-            Password
-            <input type="password" placeholder="Create a password" />
+            Password (min 6 characters) *
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Create a strong password"
+                required
+                style={{ width: '100%', paddingRight: '2.5rem' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  color: '#6b7280'
+                }}
+                title={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? '👁️' : '🔒'}
+              </button>
+            </div>
           </label>
-          <button type="submit" className="btn btn-primary full-width">
-            Register
+
+          <label>
+            Confirm Password *
+            <input
+              type={showPassword ? 'text' : 'password'}
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm your password"
+              required
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="btn btn-primary full-width"
+            disabled={isSubmitting}
+            style={{ marginTop: '0.5rem', opacity: isSubmitting ? 0.7 : 1 }}
+          >
+            {isSubmitting ? 'Creating Account...' : 'Create Account'}
           </button>
         </form>
 
-        <p className="auth-switch">
+        <p className="auth-switch" style={{ marginTop: '1.25rem' }}>
           Already have an account? <Link to="/login">Sign in</Link>
         </p>
       </div>

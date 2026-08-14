@@ -8,6 +8,10 @@ const environment = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
   clientUrl: process.env.CLIENT_URL || 'http://localhost:5173',
+  jwt: {
+    secret: process.env.JWT_SECRET || 'travel_jwt_super_secret_key_2026_secure!',
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  },
   database: {
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT, 10) || 3306,

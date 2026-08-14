@@ -3,30 +3,40 @@ const { successResponse } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 const authController = {
+  /**
+   * POST /api/auth/register
+   */
   register: asyncHandler(async (req, res) => {
-    const { fullName, email, password, phoneNumber, role } = req.body;
-    if (!fullName || !email || !password) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Please provide full name, email, and password',
-      });
-    }
-
-    const newUser = await authService.register({ fullName, email, password, phoneNumber, role });
-    return successResponse(res, 'User registered successfully', newUser, 201);
+    const result = await authService.register(req.body);
+    return successResponse(res, 'User registered successfully', result, 201);
   }),
 
+  /**
+   * POST /api/auth/login
+   */
   login: asyncHandler(async (req, res) => {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Please provide email and password',
-      });
-    }
+    const result = await authService.login(req.body);
+    return successResponse(res, 'Login successful', result, 200);
+  }),
 
-    const user = await authService.login({ email, password });
-    return successResponse(res, 'Login successful', { user });
+  /**
+   * GET /api/auth/profile
+   * Protected by authMiddleware
+   */
+  getProfile: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const user = await authService.getProfile(userId);
+    return successResponse(res, 'User profile retrieved successfully', { user });
+  }),
+
+  /**
+   * PUT /api/auth/profile
+   * Protected by authMiddleware
+   */
+  updateProfile: asyncHandler(async (req, res) => {
+    const userId = req.user.id;
+    const updatedUser = await authService.updateProfile(userId, req.body);
+    return successResponse(res, 'User profile updated successfully', { user: updatedUser });
   }),
 };
 

@@ -120,10 +120,54 @@ const swaggerDocument = {
         },
         responses: {
           '200': {
-            description: 'Login successful',
+            description: 'Login successful with JWT bearer token',
           },
           '401': {
             description: 'Invalid credentials',
+          },
+        },
+      },
+    },
+    '/api/auth/profile': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Get authenticated user profile',
+        security: [{ BearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'User profile retrieved successfully',
+          },
+          '401': {
+            description: 'Unauthorized - invalid or missing JWT token',
+          },
+        },
+      },
+      put: {
+        tags: ['Auth'],
+        summary: 'Update authenticated user profile',
+        security: [{ BearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  fullName: { type: 'string', example: 'Alex Reed' },
+                  phoneNumber: { type: 'string', example: '+1-555-0199' },
+                  address: { type: 'string', example: '742 Evergreen Terrace, Springfield, OR' },
+                  bio: { type: 'string', example: 'Passionate globe-trotter and photographer' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'User profile updated successfully',
+          },
+          '401': {
+            description: 'Unauthorized',
           },
         },
       },
