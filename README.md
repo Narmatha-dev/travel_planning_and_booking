@@ -192,11 +192,34 @@ npm run test:destinations
 - `<DestinationFilters>`: Price level, rating, and sort controls.
 - `<DestinationDetailPage>`: Full page destination view with gallery, climate/best time stats, packages, and reviews.
 
+## Trip Planning & Day-Wise Itineraries (Phase 7)
+
+The application provides a smart travel itinerary generator and trip management dashboard:
+
+### API Endpoints
+- `POST /api/trips/generate-preview` - Generates a day-by-day structured itinerary preview based on destination, travel dates, travelers, budget, travel type, and interests.
+- `POST /api/trips` - Protected: Creates a trip and saves its day-wise itinerary activities in MySQL (`trips` & `trip_itineraries`).
+- `GET /api/trips` - Protected: Lists all trips for the authenticated user with countdowns, dates, and budget summaries.
+- `GET /api/trips/:id` - Protected: Retrieves complete trip details and full Day 1..N activities timeline.
+- `PUT /api/trips/:id` - Protected: Updates trip metadata, notes, and customized activities.
+- `DELETE /api/trips/:id` - Protected: Deletes trip and cascades deletion to itinerary entries.
+
+### Testing Trip Planning Module
+```bash
+cd backend
+npm run test:trips
+```
+
+### Frontend Components & Pages
+- `<TripPlannerPage>`: Multi-step Trip Planning Wizard (Destination, Dates, Budget, Type, Interests -> Day-wise Itinerary Generator -> Save to account).
+- `<MyTripsPage>`: Travel dashboard with active trips, status pills, budget metrics, and modal itinerary viewer.
+- `<ItineraryTimeline>`: Reusable day-by-day timeline view with icons, time tags, locations, and cost estimates.
+
 ## Git Commands
 
 Stage and commit changes:
 
 ```bash
 git add .
-git commit -m "Implement destination module"
+git commit -m "Implement trip planning module"
 ```
