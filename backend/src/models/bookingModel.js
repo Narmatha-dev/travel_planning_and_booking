@@ -1,6 +1,6 @@
 const { query } = require('../config/db');
 
-// Fallback seed bookings matching database/seed.sql
+// In-memory fallback bookings store for local preview / offline dev
 let FALLBACK_BOOKINGS = [
   {
     id: 1,
@@ -10,6 +10,9 @@ let FALLBACK_BOOKINGS = [
     package_id: 1,
     destination_id: 1,
     destination_name: 'Bali Paradise Island',
+    destination_city: 'Bali',
+    destination_country: 'Indonesia',
+    featured_image_url: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800',
     package_title: 'Bali Tropical Bliss & Yoga Retreat',
     booking_type: 'package',
     travel_date: '2026-09-10',
@@ -21,8 +24,12 @@ let FALLBACK_BOOKINGS = [
     status: 'confirmed',
     special_requests: 'High-floor villa room requested; vegetarian meal preference.',
     transaction_id: 'TXN-STRIPE-891023',
+    payment_method: 'credit_card',
     payment_status: 'completed',
+    payment_gateway: 'Stripe',
+    paid_at: '2026-08-10 14:23:10',
     created_at: '2026-08-10 14:23:10',
+    updated_at: '2026-08-10 14:23:10',
   },
   {
     id: 2,
@@ -32,6 +39,9 @@ let FALLBACK_BOOKINGS = [
     package_id: 4,
     destination_id: 4,
     destination_name: 'Parisian Elegance',
+    destination_city: 'Paris',
+    destination_country: 'France',
+    featured_image_url: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800',
     package_title: 'Romantic Paris & Versailles Gourmet Getaway',
     booking_type: 'package',
     travel_date: '2026-10-05',
@@ -43,47 +53,169 @@ let FALLBACK_BOOKINGS = [
     status: 'confirmed',
     special_requests: 'Quiet room facing courtyard; late arrival around 8 PM.',
     transaction_id: 'TXN-PPAL-771928',
+    payment_method: 'paypal',
     payment_status: 'completed',
+    payment_gateway: 'PayPal',
+    paid_at: '2026-08-12 11:15:45',
     created_at: '2026-08-12 11:15:45',
+    updated_at: '2026-08-12 11:15:45',
   },
+  {
+    id: 3,
+    booking_reference: 'BK-2026-003',
+    user_id: 3,
+    trip_id: null,
+    package_id: 2,
+    destination_id: 2,
+    destination_name: 'Kyoto & Tokyo Highlights',
+    destination_city: 'Tokyo',
+    destination_country: 'Japan',
+    featured_image_url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800',
+    package_title: 'Grand Japan Explorer: Tokyo to Kyoto',
+    booking_type: 'package',
+    travel_date: '2026-11-01',
+    return_date: '2026-11-10',
+    num_travelers: 2,
+    total_amount: 5798.00,
+    discount_amount: 400.00,
+    final_amount: 5398.00,
+    status: 'confirmed',
+    special_requests: 'Non-smoking twin room requested.',
+    transaction_id: 'TXN-STRIPE-338192',
+    payment_method: 'credit_card',
+    payment_status: 'completed',
+    payment_gateway: 'Stripe',
+    paid_at: '2026-08-15 09:30:00',
+    created_at: '2026-08-15 09:30:00',
+    updated_at: '2026-08-15 09:30:00',
+  }
 ];
 
-let nextBookingId = 10;
+let nextBookingId = 20;
+
+function normalizeBooking(b) {
+  if (!b) return null;
+  return {
+    ...b,
+    id: parseInt(b.id, 10),
+    user_id: parseInt(b.user_id, 10),
+    destination_id: parseInt(b.destination_id, 10),
+    package_id: b.package_id ? parseInt(b.package_id, 10) : null,
+    trip_id: b.trip_id ? parseInt(b.trip_id, 10) : null,
+    num_travelers: parseInt(b.num_travelers, 10),
+    total_amount: parseFloat(b.total_amount),
+    discount_amount: parseFloat(b.discount_amount || 0),
+    final_amount: parseFloat(b.final_amount),
+  };
+}
 
 const bookingModel = {
-  async findByUserId(userId) {
+  /**
+   * Find bookings by user ID and optional status filter
+   */
+  async findByUserId(userId, { status, limit = 50, offset = 0 } = {}) {
+    const uid = parseInt(userId, 10);
     try {
-      const [rows] = await query(`
-        SELECT b.*, d.name AS destination_name, p.title AS package_title, pay.transaction_id, pay.payment_status
+      let sql = `
+        SELECT 
+          b.*,
+          d.name AS destination_name,
+          d.city AS destination_city,
+          d.country AS destination_country,
+          d.featured_image_url,
+          p.title AS package_title,
+          p.package_type,
+          p.duration_days,
+          p.duration_nights,
+          pay.transaction_id,
+          pay.payment_method,
+          pay.payment_status,
+          pay.payment_gateway,
+          pay.paid_at
         FROM bookings b
         JOIN destinations d ON b.destination_id = d.id
         LEFT JOIN packages p ON b.package_id = p.id
         LEFT JOIN payments pay ON pay.booking_id = b.id
         WHERE b.user_id = ?
-        ORDER BY b.created_at DESC
-      `, [userId]);
-      return rows;
+      `;
+      const params = [uid];
+
+      if (status && status !== 'all') {
+        sql += ' AND b.status = ?';
+        params.push(status);
+      }
+
+      sql += ' ORDER BY b.created_at DESC LIMIT ? OFFSET ?';
+      params.push(parseInt(limit, 10), parseInt(offset, 10));
+
+      const [rows] = await query(sql, params);
+      return rows.map(normalizeBooking);
     } catch (err) {
-      return FALLBACK_BOOKINGS.filter((b) => b.user_id === parseInt(userId, 10));
+      let list = FALLBACK_BOOKINGS.filter((b) => b.user_id === uid);
+      if (status && status !== 'all') {
+        list = list.filter((b) => b.status === status);
+      }
+      return list.slice(offset, offset + limit).map(normalizeBooking);
     }
   },
 
-  async findByReference(reference) {
+  /**
+   * Find single booking by numeric ID or unique booking reference
+   */
+  async findByIdOrReference(idOrRef) {
+    const isNumeric = /^\d+$/.test(idOrRef);
     try {
-      const [rows] = await query(`
-        SELECT b.*, d.name AS destination_name, p.title AS package_title, u.full_name AS traveler_name, u.email
+      let sql = `
+        SELECT 
+          b.*,
+          d.name AS destination_name,
+          d.city AS destination_city,
+          d.country AS destination_country,
+          d.featured_image_url,
+          p.title AS package_title,
+          p.package_type,
+          p.duration_days,
+          p.duration_nights,
+          p.inclusions,
+          p.exclusions,
+          u.full_name AS traveler_name,
+          u.email AS traveler_email,
+          u.phone_number AS traveler_phone,
+          pay.transaction_id,
+          pay.payment_method,
+          pay.payment_status,
+          pay.payment_gateway,
+          pay.paid_at
         FROM bookings b
-        JOIN users u ON b.user_id = u.id
         JOIN destinations d ON b.destination_id = d.id
+        JOIN users u ON b.user_id = u.id
         LEFT JOIN packages p ON b.package_id = p.id
-        WHERE b.booking_reference = ?
-      `, [reference]);
-      return rows[0] || null;
+        LEFT JOIN payments pay ON pay.booking_id = b.id
+        WHERE 
+      `;
+      sql += isNumeric ? 'b.id = ?' : 'b.booking_reference = ?';
+
+      const [rows] = await query(sql, [isNumeric ? parseInt(idOrRef, 10) : idOrRef]);
+      if (rows && rows.length > 0) {
+        const item = rows[0];
+        return {
+          ...normalizeBooking(item),
+          inclusions: typeof item.inclusions === 'string' ? JSON.parse(item.inclusions) : (item.inclusions || []),
+          exclusions: typeof item.exclusions === 'string' ? JSON.parse(item.exclusions) : (item.exclusions || []),
+        };
+      }
+      return null;
     } catch (err) {
-      return FALLBACK_BOOKINGS.find((b) => b.booking_reference === reference) || null;
+      const match = FALLBACK_BOOKINGS.find((b) =>
+        isNumeric ? b.id === parseInt(idOrRef, 10) : b.booking_reference === idOrRef
+      );
+      return match ? normalizeBooking(match) : null;
     }
   },
 
+  /**
+   * Create a new booking with payment record
+   */
   async createBooking(bookingData) {
     const {
       bookingReference,
@@ -91,39 +223,66 @@ const bookingModel = {
       tripId,
       packageId,
       destinationId,
-      bookingType,
+      bookingType = 'package',
       travelDate,
       returnDate,
-      numTravelers,
+      numTravelers = 1,
       totalAmount,
-      discountAmount,
+      discountAmount = 0,
       finalAmount,
       specialRequests,
+      paymentMethod = 'credit_card',
+      paymentGateway = 'Stripe',
+      destinationName,
+      packageTitle,
+      featuredImageUrl,
     } = bookingData;
+
+    const transactionId = `TXN-${paymentGateway.toUpperCase()}-${Math.floor(100000 + Math.random() * 900000)}`;
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     try {
       const [result] = await query(`
         INSERT INTO bookings (
           booking_reference, user_id, trip_id, package_id, destination_id, booking_type,
-          travel_date, return_date, num_travelers, total_amount, discount_amount, final_amount, special_requests
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          travel_date, return_date, num_travelers, total_amount, discount_amount, final_amount,
+          status, special_requests
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'confirmed', ?)
       `, [
         bookingReference,
         userId,
         tripId || null,
         packageId || null,
         destinationId,
-        bookingType || 'package',
+        bookingType,
         travelDate,
         returnDate || null,
-        numTravelers || 1,
+        numTravelers,
         totalAmount,
-        discountAmount || 0,
+        discountAmount,
         finalAmount,
         specialRequests || null,
       ]);
 
-      return result.insertId;
+      const bookingId = result.insertId;
+
+      // Insert payment record
+      await query(`
+        INSERT INTO payments (
+          booking_id, user_id, transaction_id, payment_method, payment_status,
+          amount, currency, payment_gateway, gateway_response, paid_at
+        ) VALUES (?, ?, ?, ?, 'completed', ?, 'USD', ?, ?, NOW())
+      `, [
+        bookingId,
+        userId,
+        transactionId,
+        paymentMethod,
+        finalAmount,
+        paymentGateway,
+        JSON.stringify({ status: 'succeeded', transactionId, date: now }),
+      ]);
+
+      return this.findByIdOrReference(bookingId);
     } catch (err) {
       const newId = ++nextBookingId;
       const fallbackEntry = {
@@ -133,23 +292,74 @@ const bookingModel = {
         trip_id: tripId ? parseInt(tripId, 10) : null,
         package_id: packageId ? parseInt(packageId, 10) : null,
         destination_id: parseInt(destinationId, 10),
-        destination_name: 'Selected Destination',
-        package_title: 'Selected Travel Package',
-        booking_type: bookingType || 'package',
+        destination_name: destinationName || 'Bali Paradise Island',
+        destination_city: 'Bali',
+        destination_country: 'Indonesia',
+        featured_image_url: featuredImageUrl || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800',
+        package_title: packageTitle || 'Selected Travel Package',
+        booking_type: bookingType,
         travel_date: travelDate,
         return_date: returnDate || null,
-        num_travelers: parseInt(numTravelers, 10) || 1,
+        num_travelers: parseInt(numTravelers, 10),
         total_amount: parseFloat(totalAmount),
-        discount_amount: parseFloat(discountAmount || 0),
+        discount_amount: parseFloat(discountAmount),
         final_amount: parseFloat(finalAmount),
         status: 'confirmed',
         special_requests: specialRequests || null,
-        created_at: new Date().toISOString(),
+        transaction_id: transactionId,
+        payment_method: paymentMethod,
+        payment_status: 'completed',
+        payment_gateway: paymentGateway,
+        paid_at: now,
+        created_at: now,
+        updated_at: now,
       };
       FALLBACK_BOOKINGS.unshift(fallbackEntry);
-      return newId;
+      return normalizeBooking(fallbackEntry);
     }
   },
+
+  /**
+   * Cancel an existing booking
+   */
+  async cancelBooking(id, cancellationReason = 'Customer requested cancellation') {
+    const bookingId = parseInt(id, 10);
+    const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+    try {
+      await query(`UPDATE bookings SET status = 'cancelled' WHERE id = ?`, [bookingId]);
+      await query(`UPDATE payments SET payment_status = 'refunded' WHERE booking_id = ?`, [bookingId]);
+      return this.findByIdOrReference(bookingId);
+    } catch (err) {
+      const booking = FALLBACK_BOOKINGS.find((b) => b.id === bookingId);
+      if (booking) {
+        booking.status = 'cancelled';
+        booking.payment_status = 'refunded';
+        booking.cancellation_reason = cancellationReason;
+        booking.updated_at = now;
+        return normalizeBooking(booking);
+      }
+      return null;
+    }
+  },
+
+  /**
+   * Update booking status
+   */
+  async updateStatus(id, status) {
+    const bookingId = parseInt(id, 10);
+    try {
+      await query(`UPDATE bookings SET status = ? WHERE id = ?`, [status, bookingId]);
+      return this.findByIdOrReference(bookingId);
+    } catch (err) {
+      const booking = FALLBACK_BOOKINGS.find((b) => b.id === bookingId);
+      if (booking) {
+        booking.status = status;
+        return normalizeBooking(booking);
+      }
+      return null;
+    }
+  }
 };
 
 module.exports = bookingModel;

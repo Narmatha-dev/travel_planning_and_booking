@@ -12,7 +12,8 @@
     "test:auth": "node scripts/testAuth.js",
     "test:destinations": "node scripts/testDestinations.js",
     "test:trips": "node scripts/testTrips.js",
-    "test:packages": "node scripts/testPackages.js"
+    "test:packages": "node scripts/testPackages.js",
+    "test:bookings": "node scripts/testBookings.js"
   },
   "keywords": [
     "travel",
