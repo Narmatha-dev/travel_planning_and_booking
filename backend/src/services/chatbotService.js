@@ -1,6 +1,8 @@
-// In-memory session chat history store and language state
+const config = require('../config/environment');
+
+// In-memory multi-turn session history & conversational context store
 const sessionHistories = new Map();
-const sessionLanguages = new Map();
+const sessionContexts = new Map();
 
 // Curated travel domain knowledge base
 const KNOWLEDGE_BASE = {
@@ -23,6 +25,21 @@ const KNOWLEDGE_BASE = {
       highlights: 'Calangute & Baga beaches, Aguada Fort, Mandovi sunset river cruise, Fontainhas Latin quarter, authentic Goan seafood.',
       highlightsTa: 'கலங்குட் & பாகா கடற்கரைகள், அகுவாடா கோட்டை, மண்டோவி படகு சவாரி, பொன்டைன்ஹாஸ் லத்தீன் பகுதி, ருசியான கடல் உணவுகள்.',
       highlightsTh: 'Calangute & Baga beaches, Aguada Fort, Mandovi sunset cruise, tasty sea food, water sports.',
+      hotels: 'W Goa (Luxury Beachfront), Taj Fort Aguada (Heritage Resort), Zostel Goa (Budget / Backpackers)',
+      hotelsTa: 'தாஜ் ஃபோர்ட் அகுவாடா (பாரம்பரிய ரிசார்ட்), டபிள்யூ கோவா (கடற்கரை சொகுசு), ஜோஸ்டல் கோவா (பட்ஜெட் தங்குமிடம்)',
+      hotelsTh: 'Taj Fort Aguada (Heritage), W Goa (Luxury Beachfront), Zostel Goa (Budget stay)',
+      food: 'Goan Fish Curry with steamed rice, Prawn Balchão, Bebinca dessert, Poi bread with chorizo',
+      foodTa: 'சுவையான கோவா மீன் குழம்பு, இறால் பால்சாவோ, பாரம்பரிய பெபிங்கா இனிப்பு',
+      foodTh: 'Goan Fish Curry Meals, Prawn Balchao, Bebinca traditional sweet',
+      transport: 'Renting a scooter (₹350-₹500/day) or self-drive car is the most flexible way to explore North & South Goa.',
+      transportTa: 'ஸ்கூட்டர் வாடகைக்கு எடுப்பது (நாள் ஒன்றுக்கு ₹350-₹500) கோவாவை சுற்றிப் பார்க்க சிறந்த வழியாகும்.',
+      transportTh: 'Scooter rent panni (₹350-₹500/day) suthuradhu romba easy and convenient.',
+      daysPlan: [
+        { day: 1, title: 'North Goa Beaches & Sunset', plan: 'Arrive, check in at Candolim/Calangute, relax at Baga Beach, watersports, evening sunset at Thalassa or Curlies with live music.' },
+        { day: 2, title: 'Heritage & Latin Quarter Culture', plan: 'Morning visit to Aguada Fort & lighthouse, stroll through Fontainhas colourful Portuguese streets, evening luxury Mandovi river cruise.' },
+        { day: 3, title: 'South Goa Serenity & Island Cruise', plan: 'Day trip to Palolem & Butterfly beaches, dolphin spotting boat tour, beach shack candlelight seafood dinner.' },
+        { day: 4, title: 'Spice Plantations & Shopping', plan: 'Visit Sahakari Spice Farm with traditional Goan buffet lunch, Anjuna flea market shopping, departure.' },
+      ],
       link: '/destinations',
     },
     {
@@ -43,6 +60,15 @@ const KNOWLEDGE_BASE = {
       highlights: 'Alleppey luxury houseboats, Munnar tea plantation trails, Fort Kochi Chinese fishing nets, Ayurvedic rejuvenation spas.',
       highlightsTa: 'ஆலப்புழா சொகுசு படகு வீடுகள், மூணார் தேயிலைத் தோட்டங்கள், கொச்சி சீன வலைகள், ஆயுர்வேத மசாஜ் மையங்கள்.',
       highlightsTh: 'Alleppey houseboat stay, Munnar tea estates, Fort Kochi fishing nets, Ayurvedic spas.',
+      hotels: 'Kumarakom Lake Resort (Luxury Backwaters), Blanket Hotel Munnar (Mountain Views), Zostel Kochi (Budget)',
+      food: 'Appam with Stew, Karimeen Pollichathu, Malabar Parotta with Chicken Curry, Puttu and Kadala Curry',
+      transport: 'Chauffeured private cab or scenic Kerala state KSRTC buses and Vembanad Lake passenger ferries.',
+      daysPlan: [
+        { day: 1, title: 'Fort Kochi Arrival & Heritage Walk', plan: 'Explore Chinese fishing nets, Mattancherry Dutch Palace, Jewish Synagogue, and evening Kathakali cultural dance.' },
+        { day: 2, title: 'Munnar Misty Hills & Tea Estates', plan: 'Drive to Munnar, visit Cheeyappara Waterfalls, walk inside lush tea gardens, visit Tata Tea Museum.' },
+        { day: 3, title: 'Alleppey Backwaters Houseboat Cruise', plan: 'Check in to a traditional private Kettuvallam houseboat, cruise calm palm-fringed canals, fresh Kerala dinner on board.' },
+        { day: 4, title: 'Marari Beach & Ayurvedic Rejuvenation', plan: 'Relax at pristine Marari Beach, indulge in a 90-minute authentic Abhyanga herbal oil massage, departure.' },
+      ],
       link: '/destinations',
     },
     {
@@ -63,6 +89,16 @@ const KNOWLEDGE_BASE = {
       highlights: 'Ubud emerald rice terraces, Uluwatu cliff temple, Mount Batur sunrise volcano trek, private jungle pool villas.',
       highlightsTa: 'உபுட் நெல் வயல்கள், உலுவாட்டு செங்குத்து பாறை கோவில், பத்தூர் எரிமலை சூரிய உதய ட்ரெக்கிங், சொகுசு நீச்சல் குளம் வில்லாக்கள்.',
       highlightsTh: 'Ubud rice terraces, Uluwatu temple, Mount Batur volcano sunrise trek, private pool villas.',
+      hotels: 'Maya Ubud Resort & Spa (Jungle Luxury), The Mulia Nusa Dua (Beachfront), Arya Monkey Forest (Budget Villa)',
+      food: 'Nasi Goreng, Babi Guling / Chicken Satay with Peanut Sauce, Bebek Betutu (Slow-cooked Duck), Dragonfruit Smoothie Bowls',
+      transport: 'Private driver hire ($35-$45/day) or Grab/Gojek taxi apps in Seminyak and Ubud.',
+      daysPlan: [
+        { day: 1, title: 'Ubud Arrival & Monkey Forest', plan: 'Arrive at Ngurah Rai Airport, transfer to Ubud jungle villa, visit Sacred Monkey Forest Sanctuary, evening Kecak Fire Dance.' },
+        { day: 2, title: 'Tegallalang Rice Terraces & Waterfall', plan: 'Morning walk in emerald Tegallalang rice terraces, giant jungle swing, Tirta Empul holy spring water cleansing, Tegenungan waterfall.' },
+        { day: 3, title: 'Seminyak Beach & Beach Clubs', plan: 'Transfer to Seminyak, surfing lesson at Double Six Beach, shopping boutiques, sunset cocktails at Potato Head Beach Club.' },
+        { day: 4, title: 'Nusa Penida Island Expedition', plan: 'Speedboat to Nusa Penida, witness iconic T-Rex shaped Kelingking Beach, snorkel with Manta Rays at Crystal Bay.' },
+        { day: 5, title: 'Uluwatu Cliff Temple & Farewell Dinner', plan: 'Clifftop Uluwatu Temple overlooking Indian Ocean waves, romantic Jimbaran beachfront seafood dinner on the sand.' },
+      ],
       link: '/destinations/1',
     },
     {
@@ -83,6 +119,15 @@ const KNOWLEDGE_BASE = {
       highlights: 'Matterhorn views in Zermatt, Jungfraujoch Top of Europe, Glacier 3000 suspension walk, Lake Geneva cruises.',
       highlightsTa: 'மேட்டர்ஹார்ன் பனிச்சிகரம், ஜங்ஃப்ராவ்ஜோக் ஐரோப்பாவின் உச்சி, பனிப்பாறை பாலம், ஜெனீவா ஏரி படகு சவாரி.',
       highlightsTh: 'Matterhorn views, Jungfraujoch Top of Europe train, Glacier walk, Lake Geneva cruises.',
+      hotels: 'The Omnia Zermatt (Alpine Luxury), Victoria-Jungfrau Interlaken, Mountain Lodge Grindelwald (Boutique)',
+      food: 'Traditional Swiss Cheese Fondue, Raclette, Rösti with fried egg, Swiss artisanal chocolate truffles',
+      transport: 'Swiss Travel Pass (unlimited train, bus, boat, and 50% discount on mountain cable cars).',
+      daysPlan: [
+        { day: 1, title: 'Zurich / Lucerne Arrival & Lake Cruise', plan: 'Arrive in Zurich, scenic train to Lucerne, Chapel Bridge walk, panoramic steamship cruise on Lake Lucerne.' },
+        { day: 2, title: 'Interlaken & Jungfraujoch Top of Europe', plan: 'Cogwheel train ascending 3,454m to Jungfraujoch, Ice Palace tour, Sphinx observatory terrace overlooking Aletsch Glacier.' },
+        { day: 3, title: 'Zermatt & Matterhorn Glacier Paradise', plan: 'Car-free village of Zermatt, cable car to Matterhorn Glacier Paradise (3,883m), panoramic skiing/hiking trails.' },
+        { day: 4, title: 'Grindelwald First & Cliff Walk', plan: 'Thrilling First Cliff Walk by Tissot suspended over alpine canyon, mountain cart descent, departure.' },
+      ],
       link: '/destinations/3',
     },
     {
@@ -103,6 +148,15 @@ const KNOWLEDGE_BASE = {
       highlights: 'Eiffel Tower summit, Louvre Museum Mona Lisa tour, illuminated Seine River dinner cruises, Palace of Versailles.',
       highlightsTa: 'ஈபிள் கோபுர உச்சி, லூவர் அருங்காட்சியகம் மோனாலிசா, செய்ன் நதி இரவு படகு உணவு, வெர்சாய் அரண்மனை.',
       highlightsTh: 'Eiffel Tower summit, Louvre Mona Lisa, Seine river night cruise, Versailles palace.',
+      hotels: 'Hôtel Plaza Athénée (5-Star Luxury), Grand Hôtel Saint Michel (Latin Quarter), CitizenM Gare de Lyon (Chic Modern)',
+      food: 'Fresh butter Croissants, French Onion Soup, Duck Confit, Escargot, Macarons from Ladurée',
+      transport: 'Paris Metro & RER network (Navigo Easy card or 10-ticket carnet for fast connections).',
+      daysPlan: [
+        { day: 1, title: 'Eiffel Tower & Seine Sunset Cruise', plan: 'Summit ticket to Eiffel Tower, stroll Champ de Mars, evening Seine river cruise seeing Paris monuments illuminated.' },
+        { day: 2, title: 'Louvre Art Masterpieces & Montmartre', plan: 'Skip-the-line guided Louvre Museum tour (Mona Lisa, Venus de Milo), climb Montmartre to Sacré-Cœur basilica.' },
+        { day: 3, title: 'Palace of Versailles Grand Day Tour', plan: 'RER train to Versailles, Hall of Mirrors, Marie Antoinette’s estate, grand musical fountains in royal gardens.' },
+        { day: 4, title: 'Notre-Dame, Latin Quarter & Shopping', plan: 'Walk along Île de la Cité, Latin Quarter bookshops, Champs-Élysées, Arc de Triomphe rooftop view, departure.' },
+      ],
       link: '/destinations/4',
     },
     {
@@ -123,47 +177,16 @@ const KNOWLEDGE_BASE = {
       highlights: 'Fushimi Inari 10,000 torii gates, Shibuya crossing, Shinkansen bullet train, Gion traditional tea ceremonies.',
       highlightsTa: 'புஷிமி இனாரி 10,000 சிவப்பு வாயில்கள், ஷிபுயா சந்திப்பு, புல்லட் ரயில் பயணம், பாரம்பரிய தேநீர் சடங்குகள்.',
       highlightsTh: 'Fushimi Inari 10,000 gates, Shibuya crossing, Shinkansen bullet train, Gion tea ceremony.',
+      hotels: 'Park Hyatt Tokyo (Shinjuku Skyline), Hoshinoya Kyoto (Riverside Ryokan), Hotel Gracery Shinjuku (Godzilla view)',
+      food: 'Authentic Tonkotsu Ramen, Fresh Tsukiji Nigiri Sushi, Wagyu Beef Teppanyaki, Matcha Parfait in Kyoto',
+      transport: 'JR Pass for intercity Bullet Trains, Suica/Pasmo IC cards for Tokyo Metro.',
+      daysPlan: [
+        { day: 1, title: 'Tokyo Modernity: Shibuya & Shinjuku', plan: 'Experience Shibuya Scramble Crossing, Meiji Jingu Shrine forest walk, Omoide Yokocho evening street food.' },
+        { day: 2, title: 'Asakusa & Futuristic Akihabara', plan: 'Historic Senso-ji Temple, Nakamise shopping street, Akihabara electronics & anime district, Tokyo Skytree.' },
+        { day: 3, title: 'Shinkansen Bullet Train to Kyoto', plan: 'Ride 320 km/h Shinkansen bullet train to Kyoto, check in to a traditional Ryokan with onsen, Gion Geisha district walk.' },
+        { day: 4, title: 'Fushimi Inari & Arashiyama Bamboo Grove', plan: 'Hike through 10,000 vermilion Torii gates at Fushimi Inari, Arashiyama bamboo forest boardwalk, Tenryu-ji Zen garden.' },
+      ],
       link: '/destinations/2',
-    },
-    {
-      name: 'Santorini',
-      nameTa: 'சான்டோரினி',
-      country: 'Greece',
-      countryTa: 'கிரீஸ்',
-      category: 'Island & Luxury Romance',
-      categoryTa: 'தீவு & சொகுசு காதல் பயணம்',
-      bestTime: 'May to October (Sunny Mediterranean, 26°C - 31°C)',
-      bestTimeTa: 'மே முதல் அக்டோபர் வரை (சூரிய ஒளி மத்திய தரைக்கடல் பருவம்)',
-      bestTimeTh: 'May to October (Sunny Mediterranean weather)',
-      dailyCostINR: '₹13,500 - ₹20,000 / day',
-      dailyCostUSD: '$160 - $240 / day',
-      idealDuration: '4 to 6 Days',
-      idealDurationTa: '4 முதல் 6 நாட்கள்',
-      idealDurationTh: '4 to 6 Naatkal',
-      highlights: 'Oia cliffside caldera sunset, black sand volcanic beaches, catamaran caldera sailing, Assyrtiko wine tasting.',
-      highlightsTa: 'ஓயா மலை விளிம்பு சூரிய அஸ்தமனம், கருப்பு மணல் எரிமலை கடற்கரை, படகு சவாரி, அஸிர்டிகோ திராட்சை ரசம்.',
-      highlightsTh: 'Oia caldera sunset, black sand volcanic beach, catamaran cruise, Greek wine tasting.',
-      link: '/destinations/5',
-    },
-    {
-      name: 'Serengeti',
-      nameTa: 'செரெங்கேட்டி',
-      country: 'Tanzania',
-      countryTa: 'தான்சானியா',
-      category: 'Wildlife & Safari',
-      categoryTa: 'வனவிலங்கு & சஃபாரி சாகசம்',
-      bestTime: 'June to October (Great Migration & dry season)',
-      bestTimeTa: 'ஜூன் முதல் அக்டோபர் வரை (மிருகங்களின் பெரும் இடம்பெயர்வு)',
-      bestTimeTh: 'June to October (Great Animal Migration season)',
-      dailyCostINR: '₹17,000 - ₹26,000 / day',
-      dailyCostUSD: '$200 - $320 / day',
-      idealDuration: '5 to 8 Days',
-      idealDurationTa: '5 முதல் 8 நாட்கள்',
-      idealDurationTh: '5 to 8 Naatkal',
-      highlights: 'Big Five 4x4 safari game drives, sunrise hot air balloon flight over savanna, Ngorongoro Crater, luxury tented camps.',
-      highlightsTa: 'பிக் 5 விலங்குகள் 4x4 சஃபாரி, சவன்னா மீது ஹாட் ஏர் பலூன் சவாரி, நகோரோங்கோரோ பள்ளம், சொகுசு கூடார தங்குமிடம்.',
-      highlightsTh: 'Big Five 4x4 safari, hot air balloon flight over savanna, luxury tented camps.',
-      link: '/destinations/6',
     },
   ],
 
@@ -176,13 +199,8 @@ const KNOWLEDGE_BASE = {
       durationTa: '7 நாட்கள் / 6 இரவுகள்',
       durationTh: '7 Naatkal / 6 Iravugal',
       type: 'Standard / Wellness',
-      typeTa: 'நல்வாழ்வு & ஓய்வு',
       inclusions: '4-star boutique resort, daily breakfast, airport transfers, Ubud rice terrace tour, Uluwatu sunset temple tour.',
-      inclusionsTa: '4-நட்சத்திர சொகுசு ரிசார்ட் தங்குமிடம், தினசரி காலை உணவு, விமான நிலைய பிக்-அப், உபுட் நெல் வயல் சுற்றுலா, உலுவாட்டு கோவில் பயணம்.',
-      inclusionsTh: '4-star luxury resort stay, daily breakfast, airport pickup/drop, Ubud tour, Uluwatu sunset tour.',
       exclusions: 'International flights, personal expenses, travel insurance.',
-      exclusionsTa: 'சர்வதேச விமான கட்டணம், தனிப்பட்ட செலவுகள், பயண காப்பீடு.',
-      exclusionsTh: 'Flight tickets, personal shopping, travel insurance.',
       link: '/packages/1',
     },
     {
@@ -193,13 +211,8 @@ const KNOWLEDGE_BASE = {
       durationTa: '8 நாட்கள் / 7 இரவுகள்',
       durationTh: '8 Naatkal / 7 Iravugal',
       type: 'Luxury Alpine',
-      typeTa: 'சொகுசு ஆல்பைன் சுற்றுலா',
       inclusions: '5-star Zermatt chalet stay, Swiss Travel Pass, Jungfraujoch Top of Europe rail excursion, daily alpine breakfast & fondue dinner.',
-      inclusionsTa: '5-நட்சத்திர ஜெர்மாட் மர வில்லா தங்குமிடம், சுவிஸ் டிராவல் பாஸ், ஜங்ஃப்ராவ்ஜோக் ரயில் சுற்றுலா, தினசரி சுவிஸ் காலை உணவு & பான்ட்யூ இரவு உணவு.',
-      inclusionsTh: '5-star Zermatt chalet stay, Swiss Travel Pass, Jungfraujoch Top of Europe train, daily breakfast & cheese fondue dinner.',
       exclusions: 'Ski rental gear, visa processing fees.',
-      exclusionsTa: 'பனிச்சறுக்கு உபகரண வாடகை, விசா கட்டணம்.',
-      exclusionsTh: 'Ski rental equipment, visa fees.',
       link: '/packages/3',
     },
     {
@@ -210,31 +223,9 @@ const KNOWLEDGE_BASE = {
       durationTa: '6 நாட்கள் / 5 இரவுகள்',
       durationTh: '6 Naatkal / 5 Iravugal',
       type: 'City Break & Romance',
-      typeTa: 'காதல் & நகர உலா',
       inclusions: 'Central boutique hotel near Seine, Louvre skip-the-line pass, Seine dinner cruise, Versailles palace day tour.',
-      inclusionsTa: 'செய்ன் நதி அருகே மத்திய பூட்டிக் ஹோட்டல், லூவர் விஐபி நுழைவுச்சீட்டு, செய்ன் நதி இரவு படகு உணவு, வெர்சாய் அரண்மனை சுற்றுலா.',
-      inclusionsTh: 'Central boutique hotel near Seine river, Louvre skip-line pass, Seine dinner cruise, Versailles palace tour.',
       exclusions: 'City tourist tax, lunch meals.',
-      exclusionsTa: 'நகர சுற்றுலா வரி, மதிய உணவு.',
-      exclusionsTh: 'City tourist tax, lunch.',
       link: '/packages/4',
-    },
-    {
-      title: 'Grand Japan Explorer: Tokyo to Kyoto',
-      titleTa: 'மாபெரும் ஜப்பான் பயணம்: டோக்கியோ முதல் கியோட்டோ வரை',
-      price: '$2,699 (₹2,29,415)',
-      duration: '10 Days / 9 Nights',
-      durationTa: '10 நாட்கள் / 9 இரவுகள்',
-      durationTh: '10 Naatkal / 9 Iravugal',
-      type: 'Cultural Heritage',
-      typeTa: 'கலாச்சார பாரம்பரியம்',
-      inclusions: '7-Day JR Bullet Train pass, 4-star hotels in Tokyo & Kyoto, traditional tea ceremony, guided Fushimi Inari walk.',
-      inclusionsTa: '7-நாள் புல்லட் ரயில் பாஸ், டோக்கியோ & கியோட்டோ 4-நட்சத்திர ஹோட்டல்கள், பாரம்பரிய தேநீர் சடங்கு, புஷிமி இனாரி வழிகாட்டி சுற்றுலா.',
-      inclusionsTh: '7-Day JR Bullet Train pass, 4-star hotels, traditional tea ceremony, guided temple walk.',
-      exclusions: 'Personal shopping, optional museum tickets.',
-      exclusionsTa: 'தனிப்பட்ட ஷாப்பிங், விருப்ப அருங்காட்சியக கட்டணங்கள்.',
-      exclusionsTh: 'Shopping expenses, optional tickets.',
-      link: '/packages/2',
     },
   ],
 
@@ -248,19 +239,15 @@ const KNOWLEDGE_BASE = {
     security: 'Bank-grade 256-bit SSL encryption. We adhere to strict PCI compliance and never store sensitive CVVs, passwords, or full card numbers.',
     securityTa: 'வங்கி தர 256-பிட் SSL பாதுகாப்பு. உங்கள் CVV அல்லது கடவுச்சொல் ஒருபோதும் சேமிக்கப்படாது.',
     securityTh: 'Bank-grade 256-bit SSL security. Ungaloda card CVV or password eppovum store aagadhu.',
-    confirmation: 'Instant digital confirmation with unique booking reference ID (e.g. BK-2026-XXXX) and printable receipts available under My Trips.',
-    confirmationTa: 'தனித்துவமான முன்பதிவு எண் (எ.கா. BK-2026-XXXX) மற்றும் உடனடி உறுதிப்படுத்தல் ரசீது வழங்கப்படும்.',
-    confirmationTh: 'Instant booking confirmation and unique reference ID (e.g. BK-2026-XXXX) kedaikkum.',
   },
 };
 
 /**
- * Robust Multilingual Language Detector
- * Detects: 'en' (English), 'ta' (Tamil script), 'thanglish' (Tamil in English alphabet)
- * Persists language across continuous session dialogue
+ * Detect user language and persist across multi-turn session
  */
 function detectLanguage(text, sessionId) {
-  const currentSessionLang = sessionLanguages.get(sessionId) || 'en';
+  const context = sessionContexts.get(sessionId) || {};
+  const currentSessionLang = context.language || 'en';
   if (!text || typeof text !== 'string') return currentSessionLang;
 
   const raw = text.trim();
@@ -268,7 +255,8 @@ function detectLanguage(text, sessionId) {
 
   // 1. Unicode Range Check for Tamil Script (U+0B80 to U+0BFF)
   if (/[\u0B80-\u0BFF]/.test(raw)) {
-    sessionLanguages.set(sessionId, 'ta');
+    context.language = 'ta';
+    sessionContexts.set(sessionId, context);
     return 'ta';
   }
 
@@ -282,17 +270,16 @@ function detectLanguage(text, sessionId) {
     'booking', 'rathu', 'therinjikanum', 'sollunga', 'solunga', 'solren', 'kodu', 'kodunga',
     'varum', 'iruku', 'iruka', 'pannalam', 'panradhu', 'panlam', 'pannunga', 'vanga', 'vaa',
     'poitu', 'varalam', 'edukalam', 'podhum', 'theva', 'thevai', 'paravala', 'yenna', 'endha',
-    'ennaikku', 'nalaikku', 'ippo', 'eppo', 'kooda', 'mattum', 'kitta', 'illai', 'illa',
     'aagum', 'aagudhu', 'theriyum', 'puriyala', 'puriyum', 'mudiyuma', 'theriyuma', 'irukkum',
-    'vazhikaatti', 'payanam', 'payana', 'nalladhu', 'beach-la', 'stay-ku', 'packagela',
-    'pakka', 'poyitu', 'kelambalam', 'kitta', 'keka'
+    'vazhikaatti', 'payanam', 'payana', 'nalladhu', 'beach-la', 'stay-ku', 'packagela', 'saapda'
   ];
 
   const words = lower.split(/[^a-z0-9]+/);
   const thanglishMatchCount = words.filter((w) => thanglishKeywords.includes(w)).length;
 
   if (thanglishMatchCount >= 1) {
-    sessionLanguages.set(sessionId, 'thanglish');
+    context.language = 'thanglish';
+    sessionContexts.set(sessionId, context);
     return 'thanglish';
   }
 
@@ -300,52 +287,52 @@ function detectLanguage(text, sessionId) {
   const englishClearMarkers = [
     'what', 'where', 'when', 'how', 'which', 'who', 'tell', 'show', 'give', 'recommend',
     'package', 'flight', 'hotel', 'cancellation', 'itinerary', 'destination', 'budget',
-    'price', 'cost', 'trip', 'travel', 'hi', 'hello', 'hey', 'please', 'details'
+    'price', 'cost', 'trip', 'travel', 'hi', 'hello', 'hey', 'please', 'details', 'plan'
   ];
   const englishMatchCount = words.filter((w) => englishClearMarkers.includes(w)).length;
 
   if (englishMatchCount >= 1 && thanglishMatchCount === 0) {
-    sessionLanguages.set(sessionId, 'en');
+    context.language = 'en';
+    sessionContexts.set(sessionId, context);
     return 'en';
   }
 
   return currentSessionLang;
 }
 
+/**
+ * Check if the user query is outside the travel domain
+ */
+function isOutOfScope(query) {
+  const nonTravelKeywords = [
+    'write python', 'write code', 'javascript code', 'c++', 'binary tree', 'solve equation',
+    'calculus', 'quadratic', 'derivative', 'react hook', 'sql injection', 'quantum physics',
+    'who is the president', 'medical diagnosis', 'write essay on', 'crypto bitcoin'
+  ];
+  return nonTravelKeywords.some((k) => query.includes(k));
+}
+
 const chatbotService = {
   /**
-   * Process incoming user question and generate AI travel response with multilingual intelligence
+   * Process incoming user message with multi-turn context tracking and conversational AI
    */
   async processMessage(sessionId = 'default', userMessage = '') {
     const rawQuery = String(userMessage || '').trim();
     const query = rawQuery.toLowerCase();
 
-    // Detect language: 'en', 'ta', or 'thanglish'
+    // Retrieve or initialize multi-turn session context
+    let context = sessionContexts.get(sessionId) || {
+      activeDestination: null,
+      activeDays: 4,
+      activeBudget: null,
+      recentItinerary: null,
+      language: 'en',
+    };
+
     const lang = detectLanguage(rawQuery, sessionId);
+    context.language = lang;
 
-    if (!rawQuery) {
-      if (lang === 'ta') {
-        return {
-          reply: 'வணக்கம்! நான் டிராவலோராவின் AI பயண உதவியாளர். சுற்றுலா இடங்கள், பேக்கேஜ்கள், பட்ஜெட் திட்டமிடல் அல்லது முன்பதிவு விதிகள் பற்றி என்னிடம் கேட்கலாம்!',
-          suggestions: ['₹20,000 பட்ஜெட்டில் சிறந்த கடற்கரை', 'சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ் விவரங்கள்', 'முன்பதிவு ரத்து விதிகள்'],
-          language: lang,
-        };
-      }
-      if (lang === 'thanglish') {
-        return {
-          reply: 'Vanakkam! Naan ungaloda Travelora AI Travel Assistant. Tour planning, destinations, packages, budget matrum booking pathi enkitta kettu therinjikalam!',
-          suggestions: ['₹20,000-la nalla beach trip', 'Swiss Alps package evlo aagum?', 'Cancellation policy enna?'],
-          language: lang,
-        };
-      }
-      return {
-        reply: 'Hello! I am Travelora’s AI Travel Assistant. How can I assist with your vacation planning today? Ask me about destinations, curated packages, budget planning, or booking policies!',
-        suggestions: ['Best beach for ₹20,000', 'Tell me about Swiss Alps package', 'What is your cancellation policy?'],
-        language: lang,
-      };
-    }
-
-    // Guardrail Check: Never invent or expose private booking credentials or card numbers
+    // 1. Guardrail Check: Never invent or expose credit cards or passwords
     if (
       query.includes('card number') ||
       query.includes('cvv') ||
@@ -358,32 +345,79 @@ const chatbotService = {
       query.includes('card details')
     ) {
       let guardrailReply = '';
-      let guardrailSuggestions = [];
-
       if (lang === 'ta') {
         guardrailReply = '🔒 **பாதுகாப்பு அறிவிப்பு**: உங்கள் பாதுகாப்பிற்காக, டிராவலோரா கிரெடிட் கார்டு எண்கள், CVV அல்லது கடவுச்சொற்களை ஒருபோதும் பகிரவோ கேட்கவோ மாட்டாது. உங்கள் முன்பதிவு மற்றும் கட்டண விவரங்களை பாதுகாப்பாக நிர்வகிக்க [எனது பயணங்கள் பக்கத்திற்கு](/my-trips) செல்லவும்.';
-        guardrailSuggestions = ['முன்பதிவுகளை எப்படி பார்ப்பது?', 'கட்டண முறைகள் என்ன?'];
       } else if (lang === 'thanglish') {
         guardrailReply = '🔒 **Security Notice**: Ungaloda paadhukaapukaaga Travelora eppovum sensitive card number, CVV, passwords share pannaadhu. Ungaloda confirmed bookings & safe payments-ai [My Trips Dashboard-la](/my-trips) paarthu manage pannalaam.';
-        guardrailSuggestions = ['Bookings-ai epdi paarpadhu?', 'Enna payment methods iruku?'];
       } else {
         guardrailReply = '🔒 **Security Notice**: For your protection, Travelora never shares or requests sensitive card numbers, CVVs, or passwords. To manage your real bookings and payments safely, please visit your encrypted [My Trips Dashboard](/my-trips).';
-        guardrailSuggestions = ['How to view my bookings', 'What payment methods are supported?'];
       }
 
       this.recordMessage(sessionId, rawQuery, guardrailReply);
       return {
         reply: guardrailReply,
-        suggestions: guardrailSuggestions,
+        suggestions: ['How to view my bookings', 'What payment methods are supported?'],
         language: lang,
       };
     }
+
+    // 2. Out-of-Scope Non-Travel Query Deflection
+    if (isOutOfScope(query)) {
+      let redirectReply = '';
+      if (lang === 'ta') {
+        redirectReply = '👋 நான் **டிராவலோராவின் AI பயண உதவியாளர் (Travel Assistant)**! 🌍 எனது முதன்மை பணி பயணத் திட்டமிடல், சுற்றுலா இடங்கள், பேக்கேஜ்கள், தங்குமிடம் மற்றும் முன்பதிவுகளில் உதவுவதே ஆகும்.\n\nஉங்கள் விடுமுறை பயண திட்டமிடல் பற்றி என்னிடம் கேட்கலாம் (எ.கா. *"கோவாவிற்கு 4 நாள் பயணம் திட்டமிடுங்கள்"* அல்லது *"சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ் விலை என்ன?"*)!';
+      } else if (lang === 'thanglish') {
+        redirectReply = '👋 Naan ungaloda **Travelora AI Travel Assistant**! 🌍 Ennala travel planning, destinations, tour packages, hotel stays, budget matrum itinerary pathi mattum dhaan help panna mudiyum.\n\nUnga adutha vacation-ai enga plan panreenga? (e.g. *"Plan 4-day Goa trip"* or *"Bali packages kaatunga"*).';
+      } else {
+        redirectReply = '👋 I am **Travelora AI**, your personal travel assistant! 🌍 While I\'d love to help, my expertise is dedicated exclusively to travel planning, destinations, itineraries, stays, activities, and bookings.\n\nWhere would you like to plan your next vacation? Ask me about any destination, custom itinerary, or travel package!';
+      }
+
+      this.recordMessage(sessionId, rawQuery, redirectReply);
+      return {
+        reply: redirectReply,
+        suggestions: ['Plan a 4-day Goa trip', 'Swiss Alps package details', 'Best time to visit Bali'],
+        language: lang,
+      };
+    }
+
+    // 3. Extract or update Destination entity in Context
+    let matchedDest = KNOWLEDGE_BASE.destinations.find((d) =>
+      query.includes(d.name.toLowerCase()) ||
+      query.includes(d.country.toLowerCase()) ||
+      (d.nameTa && query.includes(d.nameTa))
+    );
+
+    if (matchedDest) {
+      context.activeDestination = matchedDest;
+    } else if (context.activeDestination) {
+      matchedDest = context.activeDestination;
+    } else {
+      matchedDest = KNOWLEDGE_BASE.destinations[0]; // default to Goa
+    }
+
+    // Extract days count if mentioned (e.g. "4-day", "5 days", "7 days")
+    const daysMatch = query.match(/(\d+)\s*(day|days|naal|naatkal)/);
+    if (daysMatch) {
+      context.activeDays = parseInt(daysMatch[1], 10);
+    }
+
+    // Extract budget if mentioned (e.g. "20000", "20k", "50,000")
+    const budgetMatch = query.match(/(\d+[,0-9]*)\s*(k|budget|inr|rs|₹|\$)?/);
+    if (budgetMatch && parseInt(budgetMatch[1].replace(/,/g, ''), 10) > 500) {
+      context.activeBudget = parseInt(budgetMatch[1].replace(/,/g, ''), 10);
+    }
+
+    sessionContexts.set(sessionId, context);
 
     let reply = '';
     const suggestions = [];
     const actionLinks = [];
 
-    // 1. Booking Policy & Cancellation Queries
+    // ==========================================
+    // 4. MULTI-TURN CONTEXTUAL INTENT ROUTING
+    // ==========================================
+
+    // Intent 0: Booking Policies, Cancellation & Refunds
     if (
       query.includes('cancel') ||
       query.includes('refund') ||
@@ -402,8 +436,7 @@ const chatbotService = {
           `டிராவலோராவில் உங்கள் பயண முன்பதிவு தொடர்பான முக்கிய தகவல்கள்:\n\n` +
           `* ⏱️ **இலவச ரத்து & முழு பணத்திருப்பம்:** ${KNOWLEDGE_BASE.bookingPolicies.cancellationTa}\n` +
           `* 💳 **ஏற்றுக்கொள்ளப்படும் கட்டண முறைகள்:** ${KNOWLEDGE_BASE.bookingPolicies.paymentMethodsTa}\n` +
-          `* 🔒 **வங்கி தர பாதுகாப்பு:** ${KNOWLEDGE_BASE.bookingPolicies.securityTa}\n` +
-          `* 📄 **உடனடி உறுதிப்படுத்தல்:** ${KNOWLEDGE_BASE.bookingPolicies.confirmationTa}\n\n` +
+          `* 🔒 **வங்கி தர பாதுகாப்பு:** ${KNOWLEDGE_BASE.bookingPolicies.securityTa}\n\n` +
           `உங்கள் உறுதிசெய்யப்பட்ட பயண விவரங்களை [எனது பயணங்கள்](/my-trips) பக்கத்தில் பார்க்கலாம்.`;
 
         suggestions.push('பேக்கேஜ் முன்பதிவு செய்வது எப்படி?', 'பட்ஜெட் பயணங்கள்', 'பிரபலமான இடங்கள்');
@@ -413,8 +446,7 @@ const chatbotService = {
           `Unga bookings matrum refund details inge:\n\n` +
           `* ⏱️ **Free Cancellation & Full Refund:** ${KNOWLEDGE_BASE.bookingPolicies.cancellationTh}\n` +
           `* 💳 **Payment Methods:** ${KNOWLEDGE_BASE.bookingPolicies.paymentMethodsTh}\n` +
-          `* 🔒 **Security & Privacy:** ${KNOWLEDGE_BASE.bookingPolicies.securityTh}\n` +
-          `* 📄 **Instant Confirmation:** ${KNOWLEDGE_BASE.bookingPolicies.confirmationTh}\n\n` +
+          `* 🔒 **Security & Privacy:** ${KNOWLEDGE_BASE.bookingPolicies.securityTh}\n\n` +
           `Unga bookings-ai [My Trips Dashboard-la](/my-trips) paarthu manage pannalaam.`;
 
         suggestions.push('Package book panradhu epdi?', 'Budget beach trips sollunga', 'Popular places');
@@ -424,8 +456,7 @@ const chatbotService = {
           `Here are the key details regarding bookings on Travelora:\n\n` +
           `* **Cancellation & Refunds:** ${KNOWLEDGE_BASE.bookingPolicies.cancellation}\n` +
           `* **Payment Methods:** ${KNOWLEDGE_BASE.bookingPolicies.paymentMethods}\n` +
-          `* **Security & Privacy:** ${KNOWLEDGE_BASE.bookingPolicies.security}\n` +
-          `* **Instant Confirmation:** ${KNOWLEDGE_BASE.bookingPolicies.confirmation}\n\n` +
+          `* **Security & Privacy:** ${KNOWLEDGE_BASE.bookingPolicies.security}\n\n` +
           `You can easily view and manage your confirmed reservations under [My Trips](/my-trips).`;
 
         suggestions.push('How to book a package', 'Recommend a budget trip', 'Top destinations');
@@ -433,210 +464,193 @@ const chatbotService = {
       }
     }
 
-    // 2. Package Inquiry Queries (Curated Packages, Deals, Inclusions)
+    // Intent A: Multi-turn Day-wise Specific Inquiry (e.g. "What about the second day?", "day 2 enna panradhu?", "இரண்டாம் நாளில் என்ன செய்யலாம்?")
     else if (
-      query.includes('package') ||
-      query.includes('deal') ||
-      query.includes('inclusion') ||
-      query.includes('exclusion') ||
-      query.includes('tour cost') ||
-      query.includes('பேக்கேஜ்') ||
-      query.includes('விலை') ||
-      query.includes('சேர்க்கப்பட்டது') ||
-      query.includes('packagela') ||
-      query.includes('vilai') ||
-      query.includes('evlo aagum') ||
-      query.includes('details sollunga')
+      query.includes('second day') ||
+      query.includes('day 2') ||
+      query.includes('2nd day') ||
+      query.includes('third day') ||
+      query.includes('day 3') ||
+      query.includes('3rd day') ||
+      query.includes('first day') ||
+      query.includes('day 1') ||
+      query.includes('fourth day') ||
+      query.includes('day 4') ||
+      query.includes('இரண்டாம் நாள்') ||
+      query.includes('மூன்றாம் நாள்') ||
+      query.includes('முதல் நாள்')
     ) {
-      const matchedPkg = KNOWLEDGE_BASE.packages.find((p) =>
-        query.includes('swiss') && p.title.includes('Swiss') ||
-        query.includes('சுவிஸ்') && p.title.includes('Swiss') ||
-        query.includes('paris') && p.title.includes('Paris') ||
-        query.includes('பாரிஸ்') && p.title.includes('Paris') ||
-        query.includes('bali') && p.title.includes('Bali') ||
-        query.includes('பாலி') && p.title.includes('Bali') ||
-        query.includes('japan') && p.title.includes('Japan') ||
-        query.includes('ஜப்பான்') && p.title.includes('Japan') ||
-        query.includes('tokyo') && p.title.includes('Japan') ||
-        query.includes(p.title.toLowerCase().split(' ')[0])
-      ) || KNOWLEDGE_BASE.packages[0];
+      let targetDayNum = 2;
+      if (query.includes('first') || query.includes('day 1') || query.includes('முதல்')) targetDayNum = 1;
+      else if (query.includes('third') || query.includes('day 3') || query.includes('3rd') || query.includes('மூன்றாம்')) targetDayNum = 3;
+      else if (query.includes('fourth') || query.includes('day 4') || query.includes('4th') || query.includes('நான்காம்')) targetDayNum = 4;
+
+      const dayObj = (matchedDest.daysPlan && matchedDest.daysPlan[targetDayNum - 1]) || {
+        day: targetDayNum,
+        title: `Exploring Highlights of ${matchedDest.name}`,
+        plan: `Morning landmark sightseeing, local cultural exploration, and sunset dining.`,
+      };
 
       if (lang === 'ta') {
-        reply = `### 📦 பிரத்யேக சுற்றுலா பேக்கேஜ்: ${matchedPkg.titleTa || matchedPkg.title}\n\n` +
-          `* 💵 **கட்டணம்:** **${matchedPkg.price}** (ஒரு நபருக்கு)\n` +
-          `* ⏳ **கால அளவு:** ${matchedPkg.durationTa || matchedPkg.duration}\n` +
-          `* 🏷️ **பயண பாணி:** ${matchedPkg.typeTa || matchedPkg.type}\n\n` +
-          `#### ✅ பேக்கேஜில் உள்ளடங்கியவை (Inclusions):\n${matchedPkg.inclusionsTa || matchedPkg.inclusions}\n\n` +
-          `#### ❌ பேக்கேஜில் இல்லாதவை (Exclusions):\n${matchedPkg.exclusionsTa || matchedPkg.exclusions}\n\n` +
-          `*உடனடி உறுதிப்படுத்தல் மற்றும் 48 மணி நேர இலவச ரத்துசெய்தல் வசதியுடன்.*`;
+        reply = `### 📅 ${matchedDest.nameTa || matchedDest.name} - நாள் ${dayObj.day}: ${dayObj.title}\n\n` +
+          `நாங்கள் திட்டமிட்ட **${matchedDest.nameTa || matchedDest.name}** பயணத்தின் ${dayObj.day}-ஆம் நாள் விரிவான திட்டம்:\n\n` +
+          `* 🌅 **காலை மற்றும் மதியம்:** ${dayObj.plan}\n` +
+          `* 🍽️ **உணவு பரிந்துரை:** உள்ளூர் பிரபலமான பாரம்பரிய உணவு விடுதியில் மதிய மற்றும் இரவு உணவு.\n` +
+          `* 💡 **பயண குறிப்பு:** கூட்ட நெரிசலை தவிர்க்க காலை 9:00 மணிக்கே தொடங்குவது சிறந்தது.\n\n` +
+          `அடுத்த நாள் பற்றியோ அல்லது தங்குமிடம்/உணவு பற்றியோ மேலும் அறிய விரும்புகிறீர்களா?`;
 
-        suggestions.push('இந்த பேக்கேஜை எப்படி பதிவு செய்வது?', 'அனைத்து பேக்கேஜ்களையும் காட்டு', 'ரத்து விதிகள் என்ன?');
-        actionLinks.push({ label: 'பேக்கேஜ் விவரங்கள் (View Details)', url: matchedPkg.link });
-        actionLinks.push({ label: 'உடனடி முன்பதிவு (Book Now)', url: '/booking?packageId=1' });
+        suggestions.push(`நாள் ${dayObj.day + 1} திட்டம் என்ன?`, `${matchedDest.nameTa || matchedDest.name} தங்குமிடம் எங்கு சிறந்தது?`, 'உள்ளூர் உணவு விவரங்கள்');
       } else if (lang === 'thanglish') {
-        reply = `### 📦 Curated Package: ${matchedPkg.title}\n\n` +
-          `* 💵 **Price:** **${matchedPkg.price}** per traveler\n` +
-          `* ⏳ **Duration:** ${matchedPkg.durationTh || matchedPkg.duration}\n` +
-          `* 🏷️ **Travel Style:** ${matchedPkg.type}\n\n` +
-          `#### ✅ Package-la Enna Ellam Serndhirukku (Inclusions):\n${matchedPkg.inclusionsTh || matchedPkg.inclusions}\n\n` +
-          `#### ❌ Package-la Illaadhavai (Exclusions):\n${matchedPkg.exclusionsTh || matchedPkg.exclusions}\n\n` +
-          `*Instant confirmation matrum 48-hour free cancellation policy irukku.*`;
+        reply = `### 📅 ${matchedDest.name} - Day ${dayObj.day}: ${dayObj.title}\n\n` +
+          `Unga **${matchedDest.name}** trip-oda Day ${dayObj.day} detailed plan:\n\n` +
+          `* 🌅 **Schedule & Activities:** ${dayObj.plan}\n` +
+          `* 🍽️ **Food Spot:** Famous local Goan / regional eatery-la fresh authentic meals.\n` +
+          `* 💡 **Pro Travel Tip:** Morning 9:00 AM-kulla kelambina traffic and crowd avoid pannalaam.\n\n` +
+          `Next day plan paakka poringala? Or hotels/food pathi keka poringala?`;
 
-        suggestions.push('Idha epdi book panradhu?', 'Ella packages-um kaatunga', 'Cancellation policy enna?');
-        actionLinks.push({ label: 'Package Details Paarkka', url: matchedPkg.link });
-        actionLinks.push({ label: 'Instant Booking', url: '/booking?packageId=1' });
+        suggestions.push(`Day ${dayObj.day + 1} enna panradhu?`, `${matchedDest.name} best hotels`, 'Famous food items');
       } else {
-        reply = `### 📦 Curated Package: ${matchedPkg.title}\n\n` +
-          `* 💵 **Price:** **${matchedPkg.price}** per traveler\n` +
-          `* ⏳ **Duration:** ${matchedPkg.duration}\n` +
-          `* 🏷️ **Travel Style:** ${matchedPkg.type}\n\n` +
-          `#### ✅ Included in Package:\n${matchedPkg.inclusions}\n\n` +
-          `#### ❌ Excluded:\n${matchedPkg.exclusions}\n\n` +
-          `*Includes instant booking confirmation & 48-hour free cancellation.*`;
+        reply = `### 📅 ${matchedDest.name} - Day ${dayObj.day}: ${dayObj.title}\n\n` +
+          `Here is the detailed itinerary for **Day ${dayObj.day}** of your **${matchedDest.name}** vacation:\n\n` +
+          `* 🌅 **Activities & Sightseeing:** ${dayObj.plan}\n` +
+          `* 🍽️ **Culinary Recommendation:** Savor signature regional specialties for lunch and beachfront / scenic dining for dinner.\n` +
+          `* 💡 **AI Travel Tip:** Start around 9:00 AM to enjoy optimal morning lighting for photography and avoid peak afternoon crowds.\n\n` +
+          `Would you like to review the next day's plan or explore top hotel stays nearby?`;
 
-        suggestions.push('How do I book this package?', 'Show all available packages', 'What is the cancellation policy?');
-        actionLinks.push({ label: 'View Package Details', url: matchedPkg.link });
-        actionLinks.push({ label: 'Instant Booking', url: '/booking?packageId=1' });
+        suggestions.push(`What about Day ${dayObj.day + 1}?`, `Top hotels in ${matchedDest.name}`, `What to eat in ${matchedDest.name}?`);
+      }
+
+      actionLinks.push({ label: `Full ${matchedDest.name} Itinerary`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+    }
+
+    // Intent B: Hotels, Stays & Accommodations Inquiry
+    else if (
+      query.includes('hotel') ||
+      query.includes('stay') ||
+      query.includes('resort') ||
+      query.includes('villa') ||
+      query.includes('hostel') ||
+      query.includes('தங்குமிடம்') ||
+      query.includes('விடுதி') ||
+      query.includes('thanga') ||
+      query.includes('stay-ku')
+    ) {
+      if (lang === 'ta') {
+        reply = `### 🏨 ${matchedDest.nameTa || matchedDest.name}-ல் பரிந்துரைக்கப்படும் சிறந்த தங்குமிடங்கள்\n\n` +
+          `உங்கள் பயண பாணி மற்றும் பட்ஜெட்டிற்கு ஏற்ற சிறந்த ஹோட்டல்கள்:\n\n` +
+          `* 🌟 **பரிந்துரைக்கப்பட்டவை:** ${matchedDest.hotels || 'பிரபலமான கடற்கரை ரிசார்ட்டுகள் மற்றும் பூட்டிக் ஹோட்டல்கள்'}\n` +
+          `* 💰 **விலை நிலவரம்:** பட்ஜெட் தங்குமிடங்கள் ₹1,500 - ₹2,500/இரவு | சொகுசு ரிசார்ட்டுகள் ₹7,000 - ₹15,000/இரவு.\n` +
+          `* 📍 **சிறந்த இடங்கள்:** கடற்கரைக்கு அருகில் அல்லது நகர மையத்திற்கு அருகில் தங்குவது பயண நேரத்தை மிச்சப்படுத்தும்.`;
+
+        suggestions.push(`${matchedDest.nameTa || matchedDest.name} பேக்கேஜ்களைப் பார்`, 'உள்ளூர் போக்குவரத்து விவரங்கள்', 'பயணத் திட்டம் உருவாக்கு');
+      } else if (lang === 'thanglish') {
+        reply = `### 🏨 Top Recommended Stays in ${matchedDest.name}\n\n` +
+          `Unga travel style and budget-kku thagundha best hotels:\n\n` +
+          `* 🌟 **Top Picks:** ${matchedDest.hotels || 'Popular beach resorts & boutique stays'}\n` +
+          `* 💰 **Price Range:** Budget stays ₹1,500 - ₹2,500/night | Luxury resorts ₹7,000 - ₹15,000/night.\n` +
+          `* 📍 **Location Tip:** Prime attractions kitta stay panna travel time romba save aagum.`;
+
+        suggestions.push(`${matchedDest.name} packages kaatunga`, 'Local transport epdi?', 'Full itinerary plan');
+      } else {
+        reply = `### 🏨 Top Recommended Stays in ${matchedDest.name}\n\n` +
+          `Here are curated accommodations suited for different budgets in **${matchedDest.name}**:\n\n` +
+          `* 🌟 **Top Picks:** ${matchedDest.hotels || 'Luxury beachfront resorts & boutique heritage hotels'}\n` +
+          `* 💰 **Typical Price Ranges:** Budget Hostels & Guesthouses ($20 - $35/night) | 4/5-Star Resorts ($90 - $250+/night).\n` +
+          `* 📍 **Location Tip:** Staying centrally near major transit hubs saves commute time between daily attractions.`;
+
+        suggestions.push(`View ${matchedDest.name} packages`, 'How to get around?', 'Plan complete trip');
+      }
+
+      actionLinks.push({ label: 'Browse Packages', url: '/packages' });
+    }
+
+    // Intent C: Food, Dining & Local Cuisine
+    else if (
+      query.includes('food') ||
+      query.includes('eat') ||
+      query.includes('cuisine') ||
+      query.includes('restaurant') ||
+      query.includes('dish') ||
+      query.includes('vegetarian') ||
+      query.includes('veg') ||
+      query.includes('உணவு') ||
+      query.includes('சாப்பாடு') ||
+      query.includes('saapaadu') ||
+      query.includes('sapad')
+    ) {
+      if (lang === 'ta') {
+        reply = `### 🍽️ ${matchedDest.nameTa || matchedDest.name}-ன் புகழ்பெற்ற உணவுகள் & சுவைகள்\n\n` +
+          `நீங்கள் கண்டிப்பாக ருசிக்க வேண்டிய பாரம்பரிய உணவுகள்:\n\n` +
+          `* 🍲 **முக்கிய உணவுகள்:** ${matchedDest.food || 'பாரம்பரிய சுவையான பிராந்திய உணவுகள்'}\n` +
+          `* 🥗 **சைவ உணவுகள் (Vegetarian):** அனைத்து முக்கிய உணவகங்களிலும் சுவையான சைவ உணவுகள் மற்றும் புதிய பழச்சாறுகள் கிடைக்கின்றன.\n` +
+          `* ☕ **சிற்றுண்டி & பானங்கள்:** புதிய இளநீர் மற்றும் உள்ளூர் பிரத்யேக இனிப்புகள்.`;
+
+        suggestions.push(`${matchedDest.nameTa || matchedDest.name} நாள் 1 திட்டம்`, 'சிறந்த தங்குமிடங்கள்', 'பட்ஜெட் விவரங்கள்');
+      } else if (lang === 'thanglish') {
+        reply = `### 🍽️ Famous Food & Dining in ${matchedDest.name}\n\n` +
+          `Neenga kandippa try panna vendiya local special dishes:\n\n` +
+          `* 🍲 **Signature Dishes:** ${matchedDest.food || 'Delicious regional dishes & fresh seafood'}\n` +
+          `* 🥗 **Veg Options:** Veg restaurants and North/South Indian meals neraya idathula available.\n` +
+          `* ☕ **Street Food & Snacks:** Fresh tender coconut water matrum local snacks try pannunga.`;
+
+        suggestions.push(`${matchedDest.name} Day 1 plan`, 'Hotels pathi sollunga', 'Budget evlo aagum?');
+      } else {
+        reply = `### 🍽️ Famous Food & Dining in ${matchedDest.name}\n\n` +
+          `Must-try culinary delights and local specialties in **${matchedDest.name}**:\n\n` +
+          `* 🍲 **Signature Dishes:** ${matchedDest.food || 'Fresh seafood, aromatic curries, and regional street foods'}\n` +
+          `* 🥗 **Vegetarian / Vegan Options:** Widely available with dedicated plant-based and multicuisine dining spots.\n` +
+          `* ☕ **Local Tip:** Visit reputable beach shacks and historic town bistros for the most authentic flavors.`;
+
+        suggestions.push(`What to do on Day 1 in ${matchedDest.name}?`, `Top hotels in ${matchedDest.name}`, `What is the best season?`);
       }
     }
 
-    // 3. Destination Queries (Goa, Bali, Paris, Swiss Alps, Kerala, Tokyo, Santorini, Serengeti, etc.)
+    // Intent D: Transportation, Getting Around & Commuting
     else if (
-      query.includes('goa') ||
-      query.includes('கோவா') ||
-      query.includes('bali') ||
-      query.includes('பாலி') ||
-      query.includes('paris') ||
-      query.includes('பாரிஸ்') ||
-      query.includes('swiss') ||
-      query.includes('சுவிஸ்') ||
-      query.includes('alps') ||
-      query.includes('ஆல்ப்ஸ்') ||
-      query.includes('kerala') ||
-      query.includes('கேரளா') ||
-      query.includes('tokyo') ||
-      query.includes('டோக்கியோ') ||
-      query.includes('kyoto') ||
-      query.includes('கியோட்டோ') ||
-      query.includes('japan') ||
-      query.includes('ஜப்பான்') ||
-      query.includes('santorini') ||
-      query.includes('சான்டோரினி') ||
-      query.includes('serengeti') ||
-      query.includes('செரெங்கேட்டி') ||
-      query.includes('best time') ||
-      query.includes('weather') ||
-      query.includes('destination') ||
-      query.includes('நேரம்') ||
-      query.includes('பருவம்') ||
-      query.includes('இடங்கள்') ||
-      query.includes('neram') ||
-      query.includes('kaalam') ||
-      query.includes('idangal') ||
-      query.includes('oor') ||
-      query.includes('pogalam')
-    ) {
-      const matchedDest = KNOWLEDGE_BASE.destinations.find((d) =>
-        query.includes(d.name.toLowerCase()) ||
-        query.includes(d.country.toLowerCase()) ||
-        (d.nameTa && query.includes(d.nameTa)) ||
-        (d.countryTa && query.includes(d.countryTa))
-      ) || KNOWLEDGE_BASE.destinations[0];
-
-      if (lang === 'ta') {
-        reply = `### 🌍 பயண வழிகாட்டி: ${matchedDest.nameTa || matchedDest.name} (${matchedDest.countryTa || matchedDest.country})\n\n` +
-          `**வகை (Category):** ${matchedDest.categoryTa || matchedDest.category}\n\n` +
-          `* ⛅ **செல்ல சிறந்த பருவம்:** ${matchedDest.bestTimeTa || matchedDest.bestTime}\n` +
-          `* ⏱️ **பரிந்துரைக்கப்பட்ட நாட்கள்:** ${matchedDest.idealDurationTa || matchedDest.idealDuration}\n` +
-          `* 💰 **மதிப்பிடப்பட்ட தினசரி பட்ஜெட்:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
-          `* 🌟 **முக்கிய சுற்றுலா இடங்கள்:** ${matchedDest.highlightsTa || matchedDest.highlights}\n\n` +
-          `உங்களுக்கு ${matchedDest.nameTa || matchedDest.name}-க்கான ஸ்மார்ட் பயண திட்டத்தை (AI Itinerary) உருவாக்கவா அல்லது பேக்கேஜ்களை பார்க்கவா?`;
-
-        suggestions.push(`${matchedDest.nameTa || matchedDest.name} பயண திட்டம் உருவாக்கு`, `${matchedDest.nameTa || matchedDest.name} பேக்கேஜ்களைப் பார்`, 'பட்ஜெட் கடற்கரை பயணங்கள்');
-        actionLinks.push({ label: `${matchedDest.nameTa || matchedDest.name} திட்டம் உருவாக்கு`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
-        actionLinks.push({ label: 'பேக்கேஜ்களைப் பார்', url: '/packages' });
-      } else if (lang === 'thanglish') {
-        reply = `### 🌍 Payana Vazhikaatti: ${matchedDest.name} (${matchedDest.country})\n\n` +
-          `**Category:** ${matchedDest.category}\n\n` +
-          `* ⛅ **Poga Best Time / Season:** ${matchedDest.bestTimeTh || matchedDest.bestTime}\n` +
-          `* ⏱️ **Thevaipadum Naatkal:** ${matchedDest.idealDurationTh || matchedDest.idealDuration}\n` +
-          `* 💰 **Daily Budget Estimation:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
-          `* 🌟 **Paarka Vendiya Mukkiya Idangal:** ${matchedDest.highlightsTh || matchedDest.highlights}\n\n` +
-          `Ungalukku ${matchedDest.name}-kku day-by-day smart itinerary ready panna kattalaam? Or packages paakka poringala?`;
-
-        suggestions.push(`${matchedDest.name} itinerary generate pannunga`, `${matchedDest.name} packages kaatunga`, 'Budget beach trips');
-        actionLinks.push({ label: `${matchedDest.name} Plan Panna`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
-        actionLinks.push({ label: 'Packages Paarkka', url: '/packages' });
-      } else {
-        reply = `### 🌍 Travel Guide: ${matchedDest.name} (${matchedDest.country})\n\n` +
-          `**Category:** ${matchedDest.category}\n\n` +
-          `* ⛅ **Best Time to Visit:** ${matchedDest.bestTime}\n` +
-          `* ⏱️ **Recommended Duration:** ${matchedDest.idealDuration}\n` +
-          `* 💰 **Estimated Daily Budget:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
-          `* 🌟 **Must-See Highlights:** ${matchedDest.highlights}\n\n` +
-          `Would you like to build a day-by-day smart itinerary or browse curated travel packages for ${matchedDest.name}?`;
-
-        suggestions.push(`Generate itinerary for ${matchedDest.name}`, `View packages for ${matchedDest.name}`, 'Compare budget beach trips');
-        actionLinks.push({ label: `Plan ${matchedDest.name} Trip`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
-        actionLinks.push({ label: 'Browse Packages', url: '/packages' });
-      }
-    }
-
-    // 4. Budget & Duration Planning Queries
-    else if (
-      query.includes('budget') ||
-      query.includes('cost') ||
-      query.includes('price') ||
-      query.includes('20000') ||
-      query.includes('20,000') ||
-      query.includes('duration') ||
-      query.includes('how many days') ||
-      query.includes('cheap') ||
-      query.includes('பட்ஜெட்') ||
-      query.includes('செலவு') ||
-      query.includes('நாட்கள்') ||
-      query.includes('குறைந்த') ||
-      query.includes('selavu') ||
-      query.includes('naatkal') ||
-      query.includes('kammi')
+      query.includes('transport') ||
+      query.includes('travel around') ||
+      query.includes('getting around') ||
+      query.includes('metro') ||
+      query.includes('bus') ||
+      query.includes('taxi') ||
+      query.includes('cab') ||
+      query.includes('train') ||
+      query.includes('scooter') ||
+      query.includes('car rental') ||
+      query.includes('போக்குவரத்து') ||
+      query.includes('போவது எப்படி') ||
+      query.includes('travel panna') ||
+      query.includes('transport epdi')
     ) {
       if (lang === 'ta') {
-        reply = `### 💡 AI பட்ஜெட் மற்றும் பயண கால வழிகாட்டி\n\n` +
-          `உங்கள் பட்ஜெட்டிற்கு ஏற்ற சிறந்த பரிந்துரைகள்:\n\n` +
-          `* **₹15,000 – ₹25,000 ($200 – $300):** **3 முதல் 5 நாட்களுக்கு** **கோவா**, **கேரளா உப்பங்கழிகள்**, அல்லது **மணாலி** மலைப்பகுதி மிகவும் சிறந்தது.\n` +
-          `* **₹50,000 – ₹90,000 ($600 – $1,100):** **6 முதல் 8 நாட்களுக்கு** **பாலி தீவு** அல்லது **அந்தமான் தீவுகள்** அருமையான தேர்வு.\n` +
-          `* **₹1,20,000+ ($1,500 – $3,500):** **பாரிஸ்**, **சுவிஸ் ஆல்ப்ஸ்**, அல்லது **டோக்கியோ** போன்ற வெளிநாட்டு பயணங்களுக்கு ஏற்றது.\n\n` +
-          `**AI பட்ஜெட் குறிப்பு:** தங்குமிடம் 40%, உணவு 30%, சுற்றுலா அனுபவங்கள் 20%, உள்ளூர் போக்குவரத்து 10%.`;
+        reply = `### 🚗 ${matchedDest.nameTa || matchedDest.name}-ல் போக்குவரத்து மற்றும் பயண வழிகாட்டி\n\n` +
+          `சுற்றுலா இடங்களை எளிதாக அடைய சிறந்த போக்குவரத்து வழிகள்:\n\n` +
+          `* 🚆 **பொதுப் போக்குவரத்து & மெட்ரோ:** ${matchedDest.transportTa || matchedDest.transport}\n` +
+          `* 🚕 **வாடகை வாகனங்கள் & டாக்சி:** உள்ளூர் டாக்சிகள், ஆப் அடிப்படையிலான வாகனங்கள் அல்லது ஸ்கூட்டர்கள்.\n` +
+          `* 💡 **பயண குறிப்பு:** தினசரி பயண பாஸ்களை வாங்குவது பயண கட்டணத்தை மிச்சப்படுத்தும்.`;
 
-        suggestions.push('₹20,000-ல் சிறந்த கடற்கரைகள்', '4 நாள் கோவா திட்டம்', 'சொகுசு பேக்கேஜ்கள்');
-        actionLinks.push({ label: 'AI பயணத் திட்டம் உருவாக்கு', url: '/trip-planner' });
-        actionLinks.push({ label: 'பிரத்யேக பரிந்துரைகள்', url: '/recommendations' });
+        suggestions.push(`${matchedDest.nameTa || matchedDest.name} தங்குமிடங்கள்`, 'பயண திட்டம் உருவாக்கு', 'உள்ளூர் உணவுகள்');
       } else if (lang === 'thanglish') {
-        reply = `### 💡 AI Budget & Trip Duration Guidance\n\n` +
-          `Unga budget-kku thagundha smart recommendations inge:\n\n` +
-          `* **₹15,000 – ₹25,000 ($200 – $300):** **3 to 5 days-kku** **Goa**, **Kerala Backwaters**, or **Manali** super choice.\n` +
-          `* **₹50,000 – ₹90,000 ($600 – $1,100):** **6 to 8 days-kku** **Bali Island** or **Andaman Islands** perfect plan.\n` +
-          `* **₹1,20,000+ ($1,500 – $3,500):** **Paris**, **Swiss Alps**, or **Tokyo** international trip-kku best.\n\n` +
-          `**AI Budget Tip:** Stay 40%, Saapaadu 30%, Activities 20%, Local travel 10% allocate pannunga.`;
+        reply = `### 🚗 Local Transportation & Commute in ${matchedDest.name}\n\n` +
+          `Attractions-ai explore panna best transport options:\n\n` +
+          `* 🚆 **Transit & Commute:** ${matchedDest.transportTh || matchedDest.transport}\n` +
+          `* 🚕 **Taxi / Rentals:** Local cabs, scooter rentals or metro passes convenient-ah irukkum.\n` +
+          `* 💡 **Pro-Tip:** Day travel pass eduthukitta expenses romba reduce aagum.`;
 
-        suggestions.push('₹20,000-la top beaches', '4 days Goa itinerary', 'Luxury packages kaatunga');
-        actionLinks.push({ label: 'AI Smart Itinerary Planner', url: '/trip-planner' });
-        actionLinks.push({ label: 'Personalized Suggestions', url: '/recommendations' });
+        suggestions.push(`${matchedDest.name} hotels pathi sollunga`, 'Full itinerary plan', 'Best places to visit');
       } else {
-        reply = `### 💡 AI Budget & Trip Duration Recommendations\n\n` +
-          `Here is our smart budget breakdown based on your query:\n\n` +
-          `* **₹15,000 – ₹25,000 ($200 – $300):** Ideal for **3 to 5 days** in **Goa**, **Kerala Backwaters**, or **Himalayan Manali**.\n` +
-          `* **₹50,000 – ₹90,000 ($600 – $1,100):** Perfect for **6 to 8 days** in **Bali Paradise Island** or **Andaman Islands**.\n` +
-          `* **₹1,20,000+ ($1,500 – $3,500):** Ideal for grand 7 to 10 day international vacations in **Paris**, **Swiss Alps**, or **Tokyo**.\n\n` +
-          `**AI Budget Tip:** Allocate ~40% for accommodation, 30% for food and dining, 20% for activities/entry passes, and 10% for local transport.`;
+        reply = `### 🚗 Getting Around & Local Transportation in ${matchedDest.name}\n\n` +
+          `Here is the best way to navigate and commute in **${matchedDest.name}**:\n\n` +
+          `* 🚆 **Public Transit & Rail Network:** ${matchedDest.transport}\n` +
+          `* 🚕 **Taxis & Ride-Hailing:** Dedicated ride apps and licensed airport shuttles provide direct connectivity.\n` +
+          `* 💡 **Pro-Tip:** Multi-day transit passes (e.g. Navigo in Paris, JR Pass in Japan, Swiss Travel Pass in Switzerland) offer unlimited rides and major savings.`;
 
-        suggestions.push('Top beach destinations for ₹20,000', 'Generate 4-day Goa itinerary', 'Show luxury packages');
-        actionLinks.push({ label: 'AI Smart Itinerary Planner', url: '/trip-planner' });
-        actionLinks.push({ label: 'Personalized Recommendations', url: '/recommendations' });
+        suggestions.push(`Top hotels in ${matchedDest.name}`, `What to eat in ${matchedDest.name}?`, `Plan complete trip`);
       }
+      actionLinks.push({ label: `Plan ${matchedDest.name} Trip`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
     }
 
-    // 5. Activities & Adventure Queries
+    // Intent E: Activities, Watersports & Adventure Experiences
     else if (
       query.includes('activit') ||
       query.includes('scuba') ||
@@ -645,6 +659,7 @@ const chatbotService = {
       query.includes('trek') ||
       query.includes('safari') ||
       query.includes('watersport') ||
+      query.includes('adventure') ||
       query.includes('சாகசம்') ||
       query.includes('ஸ்கூபா') ||
       query.includes('ட்ரெக்கிங்') ||
@@ -655,9 +670,9 @@ const chatbotService = {
       if (lang === 'ta') {
         reply = `### 🧗 சிறந்த சாகசங்கள் மற்றும் சுற்றுலா அனுபவங்கள்\n\n` +
           `டிராவலோராவின் சிறந்த சாகச அனுபவங்கள்:\n\n` +
-          `* 🌊 **நீர் விளையாட்டுகள் & ஸ்கூபா டைவிங்:** ஹேவ்லாக் தீவு (அந்தமான்), கலங்குட் கடற்கரை (கோவா), பாலி தீவு.\n` +
-          `* 🏔️ **பனிச்சறுக்கு & மலையேற்றம்:** சுவிஸ் ஆல்ப்ஸ் மேட்டர்ஹார்ன், சோலாங் பள்ளத்தாக்கு (மணாலி).\n` +
-          `* 🦁 **வனவிலங்கு சஃபாரி:** செரெங்கேட்டி பிக் 5 சஃபாரி & ஹாட் ஏர் பலூன் (தான்சானியா).\n` +
+          `* 🌊 **நீர் விளையாட்டுகள் & ஸ்கூபா டைவிங் (Watersports & Scuba):** ஹேவ்லாக் தீவு (அந்தமான்), கலங்குட் கடற்கரை (கோவா), பாலி தீவு.\n` +
+          `* 🏔️ **பனிச்சறுக்கு & மலையேற்றம் (Skiing & Trekking):** சுவிஸ் ஆல்ப்ஸ் மேட்டர்ஹார்ன், சோலாங் பள்ளத்தாக்கு (மணாலி).\n` +
+          `* 🦁 **வனவிலங்கு சஃபாரி (Wildlife Safari):** செரெங்கேட்டி பிக் 5 சஃபாரி & ஹாட் ஏர் பலூன் (தான்சானியா).\n` +
           `* 🏛️ **கலை & கலாச்சாரம்:** பாரிஸ் லூவர் அருங்காட்சியகம், கியோட்டோ பாரம்பரிய தேநீர் சடங்கு.\n` +
           `* 🧘 **ஆயுர்வேத ஸ்பா & நல்வாழ்வு:** கேரள பாரம்பரிய ஆயுர்வேத மசாஜ், பாலி யோகா பயிற்சி.`;
 
@@ -688,42 +703,133 @@ const chatbotService = {
       }
     }
 
-    // 6. Generic Friendly AI Travel Assistance
+    // Intent F: Full Trip Itinerary Generation (e.g. "Plan a 4-day Goa trip")
+    else if (
+      query.includes('plan') ||
+      query.includes('itinerary') ||
+      query.includes('trip') ||
+      query.includes('திட்டமிடு') ||
+      query.includes('திட்டம்')
+    ) {
+      const daysCount = context.activeDays || 4;
+      const budgetFormatted = context.activeBudget ? `₹${context.activeBudget.toLocaleString()}` : matchedDest.dailyCostINR;
+
+      if (lang === 'ta') {
+        reply = `### ✈️ ${matchedDest.nameTa || matchedDest.name} ${daysCount}-நாள் ஸ்மார்ட் பயணத் திட்டம்\n\n` +
+          `உங்கள் விருப்பத்திற்கு ஏற்ப உருவாக்கப்பட்ட விரிவான திட்டம் (பட்ஜெட்: ${budgetFormatted}):\n\n` +
+          matchedDest.daysPlan.slice(0, daysCount).map((d) => `* **நாள் ${d.day} (${d.title}):** ${d.plan}`).join('\n') +
+          `\n\n* **பயண குறிப்பு:** ${matchedDest.transport || 'உள்ளூர் வாடகை வாகனங்கள் மூலம் எளிதாக பயணிக்கலாம்.'}\n\n` +
+          `குறிப்பிட்ட நாள் (எ.கா. *"இரண்டாம் நாள் பற்றி சொல்லுங்கள்"*) அல்லது தங்குமிடம் பற்றி மேலும் கேட்கலாம்!`;
+
+        suggestions.push('இரண்டாம் நாளில் என்ன செய்யலாம்?', 'தங்குமிடம் எங்கு சிறந்தது?', 'பேக்கேஜ் முன்பதிவு செய்வது எப்படி?');
+      } else if (lang === 'thanglish') {
+        reply = `### ✈️ ${matchedDest.name} ${daysCount}-Day Smart Travel Plan\n\n` +
+          `Unga request-kku thagundha customized itinerary (Budget: ${budgetFormatted}):\n\n` +
+          matchedDest.daysPlan.slice(0, daysCount).map((d) => `* **Day ${d.day} (${d.title}):** ${d.plan}`).join('\n') +
+          `\n\n* **Travel Advice:** ${matchedDest.transportTh || matchedDest.transport}\n\n` +
+          `Specific day pathi (e.g. *"What about the second day?"*) or hotels pathi keka related questions kelunga!`;
+
+        suggestions.push('What about the second day?', `${matchedDest.name} hotels pathi sollunga`, 'Food items enna iruku?');
+      } else {
+        reply = `### ✈️ ${matchedDest.name} ${daysCount}-Day Smart Itinerary\n\n` +
+          `Here is your personalized itinerary tailored for **${daysCount} days** in **${matchedDest.name}** (Budget: ${budgetFormatted}):\n\n` +
+          matchedDest.daysPlan.slice(0, daysCount).map((d) => `* **Day ${d.day} — ${d.title}:** ${d.plan}`).join('\n') +
+          `\n\n* 🚗 **Local Transportation:** ${matchedDest.transport}\n\n` +
+          `You can ask me to dive deeper into any specific day (e.g. *"What about the second day?"*), recommended stays, or local culinary spots!`;
+
+        suggestions.push('What about the second day?', `Top hotels in ${matchedDest.name}`, `What is the best time to visit?`);
+      }
+
+      actionLinks.push({ label: `Save to My Trips`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+    }
+
+    // Intent E: Packages & Deals Inquiry
+    else if (
+      query.includes('package') ||
+      query.includes('deal') ||
+      query.includes('inclusion') ||
+      query.includes('விலை') ||
+      query.includes('பேக்கேஜ்') ||
+      query.includes('vilai')
+    ) {
+      const matchedPkg = KNOWLEDGE_BASE.packages.find((p) =>
+        query.includes('swiss') && p.title.includes('Swiss') ||
+        query.includes('சுவிஸ்') && p.title.includes('Swiss') ||
+        query.includes('paris') && p.title.includes('Paris') ||
+        query.includes('பாரிஸ்') && p.title.includes('Paris') ||
+        query.includes('bali') && p.title.includes('Bali') ||
+        query.includes('பாலி') && p.title.includes('Bali')
+      ) || KNOWLEDGE_BASE.packages[0];
+
+      if (lang === 'ta') {
+        reply = `### 📦 பிரத்யேக சுற்றுலா பேக்கேஜ்: ${matchedPkg.titleTa || matchedPkg.title}\n\n` +
+          `* 💵 **கட்டணம்:** **${matchedPkg.price}** (ஒரு நபருக்கு)\n` +
+          `* ⏳ **கால அளவு:** ${matchedPkg.durationTa || matchedPkg.duration}\n` +
+          `* 🏷️ **பயண பாணி:** ${matchedPkg.type}\n\n` +
+          `#### ✅ பேக்கேஜில் உள்ளடங்கியவை (Inclusions):\n${matchedPkg.inclusions}\n\n` +
+          `#### ❌ பேக்கேஜில் இல்லாதவை (Exclusions):\n${matchedPkg.exclusions}\n\n` +
+          `*உடனடி உறுதிப்படுத்தல் மற்றும் 48 மணி நேர இலவச ரத்துசெய்தல் வசதியுடன்.*`;
+
+        suggestions.push('இந்த பேக்கேஜை எப்படி பதிவு செய்வது?', 'அனைத்து பேக்கேஜ்களையும் காட்டு', 'ரத்து விதிகள் என்ன?');
+      } else if (lang === 'thanglish') {
+        reply = `### 📦 Curated Package: ${matchedPkg.title}\n\n` +
+          `* 💵 **Price:** **${matchedPkg.price}** per traveler\n` +
+          `* ⏳ **Duration:** ${matchedPkg.duration}\n` +
+          `* 🏷️ **Travel Style:** ${matchedPkg.type}\n\n` +
+          `#### ✅ Package-la Enna Ellam Serndhirukku (Inclusions):\n${matchedPkg.inclusions}\n\n` +
+          `#### ❌ Package-la Illaadhavai (Exclusions):\n${matchedPkg.exclusions}\n\n` +
+          `*Instant confirmation matrum 48-hour free cancellation policy irukku.*`;
+
+        suggestions.push('Idha epdi book panradhu?', 'Ella packages-um kaatunga', 'Cancellation policy enna?');
+      } else {
+        reply = `### 📦 Curated Package: ${matchedPkg.title}\n\n` +
+          `* 💵 **Price:** **${matchedPkg.price}** per traveler\n` +
+          `* ⏳ **Duration:** ${matchedPkg.duration}\n` +
+          `* 🏷️ **Travel Style:** ${matchedPkg.type}\n\n` +
+          `#### ✅ Included in Package:\n${matchedPkg.inclusions}\n\n` +
+          `#### ❌ Excluded:\n${matchedPkg.exclusions}\n\n` +
+          `*Includes instant booking confirmation & 48-hour free cancellation.*`;
+
+        suggestions.push('How do I book this package?', 'Show all available packages', 'What is the cancellation policy?');
+      }
+
+      actionLinks.push({ label: 'View Package Details', url: matchedPkg.link });
+      actionLinks.push({ label: 'Instant Booking', url: '/booking?packageId=1' });
+    }
+
+    // Intent F: General Travel Destination & Weather Guide
     else {
       if (lang === 'ta') {
-        reply = `### 👋 வணக்கம்! நான் டிராவலோராவின் AI பயண உதவியாளர்.\n\n` +
-          `உங்கள் பயண திட்டமிடலில் உதவ நான் 24/7 தயாராக உள்ளேன்! நீங்கள் என்னிடம் கேட்கக்கூடியவை:\n\n` +
-          `* 🏖️ *"₹20,000 பட்ஜெட்டில் 4 நாட்களுக்கு செல்ல சிறந்த கடற்கரை எது?"*\n` +
-          `* 📦 *"சுவிஸ் ஆல்ப்ஸ் மற்றும் பாரிஸ் பேக்கேஜ் கட்டண விவரங்கள் சொல்லுங்கள்."*\n` +
-          `* ⛅ *"பாலி அல்லது டோக்கியோ செல்ல ஆண்டின் சிறந்த பருவம் எது?"*\n` +
-          `* 📋 *"முன்பதிவு ரத்து செய்தால் பணம் திரும்ப கிடைக்குமா?"*\n` +
-          `* 🧭 *"எனக்கு 5 நாள் பயண திட்டம் ஒன்றை உருவாக்கித் தாருங்கள்."*`;
+        reply = `### 🌍 பயண வழிகாட்டி: ${matchedDest.nameTa || matchedDest.name} (${matchedDest.countryTa || matchedDest.country})\n\n` +
+          `* ⛅ **செல்ல சிறந்த பருவம்:** ${matchedDest.bestTimeTa || matchedDest.bestTime}\n` +
+          `* ⏱️ **பரிந்துரைக்கப்பட்ட நாட்கள்:** ${matchedDest.idealDurationTa || matchedDest.idealDuration}\n` +
+          `* 💰 **மதிப்பிடப்பட்ட தினசரி பட்ஜெட்:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
+          `* 🌟 **முக்கிய சுற்றுலா இடங்கள்:** ${matchedDest.highlightsTa || matchedDest.highlights}\n\n` +
+          `உங்களுக்கு ${matchedDest.nameTa || matchedDest.name}-க்கான நாள் வாரியான பயணத் திட்டத்தை (Smart Itinerary) உருவாக்கவா?`;
 
-        suggestions.push('சிறந்த 3 கடற்கரைகள்', 'சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ்', 'முன்பதிவு ரத்து விதிகள்');
-        actionLinks.push({ label: 'AI பரிந்துரைகள்', url: '/recommendations' });
+        suggestions.push(`${matchedDest.nameTa || matchedDest.name} பயண திட்டம் உருவாக்கு`, `${matchedDest.nameTa || matchedDest.name} தங்குமிடம் எங்கு சிறந்தது?`, 'பட்ஜெட் கடற்கரை பயணங்கள்');
       } else if (lang === 'thanglish') {
-        reply = `### 👋 Vanakkam! Naan ungaloda Travelora AI Travel Assistant.\n\n` +
-          `Unga vacation planning-ku 24/7 help panna ready! Neenga enkitta keka koodiyavai:\n\n` +
-          `* 🏖️ *"₹20,000 budget-la 4 days stay panna nalla beach enga irukku?"*\n` +
-          `* 📦 *"Swiss Alps matrum Paris package details sollunga."*\n` +
-          `* ⛅ *"Bali poga best season / time enna?"*\n` +
-          `* 📋 *"Booking cancel panna full refund kedaikkuma?"*\n` +
-          `* 🧭 *"5 days trip-kku smart itinerary create pannunga."*`;
+        reply = `### 🌍 Payana Vazhikaatti: ${matchedDest.name} (${matchedDest.country})\n\n` +
+          `* ⛅ **Poga Best Time / Season:** ${matchedDest.bestTimeTh || matchedDest.bestTime}\n` +
+          `* ⏱️ **Thevaipadum Naatkal:** ${matchedDest.idealDurationTh || matchedDest.idealDuration}\n` +
+          `* 💰 **Daily Budget Estimation:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
+          `* 🌟 **Paarka Vendiya Mukkiya Idangal:** ${matchedDest.highlightsTh || matchedDest.highlights}\n\n` +
+          `Ungalukku ${matchedDest.name}-kku day-by-day smart itinerary ready panna kattalaam?`;
 
-        suggestions.push('Top 3 budget beach trips', 'Swiss Alps package details', 'Cancellation policy enna?');
-        actionLinks.push({ label: 'AI Suggestions Paarkka', url: '/recommendations' });
+        suggestions.push(`${matchedDest.name} itinerary generate pannunga`, `${matchedDest.name} hotels pathi sollunga`, 'Budget beach trips');
       } else {
-        reply = `### 👋 How Can I Help Your Travel Journey?\n\n` +
-          `I am your 24/7 AI Travel Assistant! Here are some things you can ask me:\n\n` +
-          `* 🏖️ *"What is the best beach destination for 4 days with a ₹20,000 budget?"*\n` +
-          `* 📦 *"Tell me about the Swiss Alps and Paris packages and pricing."*\n` +
-          `* ⛅ *"What is the best time of year to visit Bali or Tokyo?"*\n` +
-          `* 📋 *"What is Travelora's cancellation and refund policy?"*\n` +
-          `* 🧭 *"Generate a personalized 5-day itinerary."*`;
+        reply = `### 🌍 Travel Guide: ${matchedDest.name} (${matchedDest.country})\n\n` +
+          `* ⛅ **Best Time to Visit:** ${matchedDest.bestTime}\n` +
+          `* ⏱️ **Recommended Duration:** ${matchedDest.idealDuration}\n` +
+          `* 💰 **Estimated Daily Budget:** ${matchedDest.dailyCostINR} (${matchedDest.dailyCostUSD})\n` +
+          `* 🌟 **Must-See Highlights:** ${matchedDest.highlights}\n\n` +
+          `Would you like to build a day-by-day smart itinerary, explore top hotels, or browse curated travel packages for ${matchedDest.name}?`;
 
-        suggestions.push('Top 3 beach destinations', 'Swiss Alps package details', 'Booking cancellation policy');
-        actionLinks.push({ label: 'AI Suggestions', url: '/recommendations' });
+        suggestions.push(`Plan a ${context.activeDays || 4}-day ${matchedDest.name} trip`, `Top hotels in ${matchedDest.name}`, `What to eat in ${matchedDest.name}?`);
       }
+
+      actionLinks.push({ label: `Plan ${matchedDest.name} Trip`, url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+      actionLinks.push({ label: 'Browse Packages', url: '/packages' });
     }
 
     this.recordMessage(sessionId, rawQuery, reply);
@@ -733,6 +839,11 @@ const chatbotService = {
       suggestions,
       actionLinks,
       language: lang,
+      context: {
+        destination: matchedDest.name,
+        days: context.activeDays,
+        budget: context.activeBudget,
+      },
       timestamp: new Date().toISOString(),
     };
   },
@@ -753,9 +864,8 @@ const chatbotService = {
       timestamp: new Date().toISOString(),
     });
 
-    // Keep last 20 messages per session
-    if (history.length > 20) {
-      history = history.slice(history.length - 20);
+    if (history.length > 30) {
+      history = history.slice(history.length - 30);
     }
     sessionHistories.set(sessionId, history);
   },
@@ -768,11 +878,11 @@ const chatbotService = {
   },
 
   /**
-   * Clear history for a session
+   * Clear history and context for a session
    */
   clearHistory(sessionId = 'default') {
     sessionHistories.delete(sessionId);
-    sessionLanguages.delete(sessionId);
+    sessionContexts.delete(sessionId);
     return true;
   },
 };

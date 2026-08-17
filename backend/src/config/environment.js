@@ -20,6 +20,10 @@ const environment = {
     name: process.env.DB_NAME || 'travel_booking_db',
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT, 10) || 10,
   },
+  ai: {
+    geminiApiKey: process.env.GEMINI_API_KEY || '',
+    openaiApiKey: process.env.OPENAI_API_KEY || '',
+  },
 };
 
 module.exports = environment;
