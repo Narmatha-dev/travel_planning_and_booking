@@ -2,24 +2,33 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import chatbotService from '../services/chatbotService';
 
-const INITIAL_PROMPTS = [
-  '🏖️ Best beach for ₹20,000?',
-  '📦 Swiss Alps package details',
-  '⛅ Best time to visit Bali?',
-  '📋 What is your cancellation policy?',
-  '🦁 Tell me about Serengeti safari',
+const MULTILINGUAL_STARTER_PROMPTS = [
+  { label: '🏖️ Best beach for ₹20,000?', text: 'What is the best beach destination for 4 days with ₹20,000 budget?' },
+  { label: '📦 Swiss Alps package', text: 'Tell me about the Swiss Alps package price and inclusions' },
+  { label: '🏖️ ₹20,000-ல் சிறந்த கடற்கரை (தமிழ்)', text: '₹20,000 பட்ஜெட்டில் 4 நாட்கள் செல்ல சிறந்த கடற்கரை எது?' },
+  { label: '📦 சுவிஸ் பேக்கேஜ் (தமிழ்)', text: 'சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ் விலை மற்றும் விவரங்கள் சொல்லுங்கள்' },
+  { label: '🏖️ 20000 budget beach (Thanglish)', text: 'Goa 4 days stay panna 20000 budget podhuma?' },
+  { label: '📦 Swiss package evlo (Thanglish)', text: 'Swiss Alps package details and vilai sollunga' },
+  { label: '📋 Cancellation & Refund Rules', text: 'What is Travelora cancellation and refund policy?' },
 ];
 
 export default function ChatbotWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [currentLang, setCurrentLang] = useState('en');
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content:
-        '👋 Hi there! I am **Travelora AI**, your personal 24/7 travel assistant.\n\nAsk me about destinations, curated packages, budget planning, activity recommendations, or booking policies!',
-      suggestions: ['🏖️ Best beach for ₹20,000', '📦 Swiss Alps package details', '📋 Cancellation policy'],
+        '👋 **Hello / வணக்கம்!**\n\nI am **Travelora AI**, your personal multilingual 24/7 travel assistant.\n\nAsk me in **English**, **தமிழ் (Tamil)**, or **Thanglish** about destinations, curated packages, budget planning, activity recommendations, or booking policies!',
+      suggestions: [
+        '🏖️ Best beach for ₹20,000',
+        '📦 சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ்',
+        '🏖️ Goa-ku 20000 budget podhuma?',
+        '📋 Cancellation policy',
+      ],
+      language: 'en',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -56,18 +65,26 @@ export default function ChatbotWidget() {
 
     try {
       const response = await chatbotService.sendMessage(text);
+      if (response.language) {
+        setCurrentLang(response.language);
+      }
       const botMsg = {
         role: 'assistant',
         content: response.reply,
         suggestions: response.suggestions || [],
         actionLinks: response.actionLinks || [],
+        language: response.language || 'en',
         timestamp: response.timestamp || new Date().toISOString(),
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
       const errorMsg = {
         role: 'assistant',
-        content: '⚠️ I encountered a temporary connection issue. Please try asking again!',
+        content: currentLang === 'ta'
+          ? '⚠️ இணைப்பில் தற்காலிக சிக்கல் ஏற்பட்டுள்ளது. தயவுசெய்து மீண்டும் கேட்கவும்!'
+          : currentLang === 'thanglish'
+          ? '⚠️ Connection-la temporary problem aachu. Please marubadiyum try pannunga!'
+          : '⚠️ I encountered a temporary connection issue. Please try asking again!',
         suggestions: ['Best beach for ₹20,000', 'Swiss Alps package'],
         timestamp: new Date().toISOString(),
       };
@@ -80,11 +97,16 @@ export default function ChatbotWidget() {
   const handleClearHistory = async () => {
     try {
       await chatbotService.clearHistory();
+      setCurrentLang('en');
       setMessages([
         {
           role: 'assistant',
-          content: '✨ Chat history reset! How can I assist your travel planning today?',
-          suggestions: INITIAL_PROMPTS.slice(0, 3),
+          content: '✨ Chat history reset! / உரையாடல் வரலாறு மீட்டமைக்கப்பட்டது!\n\nHow can I assist your travel planning today? (English | தமிழ் | Thanglish)',
+          suggestions: [
+            '🏖️ Best beach for ₹20,000',
+            '📦 சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ்',
+            '🏖️ Goa-ku 20000 budget podhuma?',
+          ],
           timestamp: new Date().toISOString(),
         },
       ]);
@@ -95,8 +117,6 @@ export default function ChatbotWidget() {
   const renderFormattedContent = (content) => {
     const lines = content.split('\n');
     return lines.map((line, idx) => {
-      let formattedLine = line;
-
       // Headers
       if (line.startsWith('### ')) {
         return (
@@ -147,6 +167,12 @@ export default function ChatbotWidget() {
     });
   };
 
+  const getLanguageLabel = () => {
+    if (currentLang === 'ta') return '🇮🇳 தமிழ் (Tamil)';
+    if (currentLang === 'thanglish') return '🇮🇳 Thanglish';
+    return '🌐 English';
+  };
+
   return (
     <>
       {/* Floating Trigger Pill */}
@@ -179,6 +205,17 @@ export default function ChatbotWidget() {
           <span>AI Travel Assistant</span>
           <span
             style={{
+              background: 'rgba(255,255,255,0.25)',
+              padding: '2px 6px',
+              borderRadius: '6px',
+              fontSize: '0.7rem',
+              fontWeight: '800',
+            }}
+          >
+            EN | தமிழ்
+          </span>
+          <span
+            style={{
               width: '8px',
               height: '8px',
               borderRadius: '50%',
@@ -196,9 +233,9 @@ export default function ChatbotWidget() {
             position: 'fixed',
             bottom: '24px',
             right: '24px',
-            width: '380px',
+            width: '400px',
             maxWidth: 'calc(100vw - 32px)',
-            height: '560px',
+            height: '580px',
             maxHeight: 'calc(100vh - 48px)',
             background: '#ffffff',
             borderRadius: '20px',
@@ -226,31 +263,37 @@ export default function ChatbotWidget() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
               <div
                 style={{
-                  width: '36px',
-                  height: '36px',
+                  width: '38px',
+                  height: '38px',
                   borderRadius: '50%',
                   background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.1rem',
+                  fontSize: '1.15rem',
                 }}
               >
                 🤖
               </div>
               <div>
-                <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span>Travelora AI</span>
                   <span
                     style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '50%',
-                      background: '#22c55e',
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontSize: '0.68rem',
+                      fontWeight: '700',
                     }}
-                  />
+                  >
+                    {getLanguageLabel()}
+                  </span>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>24/7 Smart Travel Companion</div>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  Multilingual 24/7 Smart Travel Companion
+                </div>
               </div>
             </div>
 
@@ -286,6 +329,40 @@ export default function ChatbotWidget() {
                 ✕
               </button>
             </div>
+          </div>
+
+          {/* Quick Multilingual Starter Bar */}
+          <div
+            style={{
+              padding: '0.5rem 0.75rem',
+              background: '#f1f5f9',
+              borderBottom: '1px solid #e2e8f0',
+              display: 'flex',
+              gap: '0.35rem',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+              fontSize: '0.72rem',
+            }}
+          >
+            {MULTILINGUAL_STARTER_PROMPTS.map((p, pIdx) => (
+              <button
+                key={pIdx}
+                type="button"
+                onClick={() => handleSendMessage(p.text)}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  borderRadius: '9999px',
+                  padding: '2px 8px',
+                  fontSize: '0.72rem',
+                  color: '#0369a1',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
 
           {/* Messages Stream */}
@@ -384,7 +461,9 @@ export default function ChatbotWidget() {
             {/* Typing Loader Indicator */}
             {loading && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', border: '1px solid #e2e8f0', padding: '0.6rem 0.85rem', borderRadius: '16px 16px 16px 4px', width: 'fit-content' }}>
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>Travelora AI is thinking</span>
+                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
+                  {currentLang === 'ta' ? 'டிராவலோரா சிந்திக்கிறது...' : currentLang === 'thanglish' ? 'Travelora yosikkudhu...' : 'Travelora AI is thinking...'}
+                </span>
                 <span style={{ display: 'inline-flex', gap: '2px' }}>
                   <span style={{ animation: 'bounce 0.8s infinite 0.1s' }}>•</span>
                   <span style={{ animation: 'bounce 0.8s infinite 0.2s' }}>•</span>
@@ -414,7 +493,13 @@ export default function ChatbotWidget() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Ask about destinations, budget, packages..."
+              placeholder={
+                currentLang === 'ta'
+                  ? 'சுற்றுலா, பட்ஜெட், பேக்கேஜ் பற்றி தமிழில் கேட்கலாம்...'
+                  : currentLang === 'thanglish'
+                  ? 'Ask in English / Tamil / Thanglish...'
+                  : 'Ask about destinations, budget, packages (English / தமிழ்)...'
+              }
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               disabled={loading}
