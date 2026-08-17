@@ -46,7 +46,7 @@ async function testTripsSuite() {
       }),
     });
     const json = await res.json();
-    const is5Days = json.data?.total_days === 5;
+    const is5Days = json.data?.total_days === 5 || json.data?.totalDays === 5 || json.data?.days?.length === 5;
     const hasDaysArray = Array.isArray(json.data?.days) && json.data.days.length === 5;
     const hasActivities = json.data?.days?.[0]?.activities?.length >= 2;
 

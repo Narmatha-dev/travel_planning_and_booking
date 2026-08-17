@@ -21,7 +21,16 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// 2. Request Parsing Middleware
+// 2. HTTP Security Headers
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  next();
+});
+
+// 3. Request Parsing Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -136,8 +136,8 @@ const tripService = {
         tripType: tripType || 'solo',
         interests: interests || ['sightseeing', 'dining', 'culture'],
       });
-      finalItineraries = generated.itinerary_items;
-      finalEstimatedCost = generated.estimated_cost;
+      finalItineraries = generated.itineraryItems || generated.itinerary_items || (generated.days ? generated.days.flatMap((d) => d.activities || []) : []);
+      finalEstimatedCost = generated.estimated_cost || generated.totalBudget || totalBudget || 0;
     }
 
     return tripModel.createTripWithItineraries(

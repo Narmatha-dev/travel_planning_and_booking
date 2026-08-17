@@ -19,7 +19,9 @@
     "test:recommendations": "node scripts/testRecommendations.js",
     "test:itinerary": "node scripts/testAiItinerary.js",
     "test:chatbot": "node scripts/testChatbot.js",
-    "test:admin": "node scripts/testAdmin.js"
+    "test:admin": "node scripts/testAdmin.js",
+    "test:all": "node scripts/runAllTests.js",
+    "test": "node scripts/runAllTests.js"
   },
   "keywords": [
     "travel",
