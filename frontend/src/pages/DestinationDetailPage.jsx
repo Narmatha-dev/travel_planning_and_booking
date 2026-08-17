@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import destinationService from '../services/destinationService';
+import ReviewsSection from '../components/ReviewsSection';
 
 export default function DestinationDetailPage() {
   const { id } = useParams();
@@ -346,6 +347,9 @@ export default function DestinationDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Verified Reviews Section */}
+        <ReviewsSection destinationId={destination.id} title={destination.name} />
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import packageService from '../services/packageService';
+import ReviewsSection from '../components/ReviewsSection';
 
 const packageTypeColors = {
   standard: { bg: '#e0f2fe', color: '#0369a1', label: 'Standard Package' },
@@ -537,6 +538,9 @@ export default function PackageDetailPage() {
             </div>
           </aside>
         </div>
+
+        {/* Verified Reviews Section */}
+        <ReviewsSection packageId={pkg.id} destinationId={pkg.destination_id} title={pkg.title} />
       </div>
     </section>
   );
