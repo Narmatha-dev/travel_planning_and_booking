@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import packageService from '../services/packageService';
 import bookingService from '../services/bookingService';
+import paymentService from '../services/paymentService';
 
 const STEPS = [
   { step: 1, label: 'Select Package', icon: '📦' },
@@ -35,6 +36,7 @@ export default function BookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [paymentFailureError, setPaymentFailureError] = useState('');
 
   // Booking Form State
   const [formData, setFormData] = useState({
@@ -45,17 +47,19 @@ export default function BookingPage() {
     phoneNumber: user?.phone_number || '+1-555-0199',
     specialRequests: '',
     paymentMethod: 'credit_card',
-    cardNumber: '•••• •••• •••• 4242',
+    cardNumber: '4242 •••• •••• 4242',
     cardExpiry: '12/28',
     cardCvv: '•••',
     promoCode: '',
     promoDiscount: 0,
+    simulateFailure: false,
   });
 
-  // Confirmed booking state
+  // Confirmed booking & payment state
   const [confirmedBooking, setConfirmedBooking] = useState(null);
+  const [confirmedPayment, setConfirmedPayment] = useState(null);
 
-  // Load all available packages and preselect if query param provided
+  // Load packages
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -83,7 +87,7 @@ export default function BookingPage() {
     loadData();
   }, [queryPackageId]);
 
-  // Update user details if user state loads late
+  // Update user profile fields if loaded
   useEffect(() => {
     if (user) {
       setFormData((prev) => ({
@@ -114,9 +118,10 @@ export default function BookingPage() {
   })();
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     setError('');
+    setPaymentFailureError('');
   };
 
   const handleTravelersChange = (delta) => {
@@ -138,6 +143,7 @@ export default function BookingPage() {
 
   const validateStep = (step) => {
     setError('');
+    setPaymentFailureError('');
     if (step === 1) {
       if (!selectedPackage) {
         setError('Please select a travel package to continue');
@@ -181,6 +187,7 @@ export default function BookingPage() {
 
   const handlePrevStep = () => {
     setError('');
+    setPaymentFailureError('');
     setCurrentStep((prev) => Math.max(1, prev - 1));
     window.scrollTo(0, 0);
   };
@@ -188,9 +195,11 @@ export default function BookingPage() {
   const handleConfirmAndPay = async () => {
     setSubmitting(true);
     setError('');
+    setPaymentFailureError('');
 
     try {
-      const payload = {
+      // 1. Create booking reservation
+      const bookingPayload = {
         userId: user?.id || 3,
         packageId: selectedPackage?.id || 1,
         destinationId: selectedPackage?.destination_id || 1,
@@ -209,12 +218,37 @@ export default function BookingPage() {
         paymentGateway: formData.paymentMethod === 'paypal' ? 'PayPal' : 'Stripe',
       };
 
-      const result = await bookingService.createBooking(payload);
-      setConfirmedBooking(result);
+      const bookingResult = await bookingService.createBooking(bookingPayload);
+
+      // 2. Process payment transaction via paymentService
+      const paymentPayload = {
+        bookingId: bookingResult.id,
+        userId: user?.id || 3,
+        amount: finalTotal,
+        currency: 'USD',
+        paymentMethod: formData.paymentMethod,
+        paymentGateway: formData.paymentMethod === 'paypal' ? 'PayPal' : 'Stripe',
+        simulateFailure: Boolean(formData.simulateFailure),
+        cardBrand: 'Visa',
+        cardLast4: formData.cardNumber.replace(/\D/g, '').slice(-4) || '4242',
+        destinationName: selectedPackage?.destination_name,
+        packageTitle: selectedPackage?.title,
+      };
+
+      const paymentResult = await paymentService.processPayment(paymentPayload);
+
+      setConfirmedBooking(bookingResult);
+      setConfirmedPayment(paymentResult);
       setCurrentStep(6);
       window.scrollTo(0, 0);
     } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Payment processing failed. Please verify your details.');
+      if (err.response?.status === 402 || formData.simulateFailure) {
+        setPaymentFailureError(
+          '❌ Payment Authorization Declined: The transaction was declined by the issuer (Simulated Failure). No charge was made. Please verify your details, select another payment method, or uncheck failure simulation to retry.'
+        );
+      } else {
+        setError(err.response?.data?.message || err.message || 'Payment processing failed. Please verify your details.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -346,6 +380,28 @@ export default function BookingPage() {
           >
             <span>⚠️</span>
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Payment Failure / Decline Banner */}
+        {paymentFailureError && (
+          <div
+            style={{
+              background: '#fff1f2',
+              color: '#9f1239',
+              border: '1px solid #fecdd3',
+              padding: '1.25rem',
+              borderRadius: '12px',
+              marginBottom: '2rem',
+              fontSize: '0.95rem',
+              lineHeight: '1.5',
+              boxShadow: '0 4px 12px rgba(225, 29, 72, 0.08)',
+            }}
+          >
+            <div style={{ fontWeight: '800', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>🛑</span> Payment Declined
+            </div>
+            <div>{paymentFailureError}</div>
           </div>
         )}
 
@@ -750,13 +806,13 @@ export default function BookingPage() {
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* STEP 5: PAYMENT                                      */}
+        {/* STEP 5: PAYMENT (SAFE MOCK SIMULATION)               */}
         {/* ---------------------------------------------------- */}
         {currentStep === 5 && (
           <div style={{ background: '#ffffff', borderRadius: '20px', padding: '2.5rem', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)' }}>
             <span className="eyebrow">Step 5 of 5</span>
             <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: '0.35rem 0 0.5rem 0' }}>
-              Select Payment Method
+              Authorize Payment
             </h2>
             <p style={{ color: '#64748b', marginBottom: '2rem' }}>
               Total to charge: <strong style={{ color: '#0284c7', fontSize: '1.15rem' }}>${finalTotal.toLocaleString()} USD</strong>
@@ -769,7 +825,10 @@ export default function BookingPage() {
                 return (
                   <div
                     key={method.id}
-                    onClick={() => setFormData((prev) => ({ ...prev, paymentMethod: method.id }))}
+                    onClick={() => {
+                      setFormData((prev) => ({ ...prev, paymentMethod: method.id }));
+                      setPaymentFailureError('');
+                    }}
                     style={{
                       border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
                       borderRadius: '12px',
@@ -790,10 +849,10 @@ export default function BookingPage() {
 
             {/* Card Details Form */}
             {formData.paymentMethod === 'credit_card' && (
-              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+              <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>
-                    Card Number
+                    Card Number (Mock Masked Input)
                   </label>
                   <input
                     type="text"
@@ -822,14 +881,15 @@ export default function BookingPage() {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#334155', marginBottom: '0.35rem' }}>
-                      Security CVV
+                      Security CVV (Masked)
                     </label>
                     <input
-                      type="text"
+                      type="password"
                       name="cardCvv"
                       value={formData.cardCvv}
                       onChange={handleChange}
-                      placeholder="123"
+                      placeholder="•••"
+                      maxLength="4"
                       style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid #cbd5e1' }}
                     />
                   </div>
@@ -837,8 +897,28 @@ export default function BookingPage() {
               </div>
             )}
 
+            {/* Decline / Failure Simulation Toggle (For testing purposes) */}
+            <div style={{ background: '#f1f5f9', padding: '0.85rem 1.25rem', borderRadius: '12px', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: '#0f172a', display: 'block' }}>🧪 Payment Simulation Mode</strong>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Simulate issuer card decline / insufficient funds</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                <input
+                  type="checkbox"
+                  name="simulateFailure"
+                  checked={formData.simulateFailure}
+                  onChange={handleChange}
+                  style={{ width: '18px', height: '18px', accentColor: '#e11d48' }}
+                />
+                <span style={{ fontSize: '0.85rem', fontWeight: '700', color: formData.simulateFailure ? '#e11d48' : '#64748b' }}>
+                  {formData.simulateFailure ? '🔴 Simulate Decline' : '🟢 Normal Success'}
+                </span>
+              </label>
+            </div>
+
             <div style={{ textAlign: 'center', fontSize: '0.82rem', color: '#64748b', marginBottom: '2rem' }}>
-              🔒 256-bit Bank Grade Encrypted Payment Gateway • Instant Booking Confirmation
+              🔒 256-bit Bank Grade Encrypted Payment Gateway • No sensitive card numbers or CVV are stored.
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -864,11 +944,11 @@ export default function BookingPage() {
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '3rem 2.5rem', border: '1px solid #bbf7d0', boxShadow: '0 10px 40px rgba(15, 23, 42, 0.08)', textAlign: 'center' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🎉</div>
             <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 14px', borderRadius: '9999px', fontSize: '0.82rem', fontWeight: '700', textTransform: 'uppercase' }}>
-              ● {confirmedBooking.status || 'Confirmed'}
+              ● {confirmedPayment?.status || 'Completed'} • Confirmed
             </span>
 
             <h1 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', margin: '0.75rem 0 0.25rem 0' }}>
-              Booking Confirmed!
+              Payment & Booking Successful!
             </h1>
             <p style={{ color: '#64748b', fontSize: '1.05rem', margin: '0 0 2rem 0' }}>
               Your reservation is officially registered. A confirmation voucher has been sent to <strong>{formData.email}</strong>.
@@ -898,7 +978,7 @@ export default function BookingPage() {
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Transaction ID</span>
                   <div style={{ fontSize: '0.95rem', fontWeight: '700', color: '#334155' }}>
-                    {confirmedBooking.transaction_id || 'TXN-STRIPE-CONFIRMED'}
+                    {confirmedPayment?.transactionId || confirmedBooking.transaction_id || 'TXN-STRIPE-CONFIRMED'}
                   </div>
                 </div>
               </div>
@@ -932,11 +1012,11 @@ export default function BookingPage() {
 
             {/* Action CTAs */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/my-trips" className="btn btn-primary" style={{ padding: '0.85rem 2rem' }}>
+              <Link to="/my-trips?tab=bookings" className="btn btn-primary" style={{ padding: '0.85rem 2rem' }}>
                 View in Booking History ➜
               </Link>
-              <Link to="/packages" className="btn btn-outline" style={{ padding: '0.85rem 2rem' }}>
-                Browse More Packages
+              <Link to="/my-trips?tab=payments" className="btn btn-outline" style={{ padding: '0.85rem 2rem' }}>
+                View Payment Receipts
               </Link>
             </div>
           </div>

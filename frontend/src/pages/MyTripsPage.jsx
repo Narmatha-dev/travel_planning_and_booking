@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import tripService from '../services/tripService';
 import bookingService from '../services/bookingService';
+import paymentService from '../services/paymentService';
 import ItineraryTimeline from '../components/ItineraryTimeline';
 
 const tripStatusColors = {
@@ -17,6 +18,13 @@ const bookingStatusColors = {
   pending: { bg: '#fef3c7', color: '#b45309', label: 'Pending' },
   cancelled: { bg: '#fee2e2', color: '#b91c1c', label: 'Cancelled' },
   completed: { bg: '#f1f5f9', color: '#475569', label: 'Completed' },
+  refunded: { bg: '#ede9fe', color: '#6d28d9', label: 'Refunded' },
+};
+
+const paymentStatusColors = {
+  completed: { bg: '#dcfce7', color: '#15803d', label: 'Completed' },
+  pending: { bg: '#fef3c7', color: '#b45309', label: 'Pending' },
+  failed: { bg: '#fee2e2', color: '#b91c1c', label: 'Failed' },
   refunded: { bg: '#ede9fe', color: '#6d28d9', label: 'Refunded' },
 };
 
@@ -44,6 +52,12 @@ export default function MyTripsPage() {
   const [cancelReason, setCancelReason] = useState('Schedule change');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  // Payments History State
+  const [payments, setPayments] = useState([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
+
   const loadUserTrips = async () => {
     setLoadingTrips(true);
     setTripError('');
@@ -70,9 +84,23 @@ export default function MyTripsPage() {
     }
   };
 
+  const loadUserPayments = async () => {
+    setLoadingPayments(true);
+    setPaymentError('');
+    try {
+      const data = await paymentService.getPaymentHistory(3);
+      setPayments(data || []);
+    } catch (err) {
+      setPaymentError(err.response?.data?.message || err.message || 'Failed to load payment history');
+    } finally {
+      setLoadingPayments(false);
+    }
+  };
+
   useEffect(() => {
     loadUserTrips();
     loadUserBookings();
+    loadUserPayments();
   }, []);
 
   const handleTabChange = (tab) => {
@@ -118,6 +146,7 @@ export default function MyTripsPage() {
       setBookings((prev) =>
         prev.map((b) => (b.id === cancelModalBooking.id ? { ...b, status: 'cancelled', payment_status: 'refunded' } : b))
       );
+      loadUserPayments(); // Refresh payments list to reflect refund status
       setCancelModalBooking(null);
       alert(`Booking #${cancelModalBooking.booking_reference} has been cancelled successfully. Refund processing initiated.`);
     } catch (err) {
@@ -130,6 +159,11 @@ export default function MyTripsPage() {
   const filteredBookings = bookings.filter((b) => {
     if (statusFilter === 'all') return true;
     return b.status === statusFilter;
+  });
+
+  const filteredPayments = payments.filter((p) => {
+    if (paymentStatusFilter === 'all') return true;
+    return p.payment_status === paymentStatusFilter;
   });
 
   const totalPlannedBudget = trips.reduce((acc, t) => acc + parseFloat(t.total_budget || 0), 0);
@@ -145,10 +179,10 @@ export default function MyTripsPage() {
           <div>
             <span className="eyebrow">Traveler Hub</span>
             <h1 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', margin: '0.4rem 0 0.2rem 0' }}>
-              My Trips & Reservations
+              My Trips & Financial Activity
             </h1>
             <p style={{ color: '#64748b' }}>
-              Manage customized itineraries, inspect confirmed package bookings, and download receipts.
+              Manage customized itineraries, inspect confirmed package bookings, and audit transaction payment histories.
             </p>
           </div>
 
@@ -191,22 +225,22 @@ export default function MyTripsPage() {
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Confirmed Reservations</div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Transactions</div>
             <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#16a34a', marginTop: '0.2rem' }}>
-              {bookings.filter((b) => b.status === 'confirmed').length}
+              {payments.length}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Spent & Booked</div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount Paid</div>
             <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
               ${totalBookingsSpent.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {/* Tabs Switcher: Custom Trips vs Package Bookings */}
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '2rem' }}>
+        {/* Tabs Switcher: Custom Trips vs Package Bookings vs Payment History */}
+        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '2rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => handleTabChange('trips')}
             style={{
@@ -246,7 +280,28 @@ export default function MyTripsPage() {
               gap: '0.5rem',
             }}
           >
-            <span>📦</span> Package Bookings History ({bookings.length})
+            <span>📦</span> Package Bookings ({bookings.length})
+          </button>
+
+          <button
+            onClick={() => handleTabChange('payments')}
+            style={{
+              padding: '0.85rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '1rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              color: activeTab === 'payments' ? '#0284c7' : '#64748b',
+              borderBottom: activeTab === 'payments' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <span>💳</span> Payment History ({payments.length})
           </button>
         </div>
 
@@ -490,6 +545,121 @@ export default function MyTripsPage() {
         )}
 
         {/* ==================================================== */}
+        {/* TAB 3: PAYMENT HISTORY                               */}
+        {/* ==================================================== */}
+        {activeTab === 'payments' && (
+          <div>
+            {/* Status Filters Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {['all', 'completed', 'refunded', 'failed'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setPaymentStatusFilter(st)}
+                    style={{
+                      padding: '0.4rem 1rem',
+                      borderRadius: '9999px',
+                      border: paymentStatusFilter === st ? '2px solid #0284c7' : '1px solid #cbd5e1',
+                      background: paymentStatusFilter === st ? '#e0f2fe' : '#ffffff',
+                      color: paymentStatusFilter === st ? '#0369a1' : '#475569',
+                      fontWeight: paymentStatusFilter === st ? '700' : '500',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {st === 'all' ? 'All Transactions' : st}
+                  </button>
+                ))}
+              </div>
+
+              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
+                Showing <strong>{filteredPayments.length}</strong> transaction{filteredPayments.length === 1 ? '' : 's'}
+              </span>
+            </div>
+
+            {loadingPayments ? (
+              <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+                <div style={{ fontSize: '1.5rem', color: '#0284c7', marginBottom: '0.5rem' }}>💳</div>
+                <div style={{ fontWeight: '600', color: '#334155' }}>Loading payment transaction history...</div>
+              </div>
+            ) : paymentError ? (
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
+                <p style={{ color: '#b91c1c', margin: '0 0 1rem 0' }}>{paymentError}</p>
+                <button onClick={loadUserPayments} className="btn btn-primary">Try Again</button>
+              </div>
+            ) : filteredPayments.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+                  No payment transactions found
+                </h3>
+                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
+                  Your secure financial transaction audit logs and receipts will appear here once bookings are confirmed.
+                </p>
+                <Link to="/packages" className="btn btn-primary">Book a Package</Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {filteredPayments.map((p) => {
+                  const statusStyle = paymentStatusColors[p.payment_status] || paymentStatusColors.completed;
+                  return (
+                    <div
+                      key={p.id}
+                      style={{
+                        background: '#ffffff',
+                        borderRadius: '16px',
+                        border: '1px solid #e2e8f0',
+                        padding: '1.5rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1.5rem',
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: '280px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
+                          <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '2px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                            {statusStyle.label}
+                          </span>
+                          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>
+                            {p.transaction_id}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                            • {p.paid_at?.split(' ')[0] || p.created_at?.split(' ')[0] || 'Recently Processed'}
+                          </span>
+                        </div>
+
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.35rem 0' }}>
+                          {p.package_title || 'Travel Booking Payment'}
+                        </h3>
+
+                        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569' }}>
+                          <span>📍 <strong>Destination:</strong> {p.destination_name || 'Destination'}</span>
+                          <span>🔖 <strong>Booking Reference:</strong> {p.booking_reference}</span>
+                          <span>💳 <strong>Method:</strong> {p.payment_method?.toUpperCase()} ({p.payment_gateway})</span>
+                        </div>
+                      </div>
+
+                      <div style={{ textAlign: 'right', minWidth: '150px' }}>
+                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: p.payment_status === 'refunded' ? '#7c3aed' : '#0f172a' }}>
+                          ${parseFloat(p.amount).toLocaleString()} {p.currency || 'USD'}
+                        </div>
+                        <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>
+                          {p.payment_status === 'completed' ? '✓ Paid & Settled' : p.payment_status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
         {/* MODAL: VIEW BOOKING RECEIPT                          */}
         {/* ==================================================== */}
         {selectedBookingReceipt && (
@@ -540,7 +710,7 @@ export default function MyTripsPage() {
 
               <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
                 <span style={{ fontSize: '0.8rem', background: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '9999px', fontWeight: '700' }}>
-                  OFFICIAL BOOKING RECEIPT
+                  OFFICIAL BOOKING & PAYMENT RECEIPT
                 </span>
                 <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: '0.5rem 0 0.2rem 0' }}>
                   {selectedBookingReceipt.booking_reference}
@@ -589,7 +759,7 @@ export default function MyTripsPage() {
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', borderTop: '2px solid #f1f5f9', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
                   <span>Total Paid:</span>
-                  <span style={{ color: '#0284c7' }}>${parseFloat(selectedBookingReceipt.final_amount).toLocaleString()}</span>
+                  <span style={{ color: '#0284c7' }}>${parseFloat(selectedBookingReceipt.final_amount).toLocaleString()} USD</span>
                 </div>
               </div>
 
