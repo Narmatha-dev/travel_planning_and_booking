@@ -10,6 +10,7 @@ const paymentRoutes = require('./paymentRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const recommendationRoutes = require('./recommendationRoutes');
 const chatbotRoutes = require('./chatbotRoutes');
+const adminRoutes = require('./adminRoutes');
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use('/payments', paymentRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/chatbot', chatbotRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

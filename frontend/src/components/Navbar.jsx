@@ -65,6 +65,17 @@ function Navbar() {
               >
                 Profile
               </NavLink>
+              {user?.role === 'admin' && (
+                <NavLink
+                  to="/admin"
+                  className={({ isActive }) =>
+                    isActive ? 'nav-link active' : 'nav-link'
+                  }
+                  style={{ color: '#0284c7', fontWeight: '800' }}
+                >
+                  Admin 🛡️
+                </NavLink>
+              )}
             </>
           )}
         </nav>
