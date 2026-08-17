@@ -8,6 +8,8 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DestinationsPage from './pages/DestinationsPage';
 import DestinationDetailPage from './pages/DestinationDetailPage';
+import PackagesPage from './pages/PackagesPage';
+import PackageDetailPage from './pages/PackageDetailPage';
 import TripPlannerPage from './pages/TripPlannerPage';
 import BookingPage from './pages/BookingPage';
 import MyTripsPage from './pages/MyTripsPage';
@@ -28,6 +30,8 @@ function App() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/destinations" element={<DestinationsPage />} />
               <Route path="/destinations/:id" element={<DestinationDetailPage />} />
+              <Route path="/packages" element={<PackagesPage />} />
+              <Route path="/packages/:id" element={<PackageDetailPage />} />
               <Route path="/trip-planner" element={<TripPlannerPage />} />
 
               {/* Protected Routes */}

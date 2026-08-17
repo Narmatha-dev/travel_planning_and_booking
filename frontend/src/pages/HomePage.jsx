@@ -1,24 +1,35 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { packages, quickStats } from '../services/travelData';
+import { quickStats } from '../services/travelData';
 import DestinationCard from '../components/DestinationCard';
+import PackageCard from '../components/PackageCard';
 import destinationService from '../services/destinationService';
+import packageService from '../services/packageService';
 
 function HomePage() {
   const navigate = useNavigate();
   const [popularDestinations, setPopularDestinations] = useState([]);
+  const [featuredPackages, setFeaturedPackages] = useState([]);
   const [searchWhere, setSearchWhere] = useState('');
 
   useEffect(() => {
-    async function loadPopular() {
+    async function loadData() {
       try {
-        const data = await destinationService.getPopularDestinations();
-        setPopularDestinations(data || []);
+        const [destData, pkgData] = await Promise.allSettled([
+          destinationService.getPopularDestinations(),
+          packageService.getFeaturedPackages(3),
+        ]);
+        if (destData.status === 'fulfilled' && destData.value) {
+          setPopularDestinations(destData.value);
+        }
+        if (pkgData.status === 'fulfilled' && pkgData.value) {
+          setFeaturedPackages(pkgData.value);
+        }
       } catch (err) {
-        console.warn('Failed to load popular destinations on home:', err.message);
+        console.warn('Failed to load home page data:', err.message);
       }
     }
-    loadPopular();
+    loadData();
   }, []);
 
   const handleSearchSubmit = (e) => {
@@ -138,25 +149,33 @@ function HomePage() {
 
       <section className="section alt-section">
         <div className="container">
-          <div className="section-heading">
-            <span className="eyebrow">Featured packages</span>
-            <h2>Handpicked trips for every mood</h2>
+          <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <span className="eyebrow">Featured packages</span>
+              <h2>Handpicked trips for every mood</h2>
+            </div>
+            <Link to="/packages" style={{ color: '#0284c7', fontWeight: '600', textDecoration: 'none' }}>
+              View All Packages ➜
+            </Link>
           </div>
 
-          <div className="card-grid package-grid">
-            {packages.map((pkg) => (
-              <article key={pkg.id} className="package-card">
-                <img src={pkg.image} alt={pkg.title} />
-                <div className="card-body">
-                  <span className="tag">{pkg.category}</span>
-                  <h3>{pkg.title}</h3>
-                  <div className="card-meta">
-                    <span>{pkg.duration}</span>
-                    <strong>{pkg.price}</strong>
-                  </div>
-                </div>
-              </article>
-            ))}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+              gap: '1.5rem',
+              marginTop: '1.5rem',
+            }}
+          >
+            {featuredPackages.length > 0 ? (
+              featuredPackages.map((pkg) => (
+                <PackageCard key={pkg.id} pkg={pkg} />
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', gridColumn: '1 / -1', padding: '2rem' }}>
+                <Link to="/packages" className="btn btn-primary">Browse All Packages</Link>
+              </div>
+            )}
           </div>
         </div>
       </section>

@@ -18,6 +18,7 @@ function Footer() {
           <h4>Explore</h4>
           <ul>
             <li><Link to="/destinations">Destinations</Link></li>
+            <li><Link to="/packages">Travel Packages</Link></li>
             <li><Link to="/trip-planner">Trip Planner</Link></li>
             <li><Link to="/booking">Bookings</Link></li>
           </ul>

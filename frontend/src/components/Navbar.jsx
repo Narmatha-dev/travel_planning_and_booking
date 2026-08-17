@@ -4,6 +4,7 @@ import { useAppContext } from '../context/AppContext';
 const publicNavItems = [
   { to: '/', label: 'Home' },
   { to: '/destinations', label: 'Destinations' },
+  { to: '/packages', label: 'Packages' },
   { to: '/trip-planner', label: 'Trip Planner' },
 ];
 
