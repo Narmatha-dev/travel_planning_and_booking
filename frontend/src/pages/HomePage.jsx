@@ -53,8 +53,11 @@ function HomePage() {
               booking experiences for every kind of traveler.
             </p>
 
-            <div className="hero-actions">
-              <Link to="/destinations" className="btn btn-primary">
+            <div className="hero-actions" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <Link to="/recommendations" className="btn btn-primary" style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}>
+                ✨ AI Suggestions
+              </Link>
+              <Link to="/destinations" className="btn btn-outline">
                 Explore Trips
               </Link>
               <Link to="/trip-planner" className="btn btn-secondary">

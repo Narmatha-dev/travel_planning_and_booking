@@ -11,6 +11,7 @@ import DestinationDetailPage from './pages/DestinationDetailPage';
 import PackagesPage from './pages/PackagesPage';
 import PackageDetailPage from './pages/PackageDetailPage';
 import TripPlannerPage from './pages/TripPlannerPage';
+import RecommendationsPage from './pages/RecommendationsPage';
 import BookingPage from './pages/BookingPage';
 import MyTripsPage from './pages/MyTripsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -33,6 +34,7 @@ function App() {
               <Route path="/packages" element={<PackagesPage />} />
               <Route path="/packages/:id" element={<PackageDetailPage />} />
               <Route path="/trip-planner" element={<TripPlannerPage />} />
+              <Route path="/recommendations" element={<RecommendationsPage />} />
 
               {/* Protected Routes */}
               <Route

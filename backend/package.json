@@ -15,7 +15,8 @@
     "test:packages": "node scripts/testPackages.js",
     "test:bookings": "node scripts/testBookings.js",
     "test:payments": "node scripts/testPayments.js",
-    "test:reviews": "node scripts/testReviews.js"
+    "test:reviews": "node scripts/testReviews.js",
+    "test:recommendations": "node scripts/testRecommendations.js"
   },
   "keywords": [
     "travel",

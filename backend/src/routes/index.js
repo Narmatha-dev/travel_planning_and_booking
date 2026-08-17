@@ -8,6 +8,7 @@ const tripRoutes = require('./tripRoutes');
 const bookingRoutes = require('./bookingRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const reviewRoutes = require('./reviewRoutes');
+const recommendationRoutes = require('./recommendationRoutes');
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/trips', tripRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/reviews', reviewRoutes);
+router.use('/recommendations', recommendationRoutes);
 
 module.exports = router;

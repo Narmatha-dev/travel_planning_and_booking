@@ -6,6 +6,7 @@ const publicNavItems = [
   { to: '/destinations', label: 'Destinations' },
   { to: '/packages', label: 'Packages' },
   { to: '/trip-planner', label: 'Trip Planner' },
+  { to: '/recommendations', label: 'AI Suggestions ✨' },
 ];
 
 function Navbar() {
