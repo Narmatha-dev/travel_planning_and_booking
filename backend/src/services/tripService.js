@@ -7,44 +7,70 @@ const tripService = {
    * Generate an algorithmic day-wise itinerary preview before saving
    */
   async generatePreviewItinerary(params) {
-    const { destinationId, startDate, endDate, travelers, budget, tripType, interests } = params;
+    const {
+      destination,
+      destinationId,
+      destinationName,
+      numberOfDays,
+      duration,
+      durationDays,
+      startDate,
+      endDate,
+      travelers = 1,
+      budget = 20000,
+      currency = 'INR',
+      tripType = 'family',
+      travelType = 'family',
+      interests = ['beach', 'dining', 'sightseeing'],
+    } = params;
 
-    if (!destinationId) {
+    const targetDest = destinationName || destination || destinationId;
+    if (!targetDest) {
       const error = new Error('Destination is required to generate an itinerary');
       error.statusCode = 400;
       throw error;
     }
 
-    if (!startDate || !endDate) {
-      const error = new Error('Both start date and end date are required');
-      error.statusCode = 400;
-      throw error;
+    let start = startDate;
+    if (!start) {
+      const today = new Date();
+      start = today.toISOString().split('T')[0];
     }
 
-    if (new Date(endDate) < new Date(startDate)) {
-      const error = new Error('End date cannot be earlier than start date');
-      error.statusCode = 400;
-      throw error;
+    let daysCount = parseInt(numberOfDays || duration || durationDays, 10);
+    if (!daysCount && startDate && endDate) {
+      const diffTime = Math.abs(new Date(endDate) - new Date(startDate));
+      daysCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    }
+    if (!daysCount || daysCount < 1) {
+      daysCount = 4;
     }
 
-    // Lookup destination name
-    let destinationName = 'Destination';
-    try {
-      const dest = await destinationModel.findByIdOrSlug(destinationId);
-      if (dest) destinationName = dest.name;
-    } catch {
-      // ignore
+    // Lookup destination name from ID if numeric
+    let resolvedDestName = String(targetDest);
+    let resolvedDestId = destinationId;
+    if (destinationId && !isNaN(destinationId)) {
+      try {
+        const dest = await destinationModel.findByIdOrSlug(destinationId);
+        if (dest) {
+          resolvedDestName = dest.name;
+          resolvedDestId = dest.id;
+        }
+      } catch {}
     }
 
     return generateItinerary({
-      destinationId,
-      destinationName,
-      startDate,
-      endDate,
-      travelers: travelers || 1,
-      budget: budget || 1500,
-      tripType: tripType || 'solo',
-      interests: interests || ['sightseeing', 'culture', 'dining'],
+      destination: resolvedDestName,
+      destinationId: resolvedDestId,
+      destinationName: resolvedDestName,
+      numberOfDays: daysCount,
+      startDate: start,
+      travelers,
+      budget,
+      currency,
+      travelType: travelType || tripType || 'family',
+      tripType: travelType || tripType || 'family',
+      interests,
     });
   },
 

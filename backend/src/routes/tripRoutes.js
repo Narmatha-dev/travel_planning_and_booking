@@ -6,6 +6,7 @@ const router = express.Router();
 
 // 1. Generate Day-Wise Itinerary Preview (No auth required to preview)
 router.post('/generate-preview', tripController.generatePreview);
+router.post('/generate-ai-itinerary', tripController.generatePreview);
 
 // 2. Create Trip & Save Day-Wise Itinerary (Protected)
 router.post('/', authMiddleware, tripController.createTrip);

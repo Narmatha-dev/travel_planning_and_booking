@@ -10,6 +10,14 @@ const tripService = {
   },
 
   /**
+   * Generate AI Smart Itinerary with places, activities, and food suggestions
+   */
+  async generateAiItinerary(params) {
+    const response = await api.post('/trips/generate-ai-itinerary', params);
+    return response.data.data;
+  },
+
+  /**
    * Create trip and save day-wise itinerary in MySQL
    */
   async createTrip(tripData) {

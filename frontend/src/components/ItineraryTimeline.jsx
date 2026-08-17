@@ -66,11 +66,36 @@ export default function ItineraryTimeline({ days = [] }) {
             )}
           </div>
 
+          {/* Visitable Places Badges */}
+          {dayGroup.places && dayGroup.places.length > 0 && (
+            <div style={{ background: '#f8fafc', padding: '0.75rem 1.5rem', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase' }}>
+                📍 Visitable Places:
+              </span>
+              {dayGroup.places.map((place, pIdx) => (
+                <span
+                  key={pIdx}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    padding: '2px 8px',
+                    fontSize: '0.78rem',
+                    color: '#334155',
+                    fontWeight: '600',
+                  }}
+                >
+                  {place}
+                </span>
+              ))}
+            </div>
+          )}
+
           {/* Activities List */}
           <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {(dayGroup.activities || []).map((act, index) => {
-              const meta = activityTypeMeta[act.activity_type] || activityTypeMeta.sightseeing;
-              const formattedTime = act.activity_time ? act.activity_time.substring(0, 5) : '09:00';
+              const meta = activityTypeMeta[act.activity_type || act.type] || activityTypeMeta.sightseeing;
+              const formattedTime = (act.activity_time || act.time) ? (act.activity_time || act.time).substring(0, 5) : '09:00';
 
               return (
                 <div
@@ -149,10 +174,10 @@ export default function ItineraryTimeline({ days = [] }) {
                       </p>
                     )}
 
-                    {act.location_name && (
+                    {(act.location_name || act.location) && (
                       <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '0.5rem' }}>
                         <span>📍</span>
-                        <span>{act.location_name}</span>
+                        <span>{act.location_name || act.location}</span>
                       </div>
                     )}
                   </div>
@@ -160,6 +185,46 @@ export default function ItineraryTimeline({ days = [] }) {
               );
             })}
           </div>
+
+          {/* Culinary Food Suggestions (Breakfast, Lunch, Dinner) */}
+          {dayGroup.foodSuggestions && (
+            <div style={{ background: '#fffbeb', borderTop: '1px solid #fef3c7', padding: '1.25rem 1.5rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase', display: 'block', marginBottom: '0.75rem' }}>
+                🍽️ Culinary & Food Suggestions:
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.75rem' }}>
+                {dayGroup.foodSuggestions.breakfast && (
+                  <div style={{ background: '#ffffff', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.75rem' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase' }}>🍳 Breakfast</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>{dayGroup.foodSuggestions.breakfast.spot}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{dayGroup.foodSuggestions.breakfast.dish}</div>
+                  </div>
+                )}
+                {dayGroup.foodSuggestions.lunch && (
+                  <div style={{ background: '#ffffff', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.75rem' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase' }}>🍲 Lunch</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>{dayGroup.foodSuggestions.lunch.spot}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{dayGroup.foodSuggestions.lunch.dish}</div>
+                  </div>
+                )}
+                {dayGroup.foodSuggestions.dinner && (
+                  <div style={{ background: '#ffffff', border: '1px solid #fde68a', borderRadius: '8px', padding: '0.75rem' }}>
+                    <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#b45309', textTransform: 'uppercase' }}>🍷 Dinner</div>
+                    <div style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', marginTop: '2px' }}>{dayGroup.foodSuggestions.dinner.spot}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>{dayGroup.foodSuggestions.dinner.dish}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* AI Traveler Tip */}
+          {dayGroup.aiTravelTip && (
+            <div style={{ background: '#f0fdf4', borderTop: '1px solid #dcfce7', padding: '0.75rem 1.5rem', fontSize: '0.82rem', color: '#15803d', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span>💡</span>
+              <span><strong>AI Tip:</strong> {dayGroup.aiTravelTip}</span>
+            </div>
+          )}
         </div>
       ))}
     </div>
