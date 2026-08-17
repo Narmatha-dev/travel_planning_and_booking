@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ChatbotWidget from './components/ChatbotWidget';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AppProvider } from './context/AppContext';
 import HomePage from './pages/HomePage';
@@ -63,6 +64,7 @@ function App() {
               />
             </Routes>
           </main>
+          <ChatbotWidget />
           <Footer />
         </div>
       </BrowserRouter>

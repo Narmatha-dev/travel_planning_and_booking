@@ -9,6 +9,7 @@ const bookingRoutes = require('./bookingRoutes');
 const paymentRoutes = require('./paymentRoutes');
 const reviewRoutes = require('./reviewRoutes');
 const recommendationRoutes = require('./recommendationRoutes');
+const chatbotRoutes = require('./chatbotRoutes');
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/recommendations', recommendationRoutes);
+router.use('/chatbot', chatbotRoutes);
 
 module.exports = router;

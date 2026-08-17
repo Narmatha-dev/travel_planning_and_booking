@@ -17,7 +17,8 @@
     "test:payments": "node scripts/testPayments.js",
     "test:reviews": "node scripts/testReviews.js",
     "test:recommendations": "node scripts/testRecommendations.js",
-    "test:itinerary": "node scripts/testAiItinerary.js"
+    "test:itinerary": "node scripts/testAiItinerary.js",
+    "test:chatbot": "node scripts/testChatbot.js"
   },
   "keywords": [
     "travel",
