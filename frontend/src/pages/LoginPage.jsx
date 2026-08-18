@@ -44,9 +44,14 @@ function LoginPage() {
     setIsSubmitting(false);
 
     if (result.success) {
-      const defaultRedirect = result.user?.role === 'admin' ? '/admin' : '/profile';
+      const defaultRedirect = result.user?.role === 'admin' ? '/admin' : '/';
       const targetDestination = location.state?.from?.pathname || redirectParam || defaultRedirect;
-      navigate(targetDestination, { replace: true });
+      navigate(targetDestination, {
+        replace: true,
+        state: {
+          welcomeMessage: `Welcome back, ${result.user?.full_name || 'Traveler'}! You have successfully signed in.`,
+        },
+      });
     } else {
       setLocalError(result.message || 'Login failed');
     }

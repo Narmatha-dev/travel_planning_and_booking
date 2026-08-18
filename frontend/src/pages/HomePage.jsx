@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { quickStats } from '../services/travelData';
 import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
@@ -8,9 +8,17 @@ import packageService from '../services/packageService';
 
 function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [welcomeBanner, setWelcomeBanner] = useState(location.state?.welcomeMessage || null);
   const [popularDestinations, setPopularDestinations] = useState([]);
   const [featuredPackages, setFeaturedPackages] = useState([]);
   const [searchWhere, setSearchWhere] = useState('');
+
+  useEffect(() => {
+    if (location.state?.welcomeMessage) {
+      setWelcomeBanner(location.state.welcomeMessage);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     async function loadData() {
@@ -43,6 +51,46 @@ function HomePage() {
 
   return (
     <>
+      {welcomeBanner && (
+        <div className="container" style={{ paddingTop: '1.5rem', marginBottom: '-0.5rem' }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+            color: '#166534',
+            padding: '1rem 1.25rem',
+            borderRadius: '12px',
+            border: '1px solid #86efac',
+            boxShadow: '0 4px 12px rgba(34, 197, 94, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>🎉</span>
+              <div>
+                <strong style={{ display: 'block', fontSize: '0.95rem' }}>Welcome to Travelora!</strong>
+                <span style={{ fontSize: '0.875rem', color: '#15803d' }}>{welcomeBanner}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setWelcomeBanner(null)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '1.25rem',
+                color: '#166534',
+                cursor: 'pointer',
+                padding: '0.25rem 0.5rem',
+                lineHeight: 1,
+              }}
+              title="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <section className="hero-section">
         <div className="container hero-grid">
           <div className="hero-copy">

@@ -61,7 +61,13 @@ function RegisterPage() {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate('/profile', { replace: true });
+      const targetDestination = result.user?.role === 'admin' ? '/admin' : '/';
+      navigate(targetDestination, {
+        replace: true,
+        state: {
+          welcomeMessage: `Welcome to Travelora, ${result.user?.full_name || 'Traveler'}! Your account has been created and you are now signed in.`,
+        },
+      });
     } else {
       setLocalError(result.message || 'Registration failed');
     }
