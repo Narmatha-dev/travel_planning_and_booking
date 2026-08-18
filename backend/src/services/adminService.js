@@ -7,10 +7,15 @@ const reviewModel = require('../models/reviewModel');
 
 // In-memory fallback users store if MySQL is offline
 const inMemoryUsers = [
-  { id: 1, full_name: 'Administrator', email: 'admin@example.com', role: 'admin', is_active: 1, created_at: '2026-01-01' },
-  { id: 2, full_name: 'Travel Agent Sarah', email: 'agent@example.com', role: 'agent', is_active: 1, created_at: '2026-01-02' },
-  { id: 3, full_name: 'John Doe', email: 'john@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
-  { id: 4, full_name: 'Emma Watson', email: 'emma@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
+  { id: 1, full_name: 'System Administrator', email: 'admin@travelplanner.com', role: 'admin', is_active: 1, created_at: '2026-01-01' },
+  { id: 2, full_name: 'Sarah Jenkins', email: 'sarah.agent@travelplanner.com', role: 'agent', is_active: 1, created_at: '2026-01-02' },
+  { id: 3, full_name: 'Alexander Reed', email: 'alex.reed@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
+  { id: 4, full_name: 'Elena Rostova', email: 'elena.rostova@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
+  { id: 5, full_name: 'Kenji Sato', email: 'kenji.sato@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-05' },
+  { id: 6, full_name: 'Administrator (Legacy)', email: 'admin@example.com', role: 'admin', is_active: 1, created_at: '2026-01-01' },
+  { id: 7, full_name: 'Travel Agent Sarah (Legacy)', email: 'agent@example.com', role: 'agent', is_active: 1, created_at: '2026-01-02' },
+  { id: 8, full_name: 'John Doe (Legacy)', email: 'john@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
+  { id: 9, full_name: 'Emma Watson (Legacy)', email: 'emma@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
 ];
 
 const adminService = {

@@ -15,7 +15,8 @@ function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localError, setLocalError] = useState('');
 
-  const from = location.state?.from?.pathname || '/profile';
+  const searchParams = new URLSearchParams(location.search);
+  const redirectParam = searchParams.get('redirect');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -43,7 +44,9 @@ function LoginPage() {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate(from, { replace: true });
+      const defaultRedirect = result.user?.role === 'admin' ? '/admin' : '/profile';
+      const targetDestination = location.state?.from?.pathname || redirectParam || defaultRedirect;
+      navigate(targetDestination, { replace: true });
     } else {
       setLocalError(result.message || 'Login failed');
     }

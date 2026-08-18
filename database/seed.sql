@@ -12,15 +12,15 @@ SET FOREIGN_KEY_CHECKS = 0;
 -- 1. Seed: users
 -- Passwords hashed with bcrypt (cost: 10)
 -- Default demo password for all accounts: "TravelPass123!"
--- Hash: $2a$10$e8T7jN6b8V6c0W9e2d3f4uQo5mH1a2b3c4d5e6f7g8h9i0j1k2l3m (standard format)
+-- Hash: $2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey
 -- -----------------------------------------------------
 TRUNCATE TABLE `users`;
 INSERT INTO `users` (`id`, `full_name`, `email`, `password_hash`, `phone_number`, `role`, `profile_image_url`, `address`, `bio`, `is_active`) VALUES
-(1, 'System Administrator', 'admin@travelplanner.com', '$2a$10$w8.v7wA2hA2dD1z2C7f.4eRzQe5vO2j8uI3dF.Q2e5kL1mN3oP4rS', '+1-555-0100', 'admin', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300', '100 Global Way, Tech Hub, CA', 'Lead Administrator for Travel Planning & Booking System.', 1),
-(2, 'Sarah Jenkins', 'sarah.agent@travelplanner.com', '$2a$10$w8.v7wA2hA2dD1z2C7f.4eRzQe5vO2j8uI3dF.Q2e5kL1mN3oP4rS', '+1-555-0102', 'agent', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300', '45 Ocean Avenue, Miami, FL', 'Certified Luxury & Adventure Travel Specialist with 8+ years experience.', 1),
-(3, 'Alexander Reed', 'alex.reed@example.com', '$2a$10$w8.v7wA2hA2dD1z2C7f.4eRzQe5vO2j8uI3dF.Q2e5kL1mN3oP4rS', '+1-555-0199', 'traveler', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300', '742 Evergreen Terrace, Springfield, OR', 'Passionate globe-trotter, photographer, and coffee enthusiast.', 1),
-(4, 'Elena Rostova', 'elena.rostova@example.com', '$2a$10$w8.v7wA2hA2dD1z2C7f.4eRzQe5vO2j8uI3dF.Q2e5kL1mN3oP4rS', '+44-20-7946-0912', 'traveler', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300', '12 Kensington Gardens, London, UK', 'Solo traveler and cultural heritage lover exploring historic landmarks.', 1),
-(5, 'Kenji Sato', 'kenji.sato@example.com', '$2a$10$w8.v7wA2hA2dD1z2C7f.4eRzQe5vO2j8uI3dF.Q2e5kL1mN3oP4rS', '+81-3-5555-0143', 'traveler', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300', '3-2-1 Shibuya, Tokyo, Japan', 'Outdoor explorer, hiker, and culinary traveler.', 1);
+(1, 'System Administrator', 'admin@travelplanner.com', '$2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey', '+1-555-0100', 'admin', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300', '100 Global Way, Tech Hub, CA', 'Lead Administrator for Travel Planning & Booking System.', 1),
+(2, 'Sarah Jenkins', 'sarah.agent@travelplanner.com', '$2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey', '+1-555-0102', 'agent', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300', '45 Ocean Avenue, Miami, FL', 'Certified Luxury & Adventure Travel Specialist with 8+ years experience.', 1),
+(3, 'Alexander Reed', 'alex.reed@example.com', '$2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey', '+1-555-0199', 'traveler', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300', '742 Evergreen Terrace, Springfield, OR', 'Passionate globe-trotter, photographer, and coffee enthusiast.', 1),
+(4, 'Elena Rostova', 'elena.rostova@example.com', '$2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey', '+44-20-7946-0912', 'traveler', 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300', '12 Kensington Gardens, London, UK', 'Solo traveler and cultural heritage lover exploring historic landmarks.', 1),
+(5, 'Kenji Sato', 'kenji.sato@example.com', '$2b$10$8tYixCT8KL5Lm16H2vI66e45g6lD7qjWsqAO.2uYy4gQRGenQ8Oey', '+81-3-5555-0143', 'traveler', 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300', '3-2-1 Shibuya, Tokyo, Japan', 'Outdoor explorer, hiker, and culinary traveler.', 1);
 
 -- -----------------------------------------------------
 -- 2. Seed: destinations

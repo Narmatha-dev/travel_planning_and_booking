@@ -111,6 +111,164 @@ async function testAuthSuite() {
     assert('GET /api/auth/profile with invalid token returns HTTP 401', false, err.message);
   }
 
+  // 4. End-to-End Registration, Login & Token Flow
+  console.log('\n--- 4. End-to-End Registration & Login Flow ---');
+  const testUserEmail = `traveler.${Date.now()}@example.com`;
+  const testUserPassword = 'MySecretPass2026!';
+  let issuedToken = null;
+
+  // Test 4.1: Successful User Registration
+  try {
+    const res = await fetch(`${BASE_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: 'Test Explorer',
+        email: testUserEmail,
+        password: testUserPassword,
+        phoneNumber: '+1-555-9876',
+        role: 'traveler',
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'POST /api/auth/register successfully creates user and returns JWT token',
+      res.status === 201 && json.status === 'success' && Boolean(json.data?.token && json.data?.user?.email === testUserEmail.toLowerCase())
+    );
+  } catch (err) {
+    assert('POST /api/auth/register successfully creates user and returns JWT token', false, err.message);
+  }
+
+  // Test 4.2: Duplicate User Registration Prevention
+  try {
+    const res = await fetch(`${BASE_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: 'Test Explorer',
+        email: testUserEmail,
+        password: testUserPassword,
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'Duplicate registration rejected with HTTP 409 Conflict',
+      res.status === 409 && json.status === 'error'
+    );
+  } catch (err) {
+    assert('Duplicate registration rejected with HTTP 409 Conflict', false, err.message);
+  }
+
+  // Test 4.3: Login with Registered User Credentials
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testUserEmail,
+        password: testUserPassword,
+      }),
+    });
+    const json = await res.json();
+    issuedToken = json.data?.token;
+    assert(
+      'POST /api/auth/login with registered user returns HTTP 200 and valid JWT token',
+      res.status === 200 && json.status === 'success' && Boolean(issuedToken && json.data?.user?.email === testUserEmail.toLowerCase())
+    );
+  } catch (err) {
+    assert('POST /api/auth/login with registered user returns HTTP 200 and valid JWT token', false, err.message);
+  }
+
+  // Test 4.4: Login with Wrong Password
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testUserEmail,
+        password: 'IncorrectPassword999!',
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'Login with incorrect password returns HTTP 401 "Invalid email or password"',
+      res.status === 401 && json.status === 'error' && json.message === 'Invalid email or password'
+    );
+  } catch (err) {
+    assert('Login with incorrect password returns HTTP 401', false, err.message);
+  }
+
+  // Test 4.5: Login with Non-existent Email
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'nobody_exists_here_999@example.com',
+        password: testUserPassword,
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'Login with non-existent email returns HTTP 401 "Invalid email or password"',
+      res.status === 401 && json.status === 'error' && json.message === 'Invalid email or password'
+    );
+  } catch (err) {
+    assert('Login with non-existent email returns HTTP 401', false, err.message);
+  }
+
+  // Test 4.6: Access Protected Profile with Issued Token
+  try {
+    const res = await fetch(`${BASE_URL}/profile`, {
+      headers: { Authorization: `Bearer ${issuedToken}` },
+    });
+    const json = await res.json();
+    assert(
+      'GET /api/auth/profile with issued JWT retrieves authenticated user profile',
+      res.status === 200 && json.data?.user?.email === testUserEmail.toLowerCase()
+    );
+  } catch (err) {
+    assert('GET /api/auth/profile with issued JWT retrieves authenticated user profile', false, err.message);
+  }
+
+  // Test 4.7: Demo Traveler Login (alex.reed@example.com / TravelPass123!)
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'alex.reed@example.com',
+        password: 'TravelPass123!',
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'Login with demo traveler (alex.reed@example.com / TravelPass123!) succeeds (HTTP 200)',
+      res.status === 200 && json.data?.user?.role === 'traveler' && Boolean(json.data?.token)
+    );
+  } catch (err) {
+    assert('Login with demo traveler succeeds', false, err.message);
+  }
+
+  // Test 4.8: Demo Admin Login (admin@travelplanner.com / TravelPass123!)
+  try {
+    const res = await fetch(`${BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'admin@travelplanner.com',
+        password: 'TravelPass123!',
+      }),
+    });
+    const json = await res.json();
+    assert(
+      'Login with demo admin (admin@travelplanner.com / TravelPass123!) succeeds with admin role (HTTP 200)',
+      res.status === 200 && json.data?.user?.role === 'admin' && Boolean(json.data?.token)
+    );
+  } catch (err) {
+    assert('Login with demo admin succeeds', false, err.message);
+  }
+
   console.log('\n=====================================================');
   console.log(`🎉 TEST SUMMARY: ${passed}/${total} TESTS PASSED!`);
   console.log('=====================================================\n');
