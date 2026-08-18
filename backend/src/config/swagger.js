@@ -449,9 +449,4 @@ const swaggerOptions = {
   customfavIcon: 'https://img.icons8.com/color/48/airplane-take-off.png',
 };
 
-module.exports = {
-  swaggerDefinition,
-  swaggerOptions,
-  serve: swaggerJsdoc.serve,
-  setup: swaggerJsdoc.setup(swaggerDefinition, swaggerOptions),
-};
+module.exports = swaggerDefinition;
