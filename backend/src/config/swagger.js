@@ -112,6 +112,58 @@ Interactive REST API Documentation for the **Travel Planning and Booking Platfor
         },
       },
     },
+    '/api/auth/google': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Initiate Google OAuth 2.0 authorization code flow',
+        parameters: [
+          {
+            name: 'redirect',
+            in: 'query',
+            schema: { type: 'string', default: '/' },
+            description: 'Frontend path to redirect after successful authentication',
+          },
+        ],
+        responses: {
+          '302': { description: 'Redirect to Google OAuth 2.0 Consent Screen' },
+        },
+      },
+      post: {
+        tags: ['Auth'],
+        summary: 'Direct authentication with Google ID Token / Credential',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  idToken: { type: 'string', description: 'Google verified JWT ID token' },
+                  credential: { type: 'string', description: 'Google Identity One-Tap credential' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': { description: 'Google login successful with JWT bearer token' },
+          '400': { description: 'Invalid Google token' },
+        },
+      },
+    },
+    '/api/auth/google/callback': {
+      get: {
+        tags: ['Auth'],
+        summary: 'OAuth 2.0 callback endpoint from Google consent screen',
+        parameters: [
+          { name: 'code', in: 'query', schema: { type: 'string' }, description: 'Google authorization code' },
+          { name: 'state', in: 'query', schema: { type: 'string' }, description: 'State parameter' },
+        ],
+        responses: {
+          '302': { description: 'Redirects to frontend /auth/callback with JWT token' },
+        },
+      },
+    },
     '/api/auth/profile': {
       get: {
         tags: ['Auth'],

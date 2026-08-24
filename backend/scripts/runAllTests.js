@@ -3,16 +3,17 @@ const path = require('path');
 
 const SCRIPTS = [
   { name: '1. User Authentication & Registration', file: 'testAuth.js' },
-  { name: '2. Destination Catalog & Full-Text Search', file: 'testDestinations.js' },
-  { name: '3. Trip Planning & Itineraries', file: 'testTrips.js' },
-  { name: '4. Travel Packages & Pricing', file: 'testPackages.js' },
-  { name: '5. Booking Creation & Lifecycle', file: 'testBookings.js' },
-  { name: '6. Payment Processing & PCI Security', file: 'testPayments.js' },
-  { name: '7. Reviews & Star Ratings Aggregates', file: 'testReviews.js' },
-  { name: '8. AI Multi-Factor Recommendations', file: 'testRecommendations.js' },
-  { name: '9. AI Smart Day-by-Day Itinerary', file: 'testAiItinerary.js' },
-  { name: '10. AI Travel Chatbot & Guardrails', file: 'testChatbot.js' },
-  { name: '11. Admin Dashboard & RBAC Guards', file: 'testAdmin.js' },
+  { name: '2. Google OAuth 2.0 Security Flow', file: 'testGoogleAuth.js' },
+  { name: '3. Destination Catalog & Full-Text Search', file: 'testDestinations.js' },
+  { name: '4. Trip Planning & Itineraries', file: 'testTrips.js' },
+  { name: '5. Travel Packages & Pricing', file: 'testPackages.js' },
+  { name: '6. Booking Creation & Lifecycle', file: 'testBookings.js' },
+  { name: '7. Payment Processing & PCI Security', file: 'testPayments.js' },
+  { name: '8. Reviews & Star Ratings Aggregates', file: 'testReviews.js' },
+  { name: '9. AI Multi-Factor Recommendations', file: 'testRecommendations.js' },
+  { name: '10. AI Smart Day-by-Day Itinerary', file: 'testAiItinerary.js' },
+  { name: '11. AI Travel Chatbot & Guardrails', file: 'testChatbot.js' },
+  { name: '12. Admin Dashboard & RBAC Guards', file: 'testAdmin.js' },
 ];
 
 function runAllTests() {

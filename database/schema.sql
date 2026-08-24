@@ -25,7 +25,9 @@ CREATE TABLE `users` (
   `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   `full_name` VARCHAR(120) NOT NULL,
   `email` VARCHAR(191) NOT NULL,
-  `password_hash` VARCHAR(255) NOT NULL,
+  `password_hash` VARCHAR(255) DEFAULT NULL,
+  `google_id` VARCHAR(255) DEFAULT NULL,
+  `auth_provider` ENUM('local', 'google') NOT NULL DEFAULT 'local',
   `phone_number` VARCHAR(30) DEFAULT NULL,
   `role` ENUM('traveler', 'agent', 'admin') NOT NULL DEFAULT 'traveler',
   `profile_image_url` VARCHAR(500) DEFAULT NULL,
@@ -36,6 +38,7 @@ CREATE TABLE `users` (
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `uq_users_email` (`email`),
+  UNIQUE KEY `uq_users_google_id` (`google_id`),
   KEY `idx_users_role` (`role`),
   KEY `idx_users_is_active` (`is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

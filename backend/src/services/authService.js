@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('../config/environment');
 const userModel = require('../models/userModel');
+const googleAuthService = require('./googleAuthService');
 
 // Email regex pattern for validation
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -118,6 +119,12 @@ const authService = {
     }
 
     // 3. Verify bcrypt password hash
+    if (!user.password_hash) {
+      const error = new Error('This account was created with Google Sign-In. Please use Continue with Google.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       const error = new Error('Invalid email or password');
@@ -135,6 +142,120 @@ const authService = {
       user: safeUser,
       token,
     };
+  },
+
+  /**
+   * Core handler for authenticated Google profile data
+   */
+  async handleGoogleAuth({ googleId, email, fullName, profileImageUrl }) {
+    if (!email) {
+      const error = new Error('Google authentication did not provide an email address');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanName = fullName && fullName.trim() ? fullName.trim() : cleanEmail.split('@')[0];
+
+    // 1. Search by Google Subject ID first
+    let user = googleId ? await userModel.findByGoogleId(googleId) : null;
+
+    if (user) {
+      if (!user.is_active) {
+        const error = new Error('Your account has been deactivated. Please contact support.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Update avatar if not present
+      if (!user.profile_image_url && profileImageUrl) {
+        user = await userModel.updateProfile(user.id, { profileImageUrl });
+      }
+
+      const token = this.generateToken(user);
+      const { password_hash, ...safeUser } = user;
+      return { user: safeUser, token, isNewUser: false };
+    }
+
+    // 2. Search by verified email address (Link Google to existing local user account)
+    user = await userModel.findByEmail(cleanEmail);
+    if (user) {
+      if (!user.is_active) {
+        const error = new Error('Your account has been deactivated. Please contact support.');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Link Google Account to existing user
+      if (googleId) {
+        user = await userModel.linkGoogleAccount(user.id, googleId, profileImageUrl);
+      }
+
+      const token = this.generateToken(user);
+      const { password_hash, ...safeUser } = user;
+      return { user: safeUser, token, isNewUser: false };
+    }
+
+    // 3. Create new user account via Google OAuth
+    const defaultAvatar =
+      profileImageUrl ||
+      `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&background=0D8ABC&color=fff`;
+
+    const userId = await userModel.create({
+      fullName: cleanName,
+      email: cleanEmail,
+      passwordHash: null,
+      googleId: googleId || null,
+      authProvider: 'google',
+      role: 'traveler',
+      profileImageUrl: defaultAvatar,
+    });
+
+    const newUser = await userModel.findById(userId);
+    const token = this.generateToken(newUser);
+
+    const { password_hash, ...safeUser } = newUser;
+    return {
+      user: safeUser,
+      token,
+      isNewUser: true,
+    };
+  },
+
+  /**
+   * Process Google OAuth callback code
+   */
+  async googleAuthCallback({ code, state }) {
+    if (!code) {
+      const error = new Error('Authorization code was not provided by Google');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // 1. Exchange code for OAuth tokens
+    const tokens = await googleAuthService.exchangeCodeForTokens(code);
+
+    // 2. Fetch verified user profile
+    const googleProfile = await googleAuthService.getUserInfo(tokens.access_token);
+
+    // 3. Authenticate or create user in database
+    const authResult = await this.handleGoogleAuth(googleProfile);
+
+    // Parse state if return destination was passed
+    const parsedState = googleAuthService.parseState(state);
+
+    return {
+      ...authResult,
+      redirectDestination: parsedState?.redirect || null,
+    };
+  },
+
+  /**
+   * Authenticate with Google ID token (from GIS / Frontend SDK / One Tap)
+   */
+  async googleLoginWithIdToken({ idToken }) {
+    const verifiedProfile = await googleAuthService.verifyIdToken(idToken);
+    return this.handleGoogleAuth(verifiedProfile);
   },
 
   /**

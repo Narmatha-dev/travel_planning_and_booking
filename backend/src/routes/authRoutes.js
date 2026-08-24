@@ -8,8 +8,14 @@ const router = express.Router();
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 
+// Google OAuth 2.0 Endpoints
+router.get('/google', authController.initiateGoogle);
+router.get('/google/callback', authController.handleGoogleCallback);
+router.post('/google', authController.googleTokenAuth);
+
 // Protected Profile Endpoints
 router.get('/profile', authMiddleware, authController.getProfile);
 router.put('/profile', authMiddleware, authController.updateProfile);
 
 module.exports = router;
+

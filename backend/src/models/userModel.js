@@ -141,7 +141,7 @@ const userModel = {
   async findById(id) {
     try {
       const [rows] = await query(
-        `SELECT id, full_name, email, phone_number, role, profile_image_url, address, bio, is_active, created_at, updated_at 
+        `SELECT id, full_name, email, google_id, auth_provider, phone_number, role, profile_image_url, address, bio, is_active, created_at, updated_at 
          FROM users WHERE id = ?`,
         [id]
       );
@@ -170,20 +170,75 @@ const userModel = {
   },
 
   /**
-   * Create a new user record with bcrypt-hashed password
+   * Find user by Google OAuth Subject ID
+   */
+  async findByGoogleId(googleId) {
+    if (!googleId) return null;
+    try {
+      const [rows] = await query('SELECT * FROM users WHERE google_id = ?', [googleId]);
+      return rows[0] || null;
+    } catch (err) {
+      return (
+        FALLBACK_USERS.find((user) => user.google_id === googleId) || null
+      );
+    }
+  },
+
+  /**
+   * Link an existing user account with a Google account ID
+   */
+  async linkGoogleAccount(userId, googleId, profileImageUrl = null) {
+    try {
+      await query(
+        `UPDATE users 
+         SET google_id = ?, 
+             profile_image_url = COALESCE(profile_image_url, ?),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        [googleId, profileImageUrl || null, userId]
+      );
+      return this.findById(userId);
+    } catch (err) {
+      const user = FALLBACK_USERS.find((u) => u.id === parseInt(userId, 10));
+      if (user) {
+        user.google_id = googleId;
+        if (!user.profile_image_url && profileImageUrl) {
+          user.profile_image_url = profileImageUrl;
+        }
+        user.updated_at = new Date().toISOString();
+      }
+      return this.findById(userId);
+    }
+  },
+
+  /**
+   * Create a new user record (supports both email/password and OAuth users)
    */
   async create(userData) {
-    const { fullName, email, passwordHash, phoneNumber, role, profileImageUrl, address, bio } = userData;
+    const {
+      fullName,
+      email,
+      passwordHash = null,
+      googleId = null,
+      authProvider = 'local',
+      phoneNumber = null,
+      role = 'traveler',
+      profileImageUrl = null,
+      address = null,
+      bio = null,
+    } = userData;
     const cleanEmail = email.toLowerCase().trim();
 
     try {
       const [result] = await query(
-        `INSERT INTO users (full_name, email, password_hash, phone_number, role, profile_image_url, address, bio) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO users (full_name, email, password_hash, google_id, auth_provider, phone_number, role, profile_image_url, address, bio) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           fullName,
           cleanEmail,
-          passwordHash,
+          passwordHash || null,
+          googleId || null,
+          authProvider || (googleId ? 'google' : 'local'),
           phoneNumber || null,
           role || 'traveler',
           profileImageUrl || null,
@@ -199,7 +254,9 @@ const userModel = {
         id: newId,
         full_name: fullName,
         email: cleanEmail,
-        password_hash: passwordHash,
+        password_hash: passwordHash || null,
+        google_id: googleId || null,
+        auth_provider: authProvider || (googleId ? 'google' : 'local'),
         phone_number: phoneNumber || null,
         role: role || 'traveler',
         profile_image_url: profileImageUrl || null,
@@ -251,7 +308,7 @@ const userModel = {
   async findAll(limit = 20, offset = 0) {
     try {
       const [rows] = await query(
-        'SELECT id, full_name, email, phone_number, role, is_active, created_at FROM users LIMIT ? OFFSET ?',
+        'SELECT id, full_name, email, google_id, auth_provider, phone_number, role, is_active, created_at FROM users LIMIT ? OFFSET ?',
         [limit, offset]
       );
       return rows;

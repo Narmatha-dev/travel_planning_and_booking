@@ -79,6 +79,33 @@ export function AppProvider({ children }) {
   };
 
   /**
+   * OAuth Success handler
+   */
+  const handleOAuthSuccess = (authToken, authUserData) => {
+    authService.saveAuthSession(authToken, authUserData);
+    setToken(authToken);
+    setUser(authUserData);
+    setAuthError(null);
+  };
+
+  /**
+   * Google ID Token Login handler
+   */
+  const loginWithGoogleToken = async (idToken) => {
+    setAuthError(null);
+    try {
+      const data = await authService.googleTokenLogin(idToken);
+      setUser(data.user);
+      setToken(data.token);
+      return { success: true, user: data.user };
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Google authentication failed';
+      setAuthError(message);
+      return { success: false, message };
+    }
+  };
+
+  /**
    * Logout handler
    */
   const logout = () => {
@@ -112,6 +139,8 @@ export function AppProvider({ children }) {
     setAuthError,
     login,
     register,
+    handleOAuthSuccess,
+    loginWithGoogleToken,
     logout,
     updateUserProfile,
     trips,

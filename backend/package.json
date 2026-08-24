@@ -9,7 +9,9 @@
     "db:setup": "node scripts/setupDatabase.js",
     "db:verify": "node scripts/verifyDatabase.js",
     "db:validate": "node scripts/validateSqlFiles.js",
+    "db:migrate:google": "node scripts/migrateGoogleOAuth.js",
     "test:auth": "node scripts/testAuth.js",
+    "test:google": "node scripts/testGoogleAuth.js",
     "test:destinations": "node scripts/testDestinations.js",
     "test:trips": "node scripts/testTrips.js",
     "test:packages": "node scripts/testPackages.js",
@@ -36,10 +38,13 @@
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
-    "dotenv": "^17.0.1",
+    "dotenv": "^17.4.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mysql2": "^3.12.0",
+    "mysql2": "^3.23.3",
     "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
   }
 }

@@ -8,6 +8,7 @@ import { AppProvider } from './context/AppContext';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import AuthCallbackPage from './pages/AuthCallbackPage';
 import DestinationsPage from './pages/DestinationsPage';
 import DestinationDetailPage from './pages/DestinationDetailPage';
 import PackagesPage from './pages/PackagesPage';
@@ -32,6 +33,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/auth/callback" element={<AuthCallbackPage />} />
               <Route path="/destinations" element={<DestinationsPage />} />
               <Route path="/destinations/:id" element={<DestinationDetailPage />} />
               <Route path="/packages" element={<PackagesPage />} />
