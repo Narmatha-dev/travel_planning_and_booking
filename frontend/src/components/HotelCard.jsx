@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppContext } from '../context/AppContext';
 
 export default function HotelCard({
   hotel,
@@ -6,7 +7,20 @@ export default function HotelCard({
   onSelect,
   onViewDetails,
 }) {
+  const { isItemFavorited, toggleFavoriteItem } = useAppContext();
   if (!hotel) return null;
+
+  const isFavorite = isItemFavorited('hotel', hotel.id);
+
+  const handleFavoriteClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFavoriteItem('hotel', {
+      ...hotel,
+      title: hotel.name,
+      location: hotel.address || `${hotel.city}, ${hotel.country || ''}`,
+    });
+  };
 
   return (
     <div className={`travelora-hotel-card ${isSelected ? 'selected' : ''}`}>
@@ -28,6 +42,33 @@ export default function HotelCard({
             </span>
           )}
         </div>
+
+        {/* Favorite Button (Phase 13) */}
+        <button
+          type="button"
+          onClick={handleFavoriteClick}
+          title={isFavorite ? 'Remove from favorites' : 'Save to favorites'}
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            background: 'rgba(255, 255, 255, 0.9)',
+            backdropFilter: 'blur(4px)',
+            border: 'none',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1rem',
+            cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+            zIndex: 10,
+          }}
+        >
+          {isFavorite ? '❤️' : '🤍'}
+        </button>
       </div>
 
       {/* Hotel Content Body */}

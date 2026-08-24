@@ -26,6 +26,7 @@ const bookingStatusColors = {
 };
 
 export default function MyTripsPage() {
+  const { user, isItemFavorited, toggleFavoriteItem } = useAppContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTabParam = searchParams.get('tab') || 'upcoming';
 
@@ -637,7 +638,21 @@ export default function MyTripsPage() {
                         </div>
                       </div>
 
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button
+                          onClick={() => toggleFavoriteItem('trip', {
+                            ...trip,
+                            id: trip.id,
+                            title: trip.title,
+                            location: trip.destination_name,
+                            category: trip.trip_type || 'trip',
+                            price_display: `$${parseFloat(trip.total_budget || 0).toLocaleString()} Budget`,
+                          })}
+                          className="btn btn-outline btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                        >
+                          {isItemFavorited('trip', trip.id) ? '❤️ Saved' : '🤍 Save Trip'}
+                        </button>
                         <button
                           onClick={() => handleViewTripItinerary(trip.id)}
                           disabled={loadingTripDetails}

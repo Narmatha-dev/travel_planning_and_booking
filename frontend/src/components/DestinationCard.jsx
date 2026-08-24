@@ -14,9 +14,9 @@ const categoryIcons = {
 };
 
 export default function DestinationCard({ destination, onFavoriteToggle }) {
-  const { isAuthenticated } = useAppContext();
+  const { isItemFavorited, toggleFavoriteItem, isAuthenticated } = useAppContext();
   const navigate = useNavigate();
-  const [isFavorite, setIsFavorite] = useState(destination.is_favorite || false);
+  const isFavorite = isItemFavorited('destination', destination.id) || destination.is_favorite;
   const [isToggling, setIsToggling] = useState(false);
 
   const handleFavoriteClick = async (e) => {
@@ -29,23 +29,15 @@ export default function DestinationCard({ destination, onFavoriteToggle }) {
     }
 
     if (isToggling) return;
-
-    const nextState = !isFavorite;
-    setIsFavorite(nextState);
     setIsToggling(true);
 
     try {
-      if (nextState) {
-        await destinationService.addFavorite(destination.id);
-      } else {
-        await destinationService.removeFavorite(destination.id);
-      }
+      const res = await toggleFavoriteItem('destination', destination);
       if (onFavoriteToggle) {
-        onFavoriteToggle(destination.id, nextState);
+        onFavoriteToggle(destination.id, res.isFavorite);
       }
     } catch (err) {
       console.warn('Favorite toggle sync failed:', err.message);
-      setIsFavorite(!nextState); // Rollback on error
     } finally {
       setIsToggling(false);
     }

@@ -106,6 +106,14 @@ function Navbar() {
                 My Trips
               </NavLink>
               <NavLink
+                to="/favorites"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                ❤️ Saved
+              </NavLink>
+              <NavLink
                 to="/profile"
                 className={({ isActive }) =>
                   isActive ? 'nav-link active' : 'nav-link'

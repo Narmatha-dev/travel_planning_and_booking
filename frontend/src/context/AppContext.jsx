@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import authService from '../services/authService';
 import locationService from '../services/locationService';
 import notificationService from '../services/notificationService';
+import favoriteService from '../services/favoriteService';
 
 const AppContext = createContext();
 
@@ -136,14 +137,113 @@ export function AppProvider({ children }) {
     } catch {}
   };
 
-  // Automatically fetch notifications when user logs in or mounts
+  // Favorites State (Phase 13)
+  const [favorites, setFavorites] = useState([]);
+  const [favoriteSummary, setFavoriteSummary] = useState({ total: 0, places: 0, hotels: 0, trips: 0 });
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  const fetchFavorites = useCallback(async () => {
+    if (!user) {
+      setFavorites([]);
+      setFavoriteSummary({ total: 0, places: 0, hotels: 0, trips: 0 });
+      return;
+    }
+    setLoadingFavorites(true);
+    try {
+      const data = await favoriteService.getFavorites();
+      setFavorites(data?.favorites || []);
+      setFavoriteSummary(data?.summary || { total: 0, places: 0, hotels: 0, trips: 0 });
+    } catch {
+      // ignore
+    } finally {
+      setLoadingFavorites(false);
+    }
+  }, [user]);
+
+  const isItemFavorited = useCallback(
+    (type, id) => {
+      if (!user || !id) return false;
+      const normalizedType = String(type).toLowerCase();
+      const normalizedId = String(id);
+      return favorites.some(
+        (f) =>
+          (f.item_type === normalizedType || (normalizedType === 'destination' && f.destination_id === parseInt(normalizedId, 10))) &&
+          (String(f.item_id) === normalizedId || String(f.destination_id) === normalizedId)
+      );
+    },
+    [user, favorites]
+  );
+
+  const toggleFavoriteItem = async (itemType, itemData = {}) => {
+    if (!user || !token) {
+      showToast('⚠️ Please login to save favorites.');
+      return { success: false, message: 'Please login to save favorites.' };
+    }
+
+    const normalizedType = String(itemType).toLowerCase();
+    const itemId = String(itemData.id || itemData.destination_id || itemData.itemId || '1');
+    const wasFavorited = isItemFavorited(normalizedType, itemId);
+
+    // Optimistic UI state update
+    if (wasFavorited) {
+      setFavorites((prev) =>
+        prev.filter(
+          (f) => !(f.item_type === normalizedType && (String(f.item_id) === itemId || String(f.destination_id) === itemId))
+        )
+      );
+      showToast('💔 Removed from favorites.');
+    } else {
+      const optimisticItem = {
+        id: Date.now(),
+        user_id: user.id,
+        item_type: normalizedType,
+        item_id: itemId,
+        destination_id: normalizedType === 'destination' ? parseInt(itemId, 10) : null,
+        title: itemData.title || itemData.name || 'Saved Item',
+        subtitle: itemData.subtitle || itemData.city || itemData.category || '',
+        category: itemData.category || normalizedType,
+        rating: itemData.rating || 4.8,
+        price_display: itemData.price_display || (itemData.base_price ? `$${itemData.base_price}` : ''),
+        image_url: itemData.image_url || itemData.featured_image_url || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+        location: itemData.location || (itemData.city ? `${itemData.city}, ${itemData.country || ''}` : ''),
+        created_at: new Date().toISOString(),
+      };
+      setFavorites((prev) => [optimisticItem, ...prev]);
+      showToast('❤️ Added to your favorites.');
+    }
+
+    try {
+      const res = await favoriteService.toggleFavorite({
+        itemType: normalizedType,
+        itemId,
+        destinationId: normalizedType === 'destination' ? parseInt(itemId, 10) : undefined,
+        itemData,
+      });
+      // Re-sync with backend
+      fetchFavorites();
+      return { success: true, isFavorite: res.isFavorite, message: res.message };
+    } catch (err) {
+      // Revert on error
+      fetchFavorites();
+      return { success: false, message: err.message };
+    }
+  };
+
+  // Automatically fetch notifications & favorites when user logs in or mounts
   useEffect(() => {
     if (user && token) {
       fetchNotifications();
+      fetchFavorites();
       const interval = setInterval(fetchNotifications, 45000); // Polling every 45s
       return () => clearInterval(interval);
     }
-  }, [user, token, fetchNotifications]);
+  }, [user, token, fetchNotifications, fetchFavorites]);
 
   // Load authenticated user profile from backend on app startup
   useEffect(() => {
@@ -339,9 +439,45 @@ export function AppProvider({ children }) {
     markAllNotificationsAsRead,
     deleteNotification,
     clearAllNotifications,
+    // Favorites Context (Phase 13)
+    favorites,
+    favoriteSummary,
+    loadingFavorites,
+    isItemFavorited,
+    toggleFavoriteItem,
+    fetchFavorites,
+    showToast,
   };
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+      {/* Small floating Toast Notification (Feature 17) */}
+      {toastMessage && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            background: '#0f172a',
+            color: '#ffffff',
+            padding: '0.85rem 1.4rem',
+            borderRadius: '12px',
+            fontWeight: '700',
+            fontSize: '0.92rem',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
+    </AppContext.Provider>
+  );
 }
 
 export function useAppContext() {
