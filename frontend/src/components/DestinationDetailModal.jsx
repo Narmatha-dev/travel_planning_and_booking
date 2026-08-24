@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import InteractiveMapSection from './InteractiveMapSection';
 import TransportOptionsSection from './TransportOptionsSection';
+import HotelRecommendationsSection from './HotelRecommendationsSection';
 
 export default function DestinationDetailModal({ place, userLocation, onClose }) {
   const [activeImage, setActiveImage] = useState(
@@ -162,6 +163,17 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
                 origin={userLocation}
                 destination={place}
                 distanceKm={place.distance_km}
+                onContinueToTripPlanning={handlePlanClick}
+              />
+            </div>
+
+            {/* Phase 7: Hotel & Stay Recommendations */}
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #cbd5e1' }}>
+              <HotelRecommendationsSection
+                destination={place}
+                destinationName={place.name}
+                latitude={place.latitude}
+                longitude={place.longitude}
                 onContinueToTripPlanning={handlePlanClick}
               />
             </div>

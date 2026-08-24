@@ -5,6 +5,7 @@ import destinationService from '../services/destinationService';
 import ReviewsSection from '../components/ReviewsSection';
 import InteractiveMapSection from '../components/InteractiveMapSection';
 import TransportOptionsSection from '../components/TransportOptionsSection';
+import HotelRecommendationsSection from '../components/HotelRecommendationsSection';
 
 export default function DestinationDetailPage() {
   const { id } = useParams();
@@ -377,6 +378,28 @@ export default function DestinationDetailPage() {
                 }}
               />
             </div>
+
+            {/* Phase 7: Hotel & Stay Recommendations */}
+            <div style={{ marginTop: '2.5rem' }}>
+              <HotelRecommendationsSection
+                destination={destination}
+                destinationName={destination.name}
+                latitude={destination.latitude}
+                longitude={destination.longitude}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Phase 7 fallback if user has not allowed GPS yet */}
+        {!currentLocation && destination && (
+          <div style={{ marginTop: '2.5rem', marginBottom: '2.5rem' }}>
+            <HotelRecommendationsSection
+              destination={destination}
+              destinationName={destination.name}
+              latitude={destination.latitude}
+              longitude={destination.longitude}
+            />
           </div>
         )}
 

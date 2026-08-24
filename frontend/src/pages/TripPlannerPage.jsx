@@ -20,7 +20,7 @@ const PREFERENCE_OPTIONS = [
 export default function TripPlannerPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { isAuthenticated, selectedTransport, currentLocation } = useAppContext();
+  const { isAuthenticated, selectedTransport, selectedHotel, currentLocation } = useAppContext();
 
   const [destinations, setDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
@@ -129,6 +129,7 @@ export default function TripPlannerPage() {
         currency: formData.currency,
         travelPreference: formData.travelPreference,
         selectedTransport: selectedTransport || null,
+        selectedHotel: selectedHotel || null,
         currentLocation: currentLocation || null,
         startDate: formData.startDate,
       });
@@ -163,7 +164,7 @@ export default function TripPlannerPage() {
         endDate: end.toISOString().split('T')[0],
         totalBudget: formData.budget,
         travelers: formData.travelers,
-        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}`,
+        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}. Selected Stay: ${selectedHotel?.name || 'Standard accommodation'} (${selectedHotel?.price_display || 'Standard tariff'}).`,
         itineraryItems: generatedItinerary?.itineraryItems || [],
       });
 
@@ -237,6 +238,46 @@ export default function TripPlannerPage() {
             </div>
             <Link to="/destinations" className="btn btn-outline btn-sm" style={{ background: 'white' }}>
               Change Transport
+            </Link>
+          </div>
+        )}
+
+        {/* Selected Hotel Reminder Tag from Phase 7 */}
+        {selectedHotel && (
+          <div
+            style={{
+              background: '#f0f9ff',
+              border: '1.5px solid #7dd3fc',
+              borderRadius: '14px',
+              padding: '1rem 1.25rem',
+              marginBottom: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.75rem' }}>🏨</span>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#0284c7' }}>
+                  Confirmed Stay (Phase 7)
+                </span>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0369a1' }}>
+                  {selectedHotel.name} • {selectedHotel.price_display || `₹${selectedHotel.approx_price_per_night}/night`}
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#075985' }}>
+                  📍 {selectedHotel.distance_label || 'Near destination'} • {selectedHotel.type_label || 'Hotel'}
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/destinations/${formData.destinationId || 1}`}
+              className="btn btn-outline btn-sm"
+              style={{ background: 'white', color: '#0284c7', borderColor: '#7dd3fc' }}
+            >
+              Change Stay
             </Link>
           </div>
         )}

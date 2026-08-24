@@ -51,6 +51,25 @@ export function AppProvider({ children }) {
     localStorage.setItem('travel_transport_preference', pref);
   };
 
+  // Hotel / Accommodation Selection State (Phase 7)
+  const [selectedHotel, setSelectedHotelState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('travel_selected_hotel');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const setSelectedHotel = (hotel) => {
+    setSelectedHotelState(hotel);
+    if (hotel) {
+      localStorage.setItem('travel_selected_hotel', JSON.stringify(hotel));
+    } else {
+      localStorage.removeItem('travel_selected_hotel');
+    }
+  };
+
   const [trips, setTrips] = useState([
     { id: 1, destination: 'Santorini', date: '12 Aug 2026', status: 'Confirmed' },
     { id: 2, destination: 'Bali', date: '03 Sep 2026', status: 'Planning' },
@@ -234,6 +253,9 @@ export function AppProvider({ children }) {
     setSelectedTransport,
     transportPreference,
     setTransportPreference,
+    // Hotel Context (Phase 7)
+    selectedHotel,
+    setSelectedHotel,
     login,
     register,
     handleOAuthSuccess,
