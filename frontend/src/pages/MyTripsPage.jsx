@@ -5,6 +5,7 @@ import bookingService from '../services/bookingService';
 import paymentService from '../services/paymentService';
 import ItineraryTimeline from '../components/ItineraryTimeline';
 import LocationSection from '../components/LocationSection';
+import InteractiveMapSection from '../components/InteractiveMapSection';
 
 const tripStatusColors = {
   planned: { bg: '#dbeafe', color: '#1d4ed8' },
@@ -22,16 +23,9 @@ const bookingStatusColors = {
   refunded: { bg: '#ede9fe', color: '#6d28d9', label: 'Refunded' },
 };
 
-const paymentStatusColors = {
-  completed: { bg: '#dcfce7', color: '#15803d', label: 'Completed' },
-  pending: { bg: '#fef3c7', color: '#b45309', label: 'Pending' },
-  failed: { bg: '#fee2e2', color: '#b91c1c', label: 'Failed' },
-  refunded: { bg: '#ede9fe', color: '#6d28d9', label: 'Refunded' },
-};
-
 export default function MyTripsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTabParam = searchParams.get('tab') || 'trips';
+  const activeTabParam = searchParams.get('tab') || 'upcoming';
 
   const [activeTab, setActiveTab] = useState(activeTabParam);
 
@@ -47,17 +41,16 @@ export default function MyTripsPage() {
   const [bookings, setBookings] = useState([]);
   const [loadingBookings, setLoadingBookings] = useState(true);
   const [bookingError, setBookingError] = useState('');
-  const [selectedBookingReceipt, setSelectedBookingReceipt] = useState(null);
+  const [selectedBookingDetails, setSelectedBookingDetails] = useState(null);
   const [cancellingBookingId, setCancellingBookingId] = useState(null);
   const [cancelModalBooking, setCancelModalBooking] = useState(null);
-  const [cancelReason, setCancelReason] = useState('Schedule change');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [cancelReason, setCancelReason] = useState('Schedule change / change of plans');
+  const [cancelSuccessMsg, setCancelSuccessMsg] = useState('');
 
   // Payments History State
   const [payments, setPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [paymentError, setPaymentError] = useState('');
-  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
 
   const loadUserTrips = async () => {
     setLoadingTrips(true);
@@ -109,7 +102,7 @@ export default function MyTripsPage() {
     setSearchParams({ tab });
   };
 
-  const handleViewItinerary = async (tripId) => {
+  const handleViewTripItinerary = async (tripId) => {
     setLoadingTripDetails(true);
     try {
       const fullTrip = await tripService.getTripDetails(tripId);
@@ -119,6 +112,10 @@ export default function MyTripsPage() {
     } finally {
       setLoadingTripDetails(false);
     }
+  };
+
+  const handleViewBookingDetails = async (booking) => {
+    setSelectedBookingDetails(booking);
   };
 
   const handleDeleteTrip = async (tripId, title) => {
@@ -138,18 +135,20 @@ export default function MyTripsPage() {
     }
   };
 
+  // Feature 9: Cancel Booking
   const handleConfirmCancelBooking = async () => {
     if (!cancelModalBooking) return;
     setCancellingBookingId(cancelModalBooking.id);
 
     try {
-      const result = await bookingService.cancelBooking(cancelModalBooking.id, cancelReason);
+      await bookingService.cancelBooking(cancelModalBooking.id, cancelReason);
       setBookings((prev) =>
         prev.map((b) => (b.id === cancelModalBooking.id ? { ...b, status: 'cancelled', payment_status: 'refunded' } : b))
       );
-      loadUserPayments(); // Refresh payments list to reflect refund status
+      loadUserPayments();
+      setCancelSuccessMsg(`Trip reservation #${cancelModalBooking.booking_reference} has been cancelled successfully.`);
       setCancelModalBooking(null);
-      alert(`Booking #${cancelModalBooking.booking_reference} has been cancelled successfully. Refund processing initiated.`);
+      setTimeout(() => setCancelSuccessMsg(''), 5000);
     } catch (err) {
       alert('Cancellation error: ' + (err.response?.data?.message || err.message));
     } finally {
@@ -157,41 +156,149 @@ export default function MyTripsPage() {
     }
   };
 
-  const filteredBookings = bookings.filter((b) => {
-    if (statusFilter === 'all') return true;
-    return b.status === statusFilter;
-  });
+  // Feature 10: Upcoming / Completed / Cancelled Categorization
+  const todayStr = new Date().toISOString().split('T')[0];
 
-  const filteredPayments = payments.filter((p) => {
-    if (paymentStatusFilter === 'all') return true;
-    return p.payment_status === paymentStatusFilter;
-  });
+  const upcomingBookings = bookings.filter((b) => b.status !== 'cancelled' && (!b.travel_date || b.travel_date >= todayStr));
+  const completedBookings = bookings.filter((b) => b.status !== 'cancelled' && b.travel_date && b.travel_date < todayStr);
+  const cancelledBookings = bookings.filter((b) => b.status === 'cancelled');
 
-  const totalPlannedBudget = trips.reduce((acc, t) => acc + parseFloat(t.total_budget || 0), 0);
   const totalBookingsSpent = bookings
     .filter((b) => b.status === 'confirmed' || b.status === 'completed')
     .reduce((acc, b) => acc + parseFloat(b.final_amount || 0), 0);
 
+  const renderBookingCard = (booking, canCancel = false) => {
+    const statusStyle = bookingStatusColors[booking.status] || bookingStatusColors.confirmed;
+    const isCustom = booking.booking_type === 'custom_trip';
+
+    return (
+      <div
+        key={booking.id}
+        style={{
+          background: '#ffffff',
+          borderRadius: '18px',
+          border: '1px solid #e2e8f0',
+          padding: '1.75rem',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1.5rem',
+          transition: 'transform 0.2s, box-shadow 0.2s',
+        }}
+      >
+        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flex: 1, minWidth: '300px' }}>
+          {booking.featured_image_url && (
+            <img
+              src={booking.featured_image_url}
+              alt={booking.destination_name}
+              style={{
+                width: '100px',
+                height: '100px',
+                borderRadius: '14px',
+                objectFit: 'cover',
+                border: '1px solid #e2e8f0',
+              }}
+            />
+          )}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.35rem', flexWrap: 'wrap' }}>
+              <span
+                style={{
+                  background: statusStyle.bg,
+                  color: statusStyle.color,
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                }}
+              >
+                ● {statusStyle.label}
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0284c7' }}>
+                #{booking.booking_reference}
+              </span>
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+                ({isCustom ? 'AI Custom Trip' : 'Curated Package'})
+              </span>
+            </div>
+
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.35rem 0' }}>
+              {booking.destination_name || 'Selected Destination'}
+            </h3>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem' }}>
+              <span>📅 {booking.travel_date} {booking.return_date ? `➔ ${booking.return_date}` : ''}</span>
+              <span>👥 {booking.num_travelers} Traveler(s)</span>
+            </div>
+
+            {/* Transport & Stay Highlights */}
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {booking.selected_transport && (
+                <span style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700' }}>
+                  {booking.selected_transport.icon || '🚆'} {booking.selected_transport.title}
+                </span>
+              )}
+              {booking.selected_hotel && (
+                <span style={{ background: '#f0f9ff', color: '#075985', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700' }}>
+                  🏨 {booking.selected_hotel.name}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Pricing & Actions */}
+        <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: '180px' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</span>
+            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0f172a' }}>
+              ${parseFloat(booking.final_amount || 0).toLocaleString()}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+            <button
+              onClick={() => handleViewBookingDetails(booking)}
+              className="btn btn-outline btn-sm"
+              style={{ fontWeight: '700', padding: '0.5rem 1rem' }}
+            >
+              🔍 View Details
+            </button>
+            {canCancel && booking.status !== 'cancelled' && (
+              <button
+                onClick={() => setCancelModalBooking(booking)}
+                className="btn btn-sm"
+                style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: '700', padding: '0.5rem 0.85rem' }}
+              >
+                ✕ Cancel Trip
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <section className="section page-section" style={{ paddingTop: '2rem' }}>
       <div className="container">
-        {/* Header Title & CTA */}
+        {/* Header Title & Actions */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
           <div>
-            <span className="eyebrow">Traveler Hub</span>
-            <h1 style={{ fontSize: '2.25rem', fontWeight: '800', color: '#0f172a', margin: '0.4rem 0 0.2rem 0' }}>
-              My Trips & Financial Activity
+            <span className="eyebrow">Phase 8 • Traveler Dashboard</span>
+            <h1 style={{ fontSize: '2.25rem', fontWeight: '900', color: '#0f172a', margin: '0.4rem 0 0.2rem 0' }}>
+              My Trips & Bookings Hub
             </h1>
-            <p style={{ color: '#64748b' }}>
-              Manage customized itineraries, inspect confirmed package bookings, and audit transaction payment histories.
+            <p style={{ color: '#64748b', margin: 0 }}>
+              Track confirmed reservations, review day-by-day itineraries, manage cancellations, and view payment receipts.
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <Link to="/packages" className="btn btn-outline" style={{ padding: '0.75rem 1.25rem' }}>
-              📦 Browse Packages
-            </Link>
-            <Link to="/trip-planner" className="btn btn-primary" style={{ padding: '0.75rem 1.25rem' }}>
+            <Link to="/trip-planner" className="btn btn-primary" style={{ padding: '0.75rem 1.25rem', fontWeight: '800' }}>
               ➕ Plan New Trip
             </Link>
           </div>
@@ -202,11 +309,19 @@ export default function MyTripsPage() {
           <LocationSection />
         </div>
 
+        {/* Cancel Success Alert Banner */}
+        {cancelSuccessMsg && (
+          <div style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '1rem 1.25rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.25rem' }}>✅</span>
+            <strong>{cancelSuccessMsg}</strong>
+          </div>
+        )}
+
         {/* Stats Summary Strip */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
             gap: '1rem',
             background: '#ffffff',
             padding: '1.25rem',
@@ -217,123 +332,216 @@ export default function MyTripsPage() {
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Custom Trips</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>🚀 Upcoming Trips</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#0284c7', marginTop: '0.2rem' }}>
+              {upcomingBookings.length}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>📜 Completed Trips</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#16a34a', marginTop: '0.2rem' }}>
+              {completedBookings.length}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>❌ Cancelled Trips</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#e11d48', marginTop: '0.2rem' }}>
+              {cancelledBookings.length}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>💡 Draft Itineraries</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#0f172a', marginTop: '0.2rem' }}>
               {trips.length}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Package Bookings</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0284c7', marginTop: '0.2rem' }}>
-              {bookings.length}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Transactions</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#16a34a', marginTop: '0.2rem' }}>
-              {payments.length}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount Paid</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
-              ${totalBookingsSpent.toLocaleString()}
             </div>
           </div>
         </div>
 
-        {/* Tabs Switcher: Custom Trips vs Package Bookings vs Payment History */}
+        {/* Feature 7: Categorized Tabs Navigation */}
         <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '2rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => handleTabChange('upcoming')}
+            style={{
+              padding: '0.85rem 1.35rem',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '0.95rem',
+              fontWeight: '800',
+              cursor: 'pointer',
+              color: activeTab === 'upcoming' ? '#0284c7' : '#64748b',
+              borderBottom: activeTab === 'upcoming' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            🚀 Upcoming Trips ({upcomingBookings.length})
+          </button>
+
+          <button
+            onClick={() => handleTabChange('completed')}
+            style={{
+              padding: '0.85rem 1.35rem',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '0.95rem',
+              fontWeight: '800',
+              cursor: 'pointer',
+              color: activeTab === 'completed' ? '#0284c7' : '#64748b',
+              borderBottom: activeTab === 'completed' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            📜 Completed Trips ({completedBookings.length})
+          </button>
+
+          <button
+            onClick={() => handleTabChange('cancelled')}
+            style={{
+              padding: '0.85rem 1.35rem',
+              border: 'none',
+              background: 'transparent',
+              fontSize: '0.95rem',
+              fontWeight: '800',
+              cursor: 'pointer',
+              color: activeTab === 'cancelled' ? '#0284c7' : '#64748b',
+              borderBottom: activeTab === 'cancelled' ? '3px solid #0284c7' : '3px solid transparent',
+              marginBottom: '-2px',
+            }}
+          >
+            ❌ Cancelled Trips ({cancelledBookings.length})
+          </button>
+
           <button
             onClick={() => handleTabChange('trips')}
             style={{
-              padding: '0.85rem 1.5rem',
+              padding: '0.85rem 1.35rem',
               border: 'none',
               background: 'transparent',
-              fontSize: '1rem',
-              fontWeight: '700',
+              fontSize: '0.95rem',
+              fontWeight: '800',
               cursor: 'pointer',
               color: activeTab === 'trips' ? '#0284c7' : '#64748b',
               borderBottom: activeTab === 'trips' ? '3px solid #0284c7' : '3px solid transparent',
               marginBottom: '-2px',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
             }}
           >
-            <span>🗺️</span> Custom Planned Trips ({trips.length})
-          </button>
-
-          <button
-            onClick={() => handleTabChange('bookings')}
-            style={{
-              padding: '0.85rem 1.5rem',
-              border: 'none',
-              background: 'transparent',
-              fontSize: '1rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              color: activeTab === 'bookings' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'bookings' ? '3px solid #0284c7' : '3px solid transparent',
-              marginBottom: '-2px',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <span>📦</span> Package Bookings ({bookings.length})
+            💡 Draft Itineraries ({trips.length})
           </button>
 
           <button
             onClick={() => handleTabChange('payments')}
             style={{
-              padding: '0.85rem 1.5rem',
+              padding: '0.85rem 1.35rem',
               border: 'none',
               background: 'transparent',
-              fontSize: '1rem',
-              fontWeight: '700',
+              fontSize: '0.95rem',
+              fontWeight: '800',
               cursor: 'pointer',
               color: activeTab === 'payments' ? '#0284c7' : '#64748b',
               borderBottom: activeTab === 'payments' ? '3px solid #0284c7' : '3px solid transparent',
               marginBottom: '-2px',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
             }}
           >
-            <span>💳</span> Payment History ({payments.length})
+            💳 Payments History ({payments.length})
           </button>
         </div>
 
+        {/* Loading / Error states */}
+        {loadingBookings && (
+          <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
+            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✈️</div>
+            <div style={{ fontWeight: '700', color: '#0f172a' }}>Loading your travel bookings...</div>
+          </div>
+        )}
+
+        {bookingError && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '1.25rem', borderRadius: '12px', textAlign: 'center', marginBottom: '2rem' }}>
+            <p style={{ color: '#b91c1c', margin: '0 0 0.5rem 0' }}>{bookingError}</p>
+            <button onClick={loadUserBookings} className="btn btn-primary btn-sm">Try Again</button>
+          </div>
+        )}
+
         {/* ==================================================== */}
-        {/* TAB 1: CUSTOM TRIPS                                  */}
+        {/* TAB 1: UPCOMING TRIPS                                */}
         {/* ==================================================== */}
-        {activeTab === 'trips' && (
+        {!loadingBookings && activeTab === 'upcoming' && (
           <div>
-            {loadingTrips ? (
-              <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                <div style={{ fontSize: '1.5rem', color: '#0284c7', marginBottom: '0.5rem' }}>✈️</div>
-                <div style={{ fontWeight: '600', color: '#334155' }}>Loading your planned trips...</div>
-              </div>
-            ) : tripError ? (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
-                <p style={{ color: '#b91c1c', margin: '0 0 1rem 0' }}>{tripError}</p>
-                <button onClick={loadUserTrips} className="btn btn-primary">Try Again</button>
-              </div>
-            ) : trips.length === 0 ? (
-              <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎒</div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>No trips planned yet</h3>
-                <p style={{ color: '#64748b', maxWidth: '400px', margin: '0 auto 1.5rem auto' }}>
-                  Use our interactive trip planner to generate multi-day schedules tailored to your travel style.
+            {upcomingBookings.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1.5px dashed #cbd5e1', borderRadius: '20px', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🌴</div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>No upcoming trips planned</h3>
+                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
+                  Your upcoming adventures will appear here. Plan your next personalized trip or choose from popular destinations!
                 </p>
-                <Link to="/trip-planner" className="btn btn-primary">Plan Your First Trip</Link>
+                <Link to="/trip-planner" className="btn btn-primary" style={{ padding: '0.8rem 2rem', fontWeight: '800' }}>
+                  Plan a Trip with AI
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {upcomingBookings.map((b) => renderBookingCard(b, true))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* TAB 2: COMPLETED TRIPS                               */}
+        {/* ==================================================== */}
+        {!loadingBookings && activeTab === 'completed' && (
+          <div>
+            {completedBookings.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1.5px dashed #cbd5e1', borderRadius: '20px', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📜</div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>No completed trips yet</h3>
+                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
+                  Trips whose travel dates have passed will automatically be recorded here in your journey history.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {completedBookings.map((b) => renderBookingCard(b, false))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* TAB 3: CANCELLED TRIPS                               */}
+        {/* ==================================================== */}
+        {!loadingBookings && activeTab === 'cancelled' && (
+          <div>
+            {cancelledBookings.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1.5px dashed #cbd5e1', borderRadius: '20px', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>✨</div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>No cancelled reservations</h3>
+                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto' }}>
+                  All your active and completed trips remain intact.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {cancelledBookings.map((b) => renderBookingCard(b, false))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ==================================================== */}
+        {/* TAB 4: DRAFT ITINERARIES                             */}
+        {/* ==================================================== */}
+        {!loadingTrips && activeTab === 'trips' && (
+          <div>
+            {trips.length === 0 ? (
+              <div style={{ background: '#ffffff', border: '1.5px dashed #cbd5e1', borderRadius: '20px', padding: '4rem 2rem', textAlign: 'center' }}>
+                <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🎒</div>
+                <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>No draft itineraries</h3>
+                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
+                  Save multi-day schedules generated by the AI Trip Planner to review or edit later.
+                </p>
+                <Link to="/trip-planner" className="btn btn-primary">Plan New Trip</Link>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -347,7 +555,6 @@ export default function MyTripsPage() {
                         borderRadius: '16px',
                         border: '1px solid #e2e8f0',
                         padding: '1.5rem',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
@@ -357,39 +564,36 @@ export default function MyTripsPage() {
                     >
                       <div style={{ flex: 1, minWidth: '280px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                          <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '700', textTransform: 'uppercase' }}>
+                          <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase' }}>
                             {trip.status}
                           </span>
                           <span style={{ fontSize: '0.82rem', color: '#64748b' }}>
-                            📍 {trip.destination_name} ({trip.destination_city || ''}, {trip.destination_country || ''})
+                            📍 {trip.destination_name}
                           </span>
                         </div>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.4rem 0' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.4rem 0' }}>
                           {trip.title}
                         </h3>
                         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569' }}>
                           <span>📅 {trip.start_date} to {trip.end_date}</span>
-                          <span>🎒 {trip.trip_type} trip</span>
-                        </div>
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
-                          <span style={{ color: '#94a3b8' }}>Total Budget: </span>
-                          <strong style={{ color: '#0f172a' }}>${parseFloat(trip.total_budget || 0).toLocaleString()}</strong>
+                          <span>🎒 {trip.trip_type}</span>
+                          <span>💵 Budget: ${parseFloat(trip.total_budget || 0).toLocaleString()}</span>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button
-                          onClick={() => handleViewItinerary(trip.id)}
-                          className="btn btn-primary"
-                          style={{ padding: '0.55rem 1.25rem', fontSize: '0.85rem' }}
+                          onClick={() => handleViewTripItinerary(trip.id)}
+                          disabled={loadingTripDetails}
+                          className="btn btn-outline btn-sm"
                         >
-                          {loadingTripDetails && selectedTripDetails?.id === trip.id ? 'Loading...' : '📋 View Schedule'}
+                          👁️ View Schedule
                         </button>
                         <button
                           onClick={() => handleDeleteTrip(trip.id, trip.title)}
                           disabled={deletingTripId === trip.id}
-                          className="btn btn-outline"
-                          style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', color: '#dc2626', borderColor: '#fca5a5' }}
+                          className="btn btn-sm"
+                          style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5' }}
                         >
                           🗑️ Delete
                         </button>
@@ -403,277 +607,46 @@ export default function MyTripsPage() {
         )}
 
         {/* ==================================================== */}
-        {/* TAB 2: PACKAGE BOOKINGS HISTORY                      */}
+        {/* TAB 5: PAYMENTS HISTORY                              */}
         {/* ==================================================== */}
-        {activeTab === 'bookings' && (
-          <div>
-            {/* Status Filters Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {['all', 'confirmed', 'cancelled'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setStatusFilter(st)}
-                    style={{
-                      padding: '0.4rem 1rem',
-                      borderRadius: '9999px',
-                      border: statusFilter === st ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                      background: statusFilter === st ? '#e0f2fe' : '#ffffff',
-                      color: statusFilter === st ? '#0369a1' : '#475569',
-                      fontWeight: statusFilter === st ? '700' : '500',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {st === 'all' ? 'All Bookings' : st}
-                  </button>
+        {!loadingPayments && activeTab === 'payments' && (
+          <div style={{ background: '#ffffff', borderRadius: '18px', border: '1px solid #e2e8f0', padding: '1.5rem', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b' }}>
+                  <th style={{ padding: '0.75rem' }}>Transaction ID</th>
+                  <th style={{ padding: '0.75rem' }}>Method</th>
+                  <th style={{ padding: '0.75rem' }}>Amount</th>
+                  <th style={{ padding: '0.75rem' }}>Status</th>
+                  <th style={{ padding: '0.75rem' }}>Paid At</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                    <td style={{ padding: '0.75rem', fontWeight: '700', color: '#0284c7' }}>{p.transaction_id}</td>
+                    <td style={{ padding: '0.75rem' }}>{p.payment_method?.toUpperCase()} ({p.payment_gateway})</td>
+                    <td style={{ padding: '0.75rem', fontWeight: '800' }}>${parseFloat(p.amount).toLocaleString()}</td>
+                    <td style={{ padding: '0.75rem' }}>
+                      <span style={{ background: p.payment_status === 'completed' ? '#dcfce7' : '#fee2e2', color: p.payment_status === 'completed' ? '#15803d' : '#b91c1c', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800' }}>
+                        {p.payment_status}
+                      </span>
+                    </td>
+                    <td style={{ padding: '0.75rem', color: '#64748b' }}>{p.paid_at || 'Recent'}</td>
+                  </tr>
                 ))}
-              </div>
-
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Showing <strong>{filteredBookings.length}</strong> booking{filteredBookings.length === 1 ? '' : 's'}
-              </span>
-            </div>
-
-            {loadingBookings ? (
-              <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                <div style={{ fontSize: '1.5rem', color: '#0284c7', marginBottom: '0.5rem' }}>✈️</div>
-                <div style={{ fontWeight: '600', color: '#334155' }}>Loading your booking history...</div>
-              </div>
-            ) : bookingError ? (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
-                <p style={{ color: '#b91c1c', margin: '0 0 1rem 0' }}>{bookingError}</p>
-                <button onClick={loadUserBookings} className="btn btn-primary">Try Again</button>
-              </div>
-            ) : filteredBookings.length === 0 ? (
-              <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
-                  No package bookings found
-                </h3>
-                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
-                  Explore curated travel packages with pre-booked stays, private guides, and instant reservation confirmation.
-                </p>
-                <Link to="/packages" className="btn btn-primary">Explore Travel Packages</Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {filteredBookings.map((b) => {
-                  const statusStyle = bookingStatusColors[b.status] || bookingStatusColors.confirmed;
-                  const isCancelled = b.status === 'cancelled';
-
-                  return (
-                    <div
-                      key={b.id}
-                      style={{
-                        background: '#ffffff',
-                        borderRadius: '16px',
-                        border: '1px solid #e2e8f0',
-                        padding: '1.5rem',
-                        boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '1.5rem',
-                        borderLeft: isCancelled ? '4px solid #ef4444' : '4px solid #16a34a',
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: '280px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                          <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '2px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>
-                            {statusStyle.label}
-                          </span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0284c7' }}>
-                            {b.booking_reference}
-                          </span>
-                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                            • {b.created_at?.split(' ')[0] || 'Recently Booked'}
-                          </span>
-                        </div>
-
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.4rem 0' }}>
-                          {b.package_title || 'Curated Travel Package'}
-                        </h3>
-
-                        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569' }}>
-                          <span>📍 <strong>Destination:</strong> {b.destination_name}</span>
-                          <span>📅 <strong>Travel Date:</strong> {b.travel_date}</span>
-                          <span>👥 <strong>Guests:</strong> {b.num_travelers} Traveler(s)</span>
-                        </div>
-
-                        <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
-                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Amount Paid:</span>
-                          <strong style={{ fontSize: '1.15rem', color: isCancelled ? '#94a3b8' : '#16a34a' }}>
-                            ${parseFloat(b.final_amount).toLocaleString()}
-                          </strong>
-                          {b.transaction_id && (
-                            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                              (Txn: {b.transaction_id})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', minWidth: '150px' }}>
-                        <button
-                          onClick={() => setSelectedBookingReceipt(b)}
-                          className="btn btn-outline"
-                          style={{ padding: '0.55rem 1rem', fontSize: '0.85rem', textAlign: 'center' }}
-                        >
-                          📄 View Receipt
-                        </button>
-
-                        {!isCancelled && (
-                          <button
-                            onClick={() => setCancelModalBooking(b)}
-                            disabled={cancellingBookingId === b.id}
-                            className="btn btn-outline"
-                            style={{
-                              padding: '0.55rem 1rem',
-                              fontSize: '0.85rem',
-                              color: '#dc2626',
-                              borderColor: '#fca5a5',
-                              background: '#fff5f5',
-                            }}
-                          >
-                            {cancellingBookingId === b.id ? 'Processing...' : '❌ Cancel Booking'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
         )}
 
-        {/* ==================================================== */}
-        {/* TAB 3: PAYMENT HISTORY                               */}
-        {/* ==================================================== */}
-        {activeTab === 'payments' && (
-          <div>
-            {/* Status Filters Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {['all', 'completed', 'refunded', 'failed'].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setPaymentStatusFilter(st)}
-                    style={{
-                      padding: '0.4rem 1rem',
-                      borderRadius: '9999px',
-                      border: paymentStatusFilter === st ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                      background: paymentStatusFilter === st ? '#e0f2fe' : '#ffffff',
-                      color: paymentStatusFilter === st ? '#0369a1' : '#475569',
-                      fontWeight: paymentStatusFilter === st ? '700' : '500',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer',
-                      textTransform: 'capitalize',
-                    }}
-                  >
-                    {st === 'all' ? 'All Transactions' : st}
-                  </button>
-                ))}
-              </div>
-
-              <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Showing <strong>{filteredPayments.length}</strong> transaction{filteredPayments.length === 1 ? '' : 's'}
-              </span>
-            </div>
-
-            {loadingPayments ? (
-              <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                <div style={{ fontSize: '1.5rem', color: '#0284c7', marginBottom: '0.5rem' }}>💳</div>
-                <div style={{ fontWeight: '600', color: '#334155' }}>Loading payment transaction history...</div>
-              </div>
-            ) : paymentError ? (
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1.5rem', borderRadius: '12px', textAlign: 'center' }}>
-                <p style={{ color: '#b91c1c', margin: '0 0 1rem 0' }}>{paymentError}</p>
-                <button onClick={loadUserPayments} className="btn btn-primary">Try Again</button>
-              </div>
-            ) : filteredPayments.length === 0 ? (
-              <div style={{ background: '#ffffff', border: '1px dashed #cbd5e1', borderRadius: '16px', padding: '4rem 2rem', textAlign: 'center' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>💳</div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
-                  No payment transactions found
-                </h3>
-                <p style={{ color: '#64748b', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
-                  Your secure financial transaction audit logs and receipts will appear here once bookings are confirmed.
-                </p>
-                <Link to="/packages" className="btn btn-primary">Book a Package</Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {filteredPayments.map((p) => {
-                  const statusStyle = paymentStatusColors[p.payment_status] || paymentStatusColors.completed;
-                  return (
-                    <div
-                      key={p.id}
-                      style={{
-                        background: '#ffffff',
-                        borderRadius: '16px',
-                        border: '1px solid #e2e8f0',
-                        padding: '1.5rem',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        flexWrap: 'wrap',
-                        gap: '1.5rem',
-                      }}
-                    >
-                      <div style={{ flex: 1, minWidth: '280px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.4rem' }}>
-                          <span style={{ background: statusStyle.bg, color: statusStyle.color, padding: '2px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase' }}>
-                            {statusStyle.label}
-                          </span>
-                          <span style={{ fontSize: '0.85rem', fontWeight: '700', color: '#0f172a' }}>
-                            {p.transaction_id}
-                          </span>
-                          <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                            • {p.paid_at?.split(' ')[0] || p.created_at?.split(' ')[0] || 'Recently Processed'}
-                          </span>
-                        </div>
-
-                        <h3 style={{ fontSize: '1.15rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.35rem 0' }}>
-                          {p.package_title || 'Travel Booking Payment'}
-                        </h3>
-
-                        <div style={{ display: 'flex', gap: '1.25rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569' }}>
-                          <span>📍 <strong>Destination:</strong> {p.destination_name || 'Destination'}</span>
-                          <span>🔖 <strong>Booking Reference:</strong> {p.booking_reference}</span>
-                          <span>💳 <strong>Method:</strong> {p.payment_method?.toUpperCase()} ({p.payment_gateway})</span>
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right', minWidth: '150px' }}>
-                        <div style={{ fontSize: '1.4rem', fontWeight: '800', color: p.payment_status === 'refunded' ? '#7c3aed' : '#0f172a' }}>
-                          ${parseFloat(p.amount).toLocaleString()} {p.currency || 'USD'}
-                        </div>
-                        <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '600' }}>
-                          {p.payment_status === 'completed' ? '✓ Paid & Settled' : p.payment_status}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ==================================================== */}
-        {/* MODAL: VIEW BOOKING RECEIPT                          */}
-        {/* ==================================================== */}
-        {selectedBookingReceipt && (
+        {/* Feature 9: Cancel Booking Modal */}
+        {cancelModalBooking && (
           <div
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(15, 23, 42, 0.7)',
+              background: 'rgba(15, 23, 42, 0.75)',
               backdropFilter: 'blur(6px)',
               display: 'flex',
               alignItems: 'center',
@@ -687,7 +660,86 @@ export default function MyTripsPage() {
                 background: '#ffffff',
                 borderRadius: '20px',
                 width: '100%',
-                maxWidth: '650px',
+                maxWidth: '520px',
+                padding: '2.25rem',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
+              }}
+            >
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>⚠️</div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', textAlign: 'center', margin: '0 0 0.5rem 0' }}>
+                Cancel Trip Reservation?
+              </h2>
+              <p style={{ color: '#64748b', textAlign: 'center', fontSize: '0.92rem', marginBottom: '1.5rem' }}>
+                Are you sure you want to cancel reservation <strong>#{cancelModalBooking.booking_reference}</strong> ({cancelModalBooking.destination_name})?
+              </p>
+
+              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1rem', borderRadius: '10px', marginBottom: '1.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>
+                💵 A refund request will be registered and your booking status will update to Cancelled.
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#334155', marginBottom: '0.4rem' }}>
+                  Reason for Cancellation:
+                </label>
+                <select
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
+                >
+                  <option value="Schedule conflict / change of plans">Schedule conflict / change of plans</option>
+                  <option value="Booked incorrect dates">Booked incorrect dates or destination</option>
+                  <option value="Financial reasons">Financial or personal reasons</option>
+                  <option value="Other">Other reason</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setCancelModalBooking(null)}
+                  className="btn btn-outline"
+                  style={{ padding: '0.65rem 1.25rem' }}
+                >
+                  Keep Reservation
+                </button>
+                <button
+                  onClick={handleConfirmCancelBooking}
+                  disabled={Boolean(cancellingBookingId)}
+                  className="btn"
+                  style={{
+                    padding: '0.65rem 1.5rem',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    fontWeight: '800',
+                  }}
+                >
+                  {cancellingBookingId ? 'Cancelling...' : 'Confirm Cancellation'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Feature 8: Rich Trip Details Modal (Map + Itinerary + Stay + Transport) */}
+        {selectedBookingDetails && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.75)',
+              backdropFilter: 'blur(6px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 1000,
+              padding: '1rem',
+            }}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '24px',
+                width: '100%',
+                maxWidth: '850px',
                 maxHeight: '90vh',
                 overflowY: 'auto',
                 padding: '2.5rem',
@@ -696,7 +748,7 @@ export default function MyTripsPage() {
               }}
             >
               <button
-                onClick={() => setSelectedBookingReceipt(null)}
+                onClick={() => setSelectedBookingDetails(null)}
                 style={{
                   position: 'absolute',
                   top: '1.25rem',
@@ -714,148 +766,66 @@ export default function MyTripsPage() {
                 ✕
               </button>
 
-              <div style={{ textAlign: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
-                <span style={{ fontSize: '0.8rem', background: '#e0f2fe', color: '#0369a1', padding: '3px 10px', borderRadius: '9999px', fontWeight: '700' }}>
-                  OFFICIAL BOOKING & PAYMENT RECEIPT
+              <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem' }}>
+                <span style={{ background: '#dcfce7', color: '#15803d', padding: '3px 10px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase' }}>
+                  ● {selectedBookingDetails.status}
                 </span>
-                <h2 style={{ fontSize: '1.75rem', fontWeight: '800', color: '#0f172a', margin: '0.5rem 0 0.2rem 0' }}>
-                  {selectedBookingReceipt.booking_reference}
+                <h2 style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0f172a', margin: '0.4rem 0 0.2rem 0' }}>
+                  {selectedBookingDetails.destination_name}
                 </h2>
-                <span style={{
-                  display: 'inline-block',
-                  background: selectedBookingReceipt.status === 'confirmed' ? '#dcfce7' : '#fee2e2',
-                  color: selectedBookingReceipt.status === 'confirmed' ? '#15803d' : '#b91c1c',
-                  padding: '2px 10px',
-                  borderRadius: '9999px',
-                  fontSize: '0.8rem',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase',
-                }}>
-                  {selectedBookingReceipt.status}
-                </span>
+                <div style={{ fontSize: '0.9rem', color: '#64748b' }}>
+                  Booking Ref: <strong>#{selectedBookingDetails.booking_reference}</strong> • 📅 {selectedBookingDetails.travel_date} • 👥 {selectedBookingDetails.num_travelers} Travelers
+                </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', fontSize: '0.9rem', color: '#475569', marginBottom: '1.5rem' }}>
-                <div><strong>Package:</strong> {selectedBookingReceipt.package_title}</div>
-                <div><strong>Destination:</strong> {selectedBookingReceipt.destination_name}</div>
-                <div><strong>Departure Date:</strong> {selectedBookingReceipt.travel_date}</div>
-                <div><strong>Return Date:</strong> {selectedBookingReceipt.return_date || 'N/A'}</div>
-                <div><strong>Guests:</strong> {selectedBookingReceipt.num_travelers} Traveler(s)</div>
-                <div><strong>Payment Method:</strong> {selectedBookingReceipt.payment_method || 'Credit Card'}</div>
-                <div><strong>Transaction ID:</strong> {selectedBookingReceipt.transaction_id || 'N/A'}</div>
-                <div><strong>Payment Status:</strong> <span style={{ color: '#16a34a', fontWeight: '700' }}>{selectedBookingReceipt.payment_status || 'completed'}</span></div>
+              {/* Transport & Stay Summary */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                {selectedBookingDetails.selected_transport && (
+                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#16a34a', textTransform: 'uppercase' }}>🚆 Confirmed Transport</div>
+                    <div style={{ fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>{selectedBookingDetails.selected_transport.title}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedBookingDetails.selected_transport.duration_text} ({selectedBookingDetails.selected_transport.distance_text})</div>
+                  </div>
+                )}
+
+                {selectedBookingDetails.selected_hotel && (
+                  <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase' }}>🏨 Confirmed Stay</div>
+                    <div style={{ fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>{selectedBookingDetails.selected_hotel.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>{selectedBookingDetails.selected_hotel.distance_label || 'Near Destination'}</div>
+                  </div>
+                )}
               </div>
 
-              {selectedBookingReceipt.special_requests && (
-                <div style={{ background: '#f8fafc', padding: '0.85rem', borderRadius: '8px', fontSize: '0.85rem', color: '#475569', marginBottom: '1.5rem' }}>
-                  <strong>Special Requests:</strong> {selectedBookingReceipt.special_requests}
+              {/* Interactive Route Map (Phase 3) */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>📍 Route & Destination Map</h4>
+                <InteractiveMapSection
+                  destination={{
+                    latitude: selectedBookingDetails.destination_lat || 12.612,
+                    longitude: selectedBookingDetails.destination_lng || 80.1928,
+                    name: selectedBookingDetails.destination_name,
+                  }}
+                  title="Route & Live Navigation"
+                />
+              </div>
+
+              {/* Special Requests / Notes */}
+              {selectedBookingDetails.special_requests && typeof selectedBookingDetails.special_requests === 'string' && !selectedBookingDetails.special_requests.startsWith('{') && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fef3c7', padding: '1rem', borderRadius: '10px', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+                  <strong>📝 Special Requests / Notes:</strong> {selectedBookingDetails.special_requests}
                 </div>
               )}
 
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem' }}>
-                  <span>Base Booking Amount:</span>
-                  <span>${parseFloat(selectedBookingReceipt.total_amount).toLocaleString()}</span>
-                </div>
-                {parseFloat(selectedBookingReceipt.discount_amount) > 0 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', fontSize: '0.9rem', color: '#16a34a' }}>
-                    <span>Discounts Applied:</span>
-                    <span>−${parseFloat(selectedBookingReceipt.discount_amount).toLocaleString()}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Final Amount</span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0284c7' }}>
+                    ${parseFloat(selectedBookingDetails.final_amount).toLocaleString()}
                   </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', borderTop: '2px solid #f1f5f9', paddingTop: '0.75rem', marginTop: '0.5rem' }}>
-                  <span>Total Paid:</span>
-                  <span style={{ color: '#0284c7' }}>${parseFloat(selectedBookingReceipt.final_amount).toLocaleString()} USD</span>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button onClick={() => window.print()} className="btn btn-outline" style={{ padding: '0.65rem 1.25rem' }}>
-                  🖨️ Print Receipt
-                </button>
-                <button onClick={() => setSelectedBookingReceipt(null)} className="btn btn-primary" style={{ padding: '0.65rem 1.5rem' }}>
+                <button onClick={() => setSelectedBookingDetails(null)} className="btn btn-secondary" style={{ padding: '0.65rem 1.5rem' }}>
                   Close
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ==================================================== */}
-        {/* MODAL: CANCEL BOOKING CONFIRMATION                   */}
-        {/* ==================================================== */}
-        {cancelModalBooking && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(15, 23, 42, 0.7)',
-              backdropFilter: 'blur(6px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              padding: '1rem',
-            }}
-          >
-            <div
-              style={{
-                background: '#ffffff',
-                borderRadius: '20px',
-                width: '100%',
-                maxWidth: '520px',
-                padding: '2rem',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-              }}
-            >
-              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', textAlign: 'center' }}>⚠️</div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', textAlign: 'center', margin: '0 0 0.5rem 0' }}>
-                Cancel Booking?
-              </h2>
-              <p style={{ color: '#64748b', textAlign: 'center', fontSize: '0.92rem', marginBottom: '1.5rem' }}>
-                Are you sure you want to cancel reservation <strong>#{cancelModalBooking.booking_reference}</strong> ({cancelModalBooking.package_title})?
-              </p>
-
-              <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', padding: '1rem', borderRadius: '10px', marginBottom: '1.5rem', fontSize: '0.85rem', color: '#b91c1c' }}>
-                💵 A full refund of <strong>${parseFloat(cancelModalBooking.final_amount).toLocaleString()} USD</strong> will be credited to your original payment method within 3–5 business days.
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '700', color: '#334155', marginBottom: '0.4rem' }}>
-                  Reason for Cancellation:
-                </label>
-                <select
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  style={{ width: '100%', padding: '0.65rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}
-                >
-                  <option value="Schedule conflict">Schedule conflict / change of plans</option>
-                  <option value="Booking error">Booked incorrect dates/package</option>
-                  <option value="Financial reasons">Financial or personal reasons</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                <button
-                  onClick={() => setCancelModalBooking(null)}
-                  className="btn btn-secondary"
-                  style={{ padding: '0.65rem 1.25rem' }}
-                >
-                  Keep Reservation
-                </button>
-                <button
-                  onClick={handleConfirmCancelBooking}
-                  disabled={Boolean(cancellingBookingId)}
-                  className="btn btn-outline"
-                  style={{
-                    padding: '0.65rem 1.5rem',
-                    background: '#dc2626',
-                    color: '#ffffff',
-                    borderColor: '#dc2626',
-                  }}
-                >
-                  {cancellingBookingId ? 'Cancelling...' : 'Confirm Cancellation'}
                 </button>
               </div>
             </div>
@@ -868,7 +838,7 @@ export default function MyTripsPage() {
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(15, 23, 42, 0.7)',
+              background: 'rgba(15, 23, 42, 0.75)',
               backdropFilter: 'blur(6px)',
               display: 'flex',
               alignItems: 'center',

@@ -6,6 +6,7 @@ export default function AiItineraryView({
   isSaving,
   onRegenerate,
   onSave,
+  onProceedToBooking,
   error,
 }) {
   const [activeDayTab, setActiveDayTab] = useState(1);
@@ -314,7 +315,7 @@ export default function AiItineraryView({
         </div>
       )}
 
-      {/* 7. Action Bar: Regenerate & Save */}
+      {/* 7. Action Bar: Regenerate, Save & Book */}
       <div className="ai-plan-action-bar">
         <button
           type="button"
@@ -327,12 +328,25 @@ export default function AiItineraryView({
 
         <button
           type="button"
-          className="btn btn-primary btn-save-ai-plan"
+          className="btn btn-outline btn-save-ai-plan"
+          style={{ background: '#ffffff', color: '#0284c7', borderColor: '#0284c7' }}
           onClick={onSave}
           disabled={isGenerating || isSaving}
         >
-          {isSaving ? 'Saving Itinerary...' : '💾 Save AI Trip Plan'}
+          {isSaving ? 'Saving Itinerary...' : '💾 Save as Draft'}
         </button>
+
+        {onProceedToBooking && (
+          <button
+            type="button"
+            className="btn btn-primary btn-book-trip"
+            style={{ background: '#0284c7', color: '#ffffff', fontWeight: '800' }}
+            onClick={onProceedToBooking}
+            disabled={isGenerating || isSaving}
+          >
+            🚀 Review & Book Trip ➔
+          </button>
+        )}
       </div>
     </div>
   );

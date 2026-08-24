@@ -179,6 +179,25 @@ export default function TripPlannerPage() {
     }
   };
 
+  const handleProceedToBooking = () => {
+    if (generatedItinerary) {
+      localStorage.setItem('travel_active_booking_trip', JSON.stringify({
+        destinationId: formData.destinationId || 1,
+        destinationName: formData.destinationName,
+        numberOfDays: formData.numberOfDays,
+        travelers: formData.travelers,
+        budget: formData.budget,
+        currency: formData.currency,
+        travelPreference: formData.travelPreference,
+        startDate: formData.startDate,
+        selectedTransport: selectedTransport || null,
+        selectedHotel: selectedHotel || null,
+        itinerary: generatedItinerary,
+      }));
+    }
+    navigate(`/booking?customTrip=true&destinationId=${formData.destinationId || 1}&travelers=${formData.travelers}&date=${formData.startDate}`);
+  };
+
   return (
     <section className="section page-section" style={{ paddingTop: '2rem' }}>
       <div className="container">
@@ -545,13 +564,14 @@ export default function TripPlannerPage() {
           </div>
         )}
 
-        {/* AI Itinerary View Component (Phase 6) */}
+        {/* AI Itinerary View Component (Phase 6 & 8) */}
         <AiItineraryView
           itinerary={generatedItinerary}
           isGenerating={isGenerating}
           isSaving={isSaving}
           onRegenerate={handleGenerateItinerary}
           onSave={handleSaveTrip}
+          onProceedToBooking={handleProceedToBooking}
           error={error}
         />
       </div>

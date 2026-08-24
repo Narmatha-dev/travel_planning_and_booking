@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 import { quickStats } from '../services/travelData';
 import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
@@ -7,14 +8,17 @@ import LocationSection from '../components/LocationSection';
 import NearbyPlacesSection from '../components/NearbyPlacesSection';
 import destinationService from '../services/destinationService';
 import packageService from '../services/packageService';
+import bookingService from '../services/bookingService';
 
 function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, isAuthenticated } = useAppContext();
   const [welcomeBanner, setWelcomeBanner] = useState(location.state?.welcomeMessage || null);
   const [popularDestinations, setPopularDestinations] = useState([]);
   const [featuredPackages, setFeaturedPackages] = useState([]);
   const [searchWhere, setSearchWhere] = useState('');
+  const [userBookings, setUserBookings] = useState([]);
 
   useEffect(() => {
     if (location.state?.welcomeMessage) {
@@ -42,6 +46,25 @@ function HomePage() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    async function loadBookings() {
+      if (isAuthenticated) {
+        try {
+          const data = await bookingService.getUserBookings(user?.id || 3);
+          setUserBookings(data || []);
+        } catch {
+          // ignore error on home page
+        }
+      }
+    }
+    loadBookings();
+  }, [isAuthenticated, user]);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcomingTrips = userBookings.filter((b) => b.status !== 'cancelled' && (!b.travel_date || b.travel_date >= todayStr));
+  const completedTrips = userBookings.filter((b) => b.status !== 'cancelled' && b.travel_date && b.travel_date < todayStr);
+  const nextUpcomingTrip = upcomingTrips.length > 0 ? upcomingTrips[0] : null;
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchWhere.trim()) {
@@ -55,6 +78,50 @@ function HomePage() {
     <>
       {/* Current GPS Location Section (Phase 1) */}
       <LocationSection />
+
+      {/* Feature 12: Dashboard Summary Strip for Logged-In Travelers */}
+      {isAuthenticated && (
+        <div className="container" style={{ paddingTop: '1.25rem', marginBottom: '-0.25rem' }}>
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1.5px solid #e2e8f0',
+              padding: '1.25rem 1.75rem',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                🚀 TRAVELER DASHBOARD SUMMARY
+              </span>
+              <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.35rem', flexWrap: 'wrap', fontSize: '0.92rem', color: '#334155' }}>
+                <span>Upcoming Trips: <strong style={{ color: '#0284c7' }}>{upcomingTrips.length}</strong></span>
+                <span>Completed: <strong style={{ color: '#16a34a' }}>{completedTrips.length}</strong></span>
+                <span>Total Bookings: <strong>{userBookings.length}</strong></span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+              {nextUpcomingTrip ? (
+                <div style={{ fontSize: '0.85rem', color: '#475569' }}>
+                  Next Trip: <strong style={{ color: '#0f172a' }}>{nextUpcomingTrip.destination_name}</strong> ({nextUpcomingTrip.travel_date})
+                </div>
+              ) : (
+                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Ready for your next getaway?</span>
+              )}
+              <Link to="/my-trips?tab=upcoming" className="btn btn-primary btn-sm" style={{ fontWeight: '800', padding: '0.5rem 1rem' }}>
+                {nextUpcomingTrip ? 'View My Trip ➔' : 'My Trips Hub ➔'}
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {welcomeBanner && (
         <div className="container" style={{ paddingTop: '1.5rem', marginBottom: '-0.5rem' }}>
