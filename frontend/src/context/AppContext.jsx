@@ -24,6 +24,33 @@ export function AppProvider({ children }) {
   );
   const [locationError, setLocationError] = useState(null);
 
+  // Transport Selection State (Phase 4)
+  const [selectedTransport, setSelectedTransportState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('travel_selected_transport');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [transportPreference, setTransportPreferenceState] = useState(() => {
+    return localStorage.getItem('travel_transport_preference') || 'any';
+  });
+
+  const setSelectedTransport = (transport) => {
+    setSelectedTransportState(transport);
+    if (transport) {
+      localStorage.setItem('travel_selected_transport', JSON.stringify(transport));
+    } else {
+      localStorage.removeItem('travel_selected_transport');
+    }
+  };
+
+  const setTransportPreference = (pref) => {
+    setTransportPreferenceState(pref);
+    localStorage.setItem('travel_transport_preference', pref);
+  };
+
   const [trips, setTrips] = useState([
     { id: 1, destination: 'Santorini', date: '12 Aug 2026', status: 'Confirmed' },
     { id: 2, destination: 'Bali', date: '03 Sep 2026', status: 'Planning' },
@@ -202,6 +229,11 @@ export function AppProvider({ children }) {
     locationStatus,
     locationError,
     detectLocation,
+    // Transport Context (Phase 4)
+    selectedTransport,
+    setSelectedTransport,
+    transportPreference,
+    setTransportPreference,
     login,
     register,
     handleOAuthSuccess,

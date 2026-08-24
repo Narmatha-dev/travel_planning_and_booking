@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import InteractiveMapSection from './InteractiveMapSection';
+import TransportOptionsSection from './TransportOptionsSection';
 
 export default function DestinationDetailModal({ place, userLocation, onClose }) {
   const [activeImage, setActiveImage] = useState(
@@ -154,6 +155,16 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
               title={`Live Route to ${place.name}`}
               onPlanTripClick={handlePlanClick}
             />
+
+            {/* Phase 4: Transport Options Comparison & Selection */}
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #cbd5e1' }}>
+              <TransportOptionsSection
+                origin={userLocation}
+                destination={place}
+                distanceKm={place.distance_km}
+                onContinueToTripPlanning={handlePlanClick}
+              />
+            </div>
           </div>
         )}
       </div>
