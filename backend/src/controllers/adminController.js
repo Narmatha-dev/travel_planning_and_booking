@@ -11,7 +11,7 @@ const adminController = {
 
   // 2. User Management
   getUsers: asyncHandler(async (req, res) => {
-    const users = await adminService.getAllUsers();
+    const users = await adminService.getAllUsers(req.query);
     return successResponse(res, 'Users list retrieved successfully', users);
   }),
 
@@ -94,9 +94,21 @@ const adminController = {
     return successResponse(res, 'Booking status updated successfully', updated);
   }),
 
-  // 6. Review Management
+  // 6. Trip Management (Feature 9)
+  getTrips: asyncHandler(async (req, res) => {
+    const list = await adminService.getAllTrips(req.query);
+    return successResponse(res, 'Trips list retrieved successfully', list);
+  }),
+
+  // 7. Payment View (Feature 11)
+  getPayments: asyncHandler(async (req, res) => {
+    const list = await adminService.getAllPayments(req.query);
+    return successResponse(res, 'Payments list retrieved successfully', list);
+  }),
+
+  // 8. Review Management (Feature 10)
   getReviews: asyncHandler(async (req, res) => {
-    const list = await adminService.getAllReviews();
+    const list = await adminService.getAllReviews(req.query);
     return successResponse(res, 'Reviews retrieved successfully', list);
   }),
 
@@ -112,6 +124,25 @@ const adminController = {
     const result = await adminService.deleteReview(id);
     return successResponse(res, 'Review deleted successfully', result);
   }),
+
+  // 9. Analytics Data (Feature 3 & 4)
+  getAnalytics: asyncHandler(async (req, res) => {
+    const analytics = await adminService.getAnalyticsData();
+    return successResponse(res, 'Analytics data retrieved successfully', analytics);
+  }),
+
+  // 10. ML Model Status & Metrics (Feature 18)
+  getMlStatus: asyncHandler(async (req, res) => {
+    const status = await adminService.getMlModelStatus();
+    return successResponse(res, 'ML recommendation model status retrieved successfully', status);
+  }),
+
+  // 11. Trigger ML Model Retraining (Feature 11 & 18)
+  trainMlModel: asyncHandler(async (req, res) => {
+    const trained = await adminService.trainMlModel();
+    return successResponse(res, 'ML recommendation model trained and deployed successfully', trained);
+  }),
 };
 
 module.exports = adminController;
+

@@ -300,22 +300,46 @@ export default function PersonalizedRecommendationsSection() {
                       {item.category}
                     </div>
 
-                    {/* Match Score Badge (Feature 8) */}
+                    {/* Match Score Badge (Feature 8 & 15) */}
                     <div
                       style={{
                         position: 'absolute',
                         top: '10px',
                         right: '10px',
-                        background: 'linear-gradient(135deg, #10b981, #059669)',
-                        color: '#ffffff',
-                        padding: '3px 8px',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: '800',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        display: 'flex',
+                        gap: '4px',
+                        alignItems: 'center',
                       }}
                     >
-                      ✨ {item.matchPercentage || `${item.matchScore}%`} Match
+                      {item.engine === 'ml_hybrid' && (
+                        <span
+                          style={{
+                            background: 'rgba(15, 23, 42, 0.85)',
+                            color: '#38bdf8',
+                            border: '1px solid rgba(56, 189, 248, 0.4)',
+                            padding: '3px 7px',
+                            borderRadius: '9999px',
+                            fontSize: '0.68rem',
+                            fontWeight: '800',
+                            backdropFilter: 'blur(4px)',
+                          }}
+                        >
+                          🧠 ML
+                        </span>
+                      )}
+                      <span
+                        style={{
+                          background: 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#ffffff',
+                          padding: '3px 8px',
+                          borderRadius: '9999px',
+                          fontSize: '0.75rem',
+                          fontWeight: '800',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        }}
+                      >
+                        ✨ {item.matchPercentage || `${item.matchScore}%`} Match
+                      </span>
                     </div>
                   </div>
 

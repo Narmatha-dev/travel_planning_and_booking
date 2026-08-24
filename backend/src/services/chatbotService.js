@@ -43,6 +43,38 @@ const KNOWLEDGE_BASE = {
       link: '/destinations',
     },
     {
+      name: 'Ooty',
+      nameTa: 'ஊட்டி',
+      country: 'India',
+      countryTa: 'இந்தியா',
+      category: 'Hill Station & Nature',
+      categoryTa: 'மலை வாசஸ்தலம் & இயற்கை',
+      bestTime: 'October to June (Pleasant weather, 15°C - 22°C)',
+      bestTimeTa: 'அக்டோபர் முதல் ஜூன் வரை (இதமான குளிர் பருவம்)',
+      bestTimeTh: 'October mudhal June varai (Pleasant climate)',
+      dailyCostINR: '₹2,500 - ₹4,500 / day',
+      dailyCostUSD: '$30 - $55 / day',
+      idealDuration: '3 to 4 Days',
+      idealDurationTa: '3 முதல் 4 நாட்கள்',
+      idealDurationTh: '3 to 4 Naatkal',
+      highlights: 'Nilgiri Mountain Toy Train, Ooty Lake boating, Botanical Gardens, Doddabetta Peak, Pykara Waterfalls.',
+      highlightsTa: 'நீலகிரி மலை ரயில், ஊட்டி ஏரி படகு சவாரி, தாவரவியல் பூங்கா, தொட்டபெட்டா சிகரம், பைக்காரா நீர்வீழ்ச்சி.',
+      highlightsTh: 'Toy train, Ooty lake boating, Botanical garden, Doddabetta peak, Pykara falls.',
+      hotels: 'Savoy - IHCL SeleQtions (Heritage Luxury), Sterling Ooty Fern Hill, Zostel Ooty (Budget)',
+      hotelsTa: 'சவோய் ஹெரிடேஜ் ரிசார்ட், ஸ்டெர்லிங் ஊட்டி ஃபெர்ன் ஹில், ஜோஸ்டல் ஊட்டி (பட்ஜெட்)',
+      hotelsTh: 'Savoy IHCL (Heritage), Sterling Ooty (Mountain views), Zostel Ooty (Budget)',
+      food: 'Ooty Varkey, Homemade Chocolates, Nilgiri Tea, Hot South Indian Thali, Fresh Strawberry Cream',
+      foodTa: 'ஊட்டி வர்க்கி, சுவையான சாக்லேட்கள், நீலகிரி தேநீர், தென்னிந்திய சாப்பாடு, ஸ்ட்ராபெரி க்ரீம்',
+      foodTh: 'Ooty Varkey, Homemade Chocolates, Nilgiri Tea, South Indian Meals',
+      transport: 'Heritage Nilgiri Toy Train, private rental cab or local TNSTC scenic hill buses.',
+      daysPlan: [
+        { day: 1, title: 'Ooty Lake & Botanical Gardens', plan: 'Arrive, check in at resort, stroll through Government Botanical Garden, evening pedal boating at Ooty Lake with sunset.' },
+        { day: 2, title: 'Doddabetta Peak & Tea Factory', plan: 'Panoramic view from Doddabetta Peak (2,637m), tour Nilgiri Tea Factory & Chocolate Museum, evening local market shopping.' },
+        { day: 3, title: 'Pykara Lake & Waterfalls Nature Expedition', plan: 'Speedboat cruise in Pykara Lake, visit Pine Forest and Shooting Point, fresh mountain trout lunch, departure.' },
+      ],
+      link: '/destinations',
+    },
+    {
       name: 'Kerala',
       nameTa: 'கேரளா',
       country: 'India',
@@ -245,9 +277,9 @@ const KNOWLEDGE_BASE = {
 /**
  * Detect user language and persist across multi-turn session
  */
-function detectLanguage(text, sessionId) {
+function detectLanguage(text, sessionId, preferredLang = null) {
   const context = sessionContexts.get(sessionId) || {};
-  const currentSessionLang = context.language || 'en';
+  const currentSessionLang = preferredLang || context.language || 'en';
   if (!text || typeof text !== 'string') return currentSessionLang;
 
   const raw = text.trim();
@@ -271,7 +303,8 @@ function detectLanguage(text, sessionId) {
     'varum', 'iruku', 'iruka', 'pannalam', 'panradhu', 'panlam', 'pannunga', 'vanga', 'vaa',
     'poitu', 'varalam', 'edukalam', 'podhum', 'theva', 'thevai', 'paravala', 'yenna', 'endha',
     'aagum', 'aagudhu', 'theriyum', 'puriyala', 'puriyum', 'mudiyuma', 'theriyuma', 'irukkum',
-    'vazhikaatti', 'payanam', 'payana', 'nalladhu', 'beach-la', 'stay-ku', 'packagela', 'saapda'
+    'vazhikaatti', 'payanam', 'payana', 'nalladhu', 'beach-la', 'stay-ku', 'packagela', 'saapda',
+    'ooty-ku', 'ootyku', 'kudu', 'sollu', 'pannu'
   ];
 
   const words = lower.split(/[^a-z0-9]+/);
@@ -292,9 +325,9 @@ function detectLanguage(text, sessionId) {
   const englishMatchCount = words.filter((w) => englishClearMarkers.includes(w)).length;
 
   if (englishMatchCount >= 1 && thanglishMatchCount === 0) {
-    context.language = 'en';
+    context.language = preferredLang || 'en';
     sessionContexts.set(sessionId, context);
-    return 'en';
+    return context.language;
   }
 
   return currentSessionLang;
@@ -314,22 +347,42 @@ function isOutOfScope(query) {
 
 const chatbotService = {
   /**
-   * Process incoming user message with multi-turn context tracking and conversational AI
+   * Process incoming user message with multi-turn context tracking, application context & AI reasoning
    */
-  async processMessage(sessionId = 'default', userMessage = '') {
+  async processMessage(sessionId = 'default', userMessage = '', clientContext = {}) {
     const rawQuery = String(userMessage || '').trim();
     const query = rawQuery.toLowerCase();
 
     // Retrieve or initialize multi-turn session context
     let context = sessionContexts.get(sessionId) || {
       activeDestination: null,
-      activeDays: 4,
+      activeDays: 3,
       activeBudget: null,
       recentItinerary: null,
-      language: 'en',
+      language: clientContext.language || 'en',
     };
 
-    const lang = detectLanguage(rawQuery, sessionId);
+    // Merge client context if provided (GPS location, selected hotel, favorites, budget, language)
+    if (clientContext.currentLocation) {
+      context.currentLocation = clientContext.currentLocation;
+    }
+    if (clientContext.savedFavorites) {
+      context.savedFavorites = clientContext.savedFavorites;
+    }
+    if (clientContext.selectedTransport) {
+      context.selectedTransport = clientContext.selectedTransport;
+    }
+    if (clientContext.selectedHotel) {
+      context.selectedHotel = clientContext.selectedHotel;
+    }
+    if (clientContext.budget) {
+      context.activeBudget = parseInt(clientContext.budget, 10);
+    }
+    if (clientContext.language) {
+      context.language = clientContext.language;
+    }
+
+    const lang = detectLanguage(rawQuery, sessionId, clientContext.language);
     context.language = lang;
 
     // 1. Guardrail Check: Never invent or expose credit cards or passwords
@@ -414,11 +467,162 @@ const chatbotService = {
     const actionLinks = [];
 
     // ==========================================
-    // 4. MULTI-TURN CONTEXTUAL INTENT ROUTING
+    // 4. MULTI-TURN CONTEXTUAL INTENT ROUTING (Phase 14 Enhanced)
     // ==========================================
 
-    // Intent 0: Booking Policies, Cancellation & Refunds
+    // Intent P14-1: Suggest Places Near Me / GPS Location (Feature 3 & 4)
     if (
+      (query.includes('near me') ||
+        query.includes('nearby') ||
+        query.includes('places near') ||
+        query.includes('suggest places near') ||
+        query.includes('அருகில்') ||
+        query.includes('kitta irukura')) &&
+      !query.includes('hotel') &&
+      !query.includes('stay') &&
+      !query.includes('தங்குமிடம்') &&
+      !query.includes('விடுதி')
+    ) {
+      const locCity = context.currentLocation?.city || context.currentLocation?.area || 'your current location';
+
+      reply = `### 📍 Top Tourist Places Near ${locCity}\n\n` +
+        `Based on your GPS coordinates, here are handpicked scenic getaways and attractions near **${locCity}**:\n\n` +
+        `1. 🏖️ **Mahabalipuram & ECR Coast** (~45 km • ~1.2 hrs travel)\n` +
+        `   * **Highlights:** UNESCO Shore Temple, monolithic Five Rathas, surfing & beach cafes.\n` +
+        `   * **Estimated Budget:** ₹3,500 - ₹5,000 / day (Estimated)\n` +
+        `   * **Ideal Duration:** 1 to 2 Days\n\n` +
+        `2. 🏛️ **Pondicherry French Quarter & Promenade** (~150 km • ~3.5 hrs travel)\n` +
+        `   * **Highlights:** Heritage French villas, Auroville Matrimandir, beachfront bistros.\n` +
+        `   * **Estimated Budget:** ₹4,500 - ₹6,500 / day (Estimated)\n` +
+        `   * **Ideal Duration:** 2 to 3 Days\n\n` +
+        `3. 🌲 **Ooty & Nilgiri Mountain Hills** (~530 km • ~9.5 hrs scenic route)\n` +
+        `   * **Highlights:** Botanical Gardens, Nilgiri Toy Train, Pykara Lake waterfalls.\n` +
+        `   * **Estimated Budget:** ₹4,000 - ₹6,000 / day (Estimated)\n` +
+        `   * **Ideal Duration:** 3 to 4 Days\n\n` +
+        `*Note: Travel times and costs are estimated guidelines based on standard road transit.*`;
+
+      suggestions.push('Plan a 3-day trip to Ooty', 'Find budget stays', 'Suggest transport', 'Calculate trip budget');
+      actionLinks.push({ label: '🗺️ View on Map', url: '/destinations' });
+      actionLinks.push({ label: '🚀 Plan Trip to Ooty', url: '/trip-planner?destination=Ooty' });
+      actionLinks.push({ label: '🏨 View Stays & Hotels', url: '/destinations/1' });
+    }
+
+    // Intent P14-2: Budget Assistance & Feasibility Calculation (Feature 9)
+    else if (
+      (query.includes('calculate') && query.includes('budget')) ||
+      query.includes('can i plan this trip') ||
+      query.includes('calculate trip budget') ||
+      (query.includes('budget') && (query.includes('8000') || query.includes('8,000') || query.includes('10000') || query.includes('10,000') || query.includes('12000') || query.includes('12,000') || query.includes('20000') || query.includes('20,000')))
+    ) {
+      const budgetAmount = context.activeBudget || 12000;
+      const days = context.activeDays || 3;
+      const estTransport = 1800;
+      const estStay = days * 1800;
+      const estFood = days * 800;
+      const estActivities = days * 400;
+      const estBuffer = 800;
+      const totalEstimated = estTransport + estStay + estFood + estActivities + estBuffer;
+      const diff = budgetAmount - totalEstimated;
+
+      reply = `### 💵 Trip Budget Breakdown & Feasibility Analysis\n\n` +
+        `Here is the itemized budget estimate for a **${days}-day trip to ${matchedDest.name}**:\n\n` +
+        `* 🚆 **Estimated Transport (Round-Trip):** ₹${estTransport.toLocaleString()} (AC Bus / Express Train)\n` +
+        `* 🏨 **Accommodation (${days - 1} Nights):** ₹${estStay.toLocaleString()} (Comfortable 3-Star / Boutique Stay)\n` +
+        `* 🍽️ **Food & Dining:** ₹${estFood.toLocaleString()} (₹800/day approx)\n` +
+        `* 🎟️ **Local Sightseeing & Entry Tickets:** ₹${estActivities.toLocaleString()} (₹400/day approx)\n` +
+        `* 🛡️ **Emergency Buffer & Local Cabs:** ₹${estBuffer.toLocaleString()}\n\n` +
+        `---\n` +
+        `* 💰 **Estimated Total Cost:** **₹${totalEstimated.toLocaleString()}** (Approximate estimate)\n` +
+        `* 🎯 **Your Target Budget:** **₹${budgetAmount.toLocaleString()}**\n\n` +
+        (diff >= 0
+          ? `✅ **Verdict:** **Feasible & Well Within Budget!** You will have approximately **₹${diff.toLocaleString()}** remaining for shopping and personal expenses.`
+          : `⚠️ **Verdict:** Slightly tight by **₹${Math.abs(diff).toLocaleString()}**. We recommend choosing a budget hostel/homestay or bus transit to bring costs within your target.`);
+
+      suggestions.push('Find budget stays', 'Suggest transport', 'Create itinerary', 'Plan a 3-day trip');
+      actionLinks.push({ label: '🚀 Open Budget Calculator', url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+      actionLinks.push({ label: '🏨 View Budget Stays', url: '/destinations' });
+    }
+
+    // Intent P14-3: Transport Suggestions (Feature 7)
+    else if (
+      query.includes('suggest transport') ||
+      query.includes('how can i travel') ||
+      query.includes('how to travel') ||
+      query.includes('how to reach')
+    ) {
+      reply = `### 🚗 Recommended Transport Options to ${matchedDest.name}\n\n` +
+        `Here are the most convenient ways to travel to **${matchedDest.name}**:\n\n` +
+        `* ✈️ **Flight + Taxi:** Fastest option. Estimated travel time ~2-3 hrs. Cost: ₹3,500 - ₹6,500 (Estimated).\n` +
+        `* 🚆 **Superfast / Express Train:** Most comfortable & scenic. Estimated travel time ~6-8 hrs. Cost: ₹750 - ₹1,800 (Estimated).\n` +
+        `* 🚌 **AC Sleeper / Multi-Axle Bus:** Great overnight choice. Estimated travel time ~8-10 hrs. Cost: ₹850 - ₹1,600 (Estimated).\n` +
+        `* 🚕 **Chauffeured Outstation Cab / Self-Drive:** Maximum flexibility. Estimated travel time ~7-9 hrs. Cost: ₹5,500 - ₹8,000 (Estimated).\n\n` +
+        `*ℹ️ Note: Fares and travel durations are estimated guidelines and depend on real-time transit schedules and seasonality.*`;
+
+      suggestions.push('Plan a 3-day trip', 'Find budget stays', 'Calculate trip budget', 'Create itinerary');
+      actionLinks.push({ label: '🚗 Compare Transport in Planner', url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+      actionLinks.push({ label: '🗺️ View Route on Map', url: '/destinations' });
+    }
+
+    // Intent P14-4: Hotel / Stay Suggestions (Feature 8)
+    else if (
+      query.includes('find budget stays') ||
+      query.includes('budget stays') ||
+      query.includes('suggest a budget hotel') ||
+      query.includes('hotels suggest') ||
+      query.includes('suggest hotels') ||
+      query.includes('hotel') ||
+      query.includes('stay') ||
+      query.includes('resort') ||
+      query.includes('தங்குமிடம்') ||
+      query.includes('விடுதி')
+    ) {
+      reply = `### 🏨 Recommended Stays in & around ${matchedDest.name}\n\n` +
+        `Curated accommodations from our verified stays catalog:\n\n` +
+        `1. 🌟 **Radisson Blu Resort Temple Bay / Heritage Haven**\n` +
+        `   * **Type:** 4-Star Luxury Beachfront / Mountain View\n` +
+        `   * **Rating:** ⭐ 4.8 / 5.0\n` +
+        `   * **Approximate Price:** ₹6,500 - ₹9,500 / night (Approximate price)\n` +
+        `   * **Distance:** ~0.8 km from city center\n\n` +
+        `2. 🏡 **Sterling Fern Hill / Serene Valley Stays**\n` +
+        `   * **Type:** 3-Star Comfort Resort\n` +
+        `   * **Rating:** ⭐ 4.6 / 5.0\n` +
+        `   * **Approximate Price:** ₹3,200 - ₹4,800 / night (Approximate price)\n` +
+        `   * **Distance:** ~2.5 km from major attractions\n\n` +
+        `3. 🎒 **Zostel & Greenview Backpackers Boutique**\n` +
+        `   * **Type:** Budget Homestay / Hostel\n` +
+        `   * **Rating:** ⭐ 4.7 / 5.0\n` +
+        `   * **Approximate Price:** ₹1,200 - ₹2,200 / night (Approximate price)\n` +
+        `   * **Distance:** Central transit accessible\n\n` +
+        `*Disclaimer: Prices are approximate indicators. Check real-time booking availability prior to confirmation.*`;
+
+      suggestions.push('Suggest transport', 'Calculate trip budget', 'Plan a 3-day trip', 'Create itinerary');
+      actionLinks.push({ label: '🏨 View Stays Catalog', url: '/destinations' });
+      actionLinks.push({ label: '🚀 Plan Trip with Stay', url: `/trip-planner?destination=${encodeURIComponent(matchedDest.name)}` });
+    }
+
+    // Intent P14-5: Favorites Context Notice (Feature 10)
+    else if (
+      query.includes('saved') ||
+      query.includes('favorites') ||
+      query.includes('wishlist')
+    ) {
+      const favList = (context.savedFavorites || []).map((f) => f.title).join(', ');
+      if (favList) {
+        reply = `### ❤️ Your Saved Favorites & Wishlist\n\n` +
+          `I found the following places and stays in your Travelora Wishlist:\n\n` +
+          `* ${favList}\n\n` +
+          `Would you like me to build a customized **3-day itinerary** that includes these exact places?`;
+      } else {
+        reply = `### ❤️ Your Saved Favorites\n\n` +
+          `You currently have no saved favorites. You can click the ❤️ heart button on any tourist place, hotel, or trip to bookmark it, and I'll include it in your future itineraries!`;
+      }
+      suggestions.push('Plan a 3-day trip', 'Suggest places near me', 'Find budget stays');
+      actionLinks.push({ label: '❤️ Open My Favorites', url: '/favorites' });
+      actionLinks.push({ label: '🚀 Plan Trip', url: '/trip-planner' });
+    }
+
+    // Intent 0: Booking Policies, Cancellation & Refunds
+    else if (
       query.includes('cancel') ||
       query.includes('refund') ||
       query.includes('policy') ||
@@ -795,6 +999,33 @@ const chatbotService = {
 
       actionLinks.push({ label: 'View Package Details', url: matchedPkg.link });
       actionLinks.push({ label: 'Instant Booking', url: '/booking?packageId=1' });
+    }
+
+    // Intent G: Travel Rewards & Loyalty Points (Phase 16 - Feature 16)
+    else if (
+      query.includes('reward') ||
+      query.includes('point') ||
+      query.includes('tier') ||
+      query.includes('loyalty') ||
+      query.includes('level') ||
+      query.includes('points') ||
+      query.includes('மதிப்பெண்') ||
+      query.includes('பரிசு')
+    ) {
+      reply = `### 🏆 Travelora Rewards Program\n\n` +
+        `You earn **Travel Points** through genuine travel activities on Travelora:\n\n` +
+        `* 🧳 **Completed Trip:** +100 Travel Points\n` +
+        `* ⭐ **Verified Review:** +25 Travel Points\n` +
+        `* 🗺️ **Saved Trip Plan:** +10 Travel Points\n\n` +
+        `#### 🎖️ Loyalty Tiers:\n` +
+        `* 🌱 **Explorer** (0–499 pts)\n` +
+        `* 🧭 **Traveller** (500–999 pts)\n` +
+        `* 🌍 **Adventurer** (1,000–2,499 pts)\n` +
+        `* 🏆 **Travel Pro** (2,500+ pts)\n\n` +
+        `*Track your balance, tier level progress, and reward history in your Rewards Hub.*`;
+
+      suggestions.push('How to earn more points?', 'Plan a new trip', 'Explore destinations');
+      actionLinks.push({ label: 'View My Rewards', url: '/rewards' });
     }
 
     // Intent F: General Travel Destination & Weather Guide

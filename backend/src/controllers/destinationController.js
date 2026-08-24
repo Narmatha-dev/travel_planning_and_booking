@@ -1,8 +1,44 @@
 const destinationService = require('../services/destinationService');
+const placesService = require('../services/placesService');
 const { successResponse } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 const destinationController = {
+  /**
+   * GET /api/destinations/nearby?lat=...&lng=...&category=...&limit=...
+   * Retrieves real nearby tourist attractions based on GPS coordinates
+   */
+  getNearbyDestinations: asyncHandler(async (req, res) => {
+    const { lat, lng, latitude, longitude, radius, category, limit } = req.query;
+    const targetLat = lat || latitude;
+    const targetLng = lng || longitude;
+
+    if (!targetLat || !targetLng) {
+      const error = new Error('Both latitude and longitude are required to find nearby places');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const data = await placesService.getNearbyTouristPlaces({
+      latitude: targetLat,
+      longitude: targetLng,
+      radiusKm: radius ? parseFloat(radius) : 150,
+      category: category || 'all',
+      limit: limit ? parseInt(limit, 10) : 12,
+    });
+
+    return successResponse(res, `Found ${data.places.length} nearby tourist destination(s)`, data);
+  }),
+
+  /**
+   * GET /api/destinations/nearby/:placeId
+   * Retrieves detailed information for a real nearby place
+   */
+  getNearbyPlaceDetails: asyncHandler(async (req, res) => {
+    const { placeId } = req.params;
+    const place = await placesService.getPlaceDetails(placeId);
+    return successResponse(res, 'Place details retrieved successfully', place);
+  }),
   /**
    * GET /api/destinations
    */

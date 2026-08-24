@@ -1,5 +1,6 @@
 const tripModel = require('../models/tripModel');
 const destinationModel = require('../models/destinationModel');
+const aiTripService = require('./aiTripService');
 const { generateItinerary } = require('../utils/itineraryGenerator');
 
 const tripService = {
@@ -21,6 +22,10 @@ const tripService = {
       currency = 'INR',
       tripType = 'family',
       travelType = 'family',
+      travelPreference,
+      selectedTransport,
+      selectedHotel,
+      currentLocation,
       interests = ['beach', 'dining', 'sightseeing'],
     } = params;
 
@@ -59,7 +64,7 @@ const tripService = {
       } catch {}
     }
 
-    return generateItinerary({
+    return aiTripService.generateAiItinerary({
       destination: resolvedDestName,
       destinationId: resolvedDestId,
       destinationName: resolvedDestName,
@@ -68,8 +73,10 @@ const tripService = {
       travelers,
       budget,
       currency,
-      travelType: travelType || tripType || 'family',
-      tripType: travelType || tripType || 'family',
+      travelPreference: travelPreference || travelType || tripType || 'family',
+      selectedTransport,
+      selectedHotel,
+      currentLocation,
       interests,
     });
   },
@@ -140,7 +147,7 @@ const tripService = {
       finalEstimatedCost = generated.estimated_cost || generated.totalBudget || totalBudget || 0;
     }
 
-    return tripModel.createTripWithItineraries(
+    const createdTrip = await tripModel.createTripWithItineraries(
       {
         userId,
         destinationId,
@@ -156,6 +163,24 @@ const tripService = {
       },
       finalItineraries
     );
+
+    // Feature 7: Phase 16 Saved Trip Reward (+10 pts)
+    if (createdTrip && createdTrip.id) {
+      try {
+        const rewardService = require('./rewardService');
+        await rewardService.awardPoints(
+          userId,
+          'trip_saved',
+          `trip_${createdTrip.id}`,
+          10,
+          `Saved custom trip plan: ${createdTrip.title || destinationName}`
+        );
+      } catch (err) {
+        console.warn('Trip save reward trigger failed:', err.message);
+      }
+    }
+
+    return createdTrip;
   },
 
   /**

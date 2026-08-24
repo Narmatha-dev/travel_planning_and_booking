@@ -99,6 +99,9 @@
     "planTrip": "Plan Trip",
     "isUseful": "Is this useful?",
     "notInterested": "Hide",
-    "reasonsTitle": "Recommended because:"
+    "reasonsTitle": "Recommended because:",
+    "mlBadge": "ML Recommended",
+    "mlEngine": "ML Recommendation Engine",
+    "retrainModel": "Retrain ML Model"
   }
 }

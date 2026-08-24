@@ -58,6 +58,115 @@ Interactive REST API Documentation for the **Travel Planning and Booking Platfor
         },
       },
     },
+    '/api/location/reverse-geocode': {
+      get: {
+        tags: ['Location'],
+        summary: 'Reverse geocode GPS coordinates into human-readable city and state',
+        parameters: [
+          { name: 'lat', in: 'query', required: true, schema: { type: 'number', example: 13.0827 }, description: 'Latitude coordinate' },
+          { name: 'lng', in: 'query', required: true, schema: { type: 'number', example: 80.2707 }, description: 'Longitude coordinate' },
+        ],
+        responses: {
+          '200': {
+            description: 'Location detected successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', example: 'success' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        city: { type: 'string', example: 'Chennai' },
+                        state: { type: 'string', example: 'Tamil Nadu' },
+                        country: { type: 'string', example: 'India' },
+                        locationLabel: { type: 'string', example: 'Chennai, Tamil Nadu' },
+                        latitude: { type: 'number', example: 13.0827 },
+                        longitude: { type: 'number', example: 80.2707 },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid coordinates' },
+        },
+      },
+    },
+    '/api/location/route': {
+      get: {
+        tags: ['Location'],
+        summary: 'Calculate live route, road distance, and travel time between origin and destination (Phase 3)',
+        parameters: [
+          { name: 'originLat', in: 'query', required: true, schema: { type: 'number', example: 13.0827 } },
+          { name: 'originLng', in: 'query', required: true, schema: { type: 'number', example: 80.2707 } },
+          { name: 'destLat', in: 'query', required: true, schema: { type: 'number', example: 12.6163 } },
+          { name: 'destLng', in: 'query', required: true, schema: { type: 'number', example: 80.1983 } },
+          { name: 'mode', in: 'query', required: false, schema: { type: 'string', enum: ['driving', 'transit', 'walking', 'bicycling'], default: 'driving' } },
+        ],
+        responses: {
+          '200': { description: 'Route calculated successfully with distance and estimated time' },
+          '400': { description: 'Missing coordinates' },
+        },
+      },
+    },
+    '/api/location/map-config': {
+      get: {
+        tags: ['Location'],
+        summary: 'Retrieve client Google Maps configuration',
+        responses: {
+          '200': { description: 'Map configuration returned' },
+        },
+      },
+    },
+    '/api/transport/options': {
+      get: {
+        tags: ['Transport'],
+        summary: 'Calculate multi-modal transport options, estimated costs, and travel times (Phase 4)',
+        parameters: [
+          { name: 'originLat', in: 'query', required: true, schema: { type: 'number', example: 13.0827 } },
+          { name: 'originLng', in: 'query', required: true, schema: { type: 'number', example: 80.2707 } },
+          { name: 'destLat', in: 'query', required: true, schema: { type: 'number', example: 12.6163 } },
+          { name: 'destLng', in: 'query', required: true, schema: { type: 'number', example: 80.1983 } },
+          { name: 'preference', in: 'query', required: false, schema: { type: 'string', enum: ['any', 'cheapest', 'fastest', 'comfortable'], default: 'any' } },
+        ],
+        responses: {
+          '200': { description: 'Transport options and fare estimates calculated successfully' },
+          '400': { description: 'Missing coordinates' },
+        },
+      },
+    },
+    '/api/destinations/nearby': {
+      get: {
+        tags: ['Destinations'],
+        summary: 'Retrieve real nearby tourist attractions with photos and calculated distances (Phase 2)',
+        parameters: [
+          { name: 'lat', in: 'query', required: true, schema: { type: 'number' }, description: 'User latitude' },
+          { name: 'lng', in: 'query', required: true, schema: { type: 'number' }, description: 'User longitude' },
+          { name: 'category', in: 'query', required: false, schema: { type: 'string', default: 'all' }, description: 'Category filter (beach, cultural, park, all)' },
+          { name: 'limit', in: 'query', required: false, schema: { type: 'integer', default: 12 }, description: 'Max places to return' },
+        ],
+        responses: {
+          '200': { description: 'Nearby places retrieved successfully with distances and photos' },
+          '400': { description: 'Missing coordinates' },
+        },
+      },
+    },
+    '/api/destinations/nearby/{placeId}': {
+      get: {
+        tags: ['Destinations'],
+        summary: 'Retrieve detailed information for a real nearby tourist place',
+        parameters: [
+          { name: 'placeId', in: 'path', required: true, schema: { type: 'string' }, description: 'Place identifier' },
+        ],
+        responses: {
+          '200': { description: 'Place details retrieved successfully' },
+          '404': { description: 'Place not found' },
+        },
+      },
+    },
     '/api/auth/register': {
       post: {
         tags: ['Auth'],

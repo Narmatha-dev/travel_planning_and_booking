@@ -1,8 +1,20 @@
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 
-// Load environment variables from backend/.env
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+// Load environment variables with fallback path resolution
+const envPaths = [
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(process.cwd(), 'backend/.env'),
+];
+
+for (const envPath of envPaths) {
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    break;
+  }
+}
 
 const environment = {
   nodeEnv: process.env.NODE_ENV || 'development',

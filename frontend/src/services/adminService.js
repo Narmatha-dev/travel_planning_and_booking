@@ -114,6 +114,18 @@ const adminService = {
     const response = await api.delete(`/admin/reviews/${id}`);
     return response.data.data;
   },
+
+  // 10. ML Recommendation Model Management (Feature 18)
+  async getMlStatus() {
+    const response = await api.get('/admin/ml/status');
+    return response.data.data;
+  },
+
+  async trainMlModel() {
+    const response = await api.post('/admin/ml/train');
+    return response.data.data;
+  },
 };
 
 export default adminService;
+

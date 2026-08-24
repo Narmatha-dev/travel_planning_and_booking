@@ -28,7 +28,16 @@ function errorResponse(res, message = 'An error occurred', statusCode = 500, err
   return res.status(statusCode).json(payload);
 }
 
+class ApiError extends Error {
+  constructor(statusCode, message) {
+    super(message);
+    this.statusCode = statusCode;
+    this.name = 'ApiError';
+  }
+}
+
 module.exports = {
   successResponse,
   errorResponse,
+  ApiError,
 };

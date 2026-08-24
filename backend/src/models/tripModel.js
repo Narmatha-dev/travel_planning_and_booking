@@ -197,7 +197,7 @@ const tripModel = {
           d.category AS destination_category,
           COUNT(ti.id) AS activities_count
         FROM trips t
-        JOIN destinations d ON t.destination_id = d.id
+        LEFT JOIN destinations d ON t.destination_id = d.id
         LEFT JOIN trip_itineraries ti ON ti.trip_id = t.id
         WHERE t.user_id = ?
         GROUP BY t.id
@@ -225,7 +225,7 @@ const tripModel = {
           d.category AS destination_category,
           p.title AS package_title
         FROM trips t
-        JOIN destinations d ON t.destination_id = d.id
+        LEFT JOIN destinations d ON t.destination_id = d.id
         LEFT JOIN packages p ON t.package_id = p.id
         WHERE t.id = ?
       `;
@@ -237,7 +237,13 @@ const tripModel = {
       }
 
       const [tripRows] = await query(sql, params);
-      if (!tripRows || tripRows.length === 0) return null;
+      if (!tripRows || tripRows.length === 0) {
+        const fallbackTrip = FALLBACK_TRIPS.find((t) => String(t.id) === String(tripId));
+        if (fallbackTrip && (!userId || fallbackTrip.user_id === parseInt(userId, 10))) {
+          return fallbackTrip;
+        }
+        return null;
+      }
 
       const trip = tripRows[0];
 

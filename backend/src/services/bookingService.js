@@ -77,6 +77,18 @@ const bookingService = {
       finalAmount: parseFloat(bookingData.finalAmount || totalAmount),
     });
 
+    // Feature 3: Automated Booking Confirmation Notification (Phase 10)
+    try {
+      const notificationService = require('./notificationService');
+      await notificationService.createSystemNotification({
+        userId: createdBooking.user_id || bookingData.userId || 3,
+        title: '🎉 Trip Confirmed',
+        message: `Your trip to ${createdBooking.destination_name || 'your destination'} has been successfully booked.`,
+        type: 'booking_update',
+        linkUrl: '/my-trips?tab=upcoming',
+      });
+    } catch {}
+
     return createdBooking;
   },
 
@@ -99,6 +111,19 @@ const bookingService = {
     }
 
     const cancelledBooking = await bookingModel.cancelBooking(existing.id, cancellationReason);
+
+    // Feature 2: Automated Cancellation Notification (Phase 10)
+    try {
+      const notificationService = require('./notificationService');
+      await notificationService.createSystemNotification({
+        userId: existing.user_id || 3,
+        title: '❌ Booking Cancelled',
+        message: `Your reservation #${existing.booking_reference} for ${existing.destination_name || 'your destination'} has been cancelled.`,
+        type: 'booking_update',
+        linkUrl: '/my-trips?tab=cancelled',
+      });
+    } catch {}
+
     return {
       ...cancelledBooking,
       message: 'Booking cancelled successfully. Refund processing has been initiated.',
@@ -116,8 +141,26 @@ const bookingService = {
       throw error;
     }
 
-    await this.getBookingByIdOrReference(id);
-    return bookingModel.updateStatus(id, status);
+    const booking = await this.getBookingByIdOrReference(id);
+    const updated = await bookingModel.updateStatus(id, status);
+
+    // Feature 5: Award Completed Trip Reward (+100 pts)
+    if (status === 'completed' && booking) {
+      try {
+        const rewardService = require('./rewardService');
+        await rewardService.awardPoints(
+          booking.user_id || 3,
+          'trip_completed',
+          `booking_${booking.id || id}`,
+          100,
+          `Completed trip to ${booking.destination_name || 'Destination'}`
+        );
+      } catch (err) {
+        console.warn('Completed trip reward trigger failed:', err.message);
+      }
+    }
+
+    return updated;
   },
 };
 

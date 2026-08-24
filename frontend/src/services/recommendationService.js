@@ -48,7 +48,16 @@ const recommendationService = {
     const response = await api.post('/recommendations/feedback', feedbackData);
     return response.data.data;
   },
+
+  /**
+   * Retrieve ML recommendation model status and evaluation metrics (Feature 14 & 18)
+   */
+  async getMlStatus() {
+    const response = await api.get('/recommendations/ml-status');
+    return response.data.data;
+  },
 };
 
 export default recommendationService;
+
 

@@ -153,6 +153,9 @@ const server = app.listen(PORT, async () => {
   console.log(
     `📚 API Docs:     http://localhost:${PORT}/docs`
   );
+  console.log(
+    `🔑 Google OAuth: ${config.google.clientId ? 'Configured (' + config.google.clientId.substring(0, 15) + '...)' : 'Pending (GOOGLE_CLIENT_ID not set in backend/.env)'}`
+  );
   console.log('=====================================================');
 
   // Verify database connection

@@ -10,8 +10,9 @@ const chatbotController = {
   sendMessage: asyncHandler(async (req, res) => {
     const sessionId = req.body.sessionId || req.user?.id?.toString() || 'default_session';
     const message = req.body.message || '';
+    const context = req.body.context || {};
 
-    const response = await chatbotService.processMessage(sessionId, message);
+    const response = await chatbotService.processMessage(sessionId, message, context);
     return successResponse(res, 'AI response generated successfully', response);
   }),
 

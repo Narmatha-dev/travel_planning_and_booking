@@ -1,11 +1,73 @@
 const paymentService = require('../services/paymentService');
-const { successResponse, errorResponse } = require('../utils/apiResponse');
+const { successResponse } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
 
 const paymentController = {
   /**
+   * GET /api/payments/config
+   * Retrieve public payment gateway configuration
+   */
+  getGatewayConfig: asyncHandler(async (req, res) => {
+    const config = paymentService.getGatewayConfig();
+    return successResponse(res, 'Payment gateway configuration retrieved successfully', config);
+  }),
+
+  /**
+   * POST /api/payments/create-order
+   * Feature 4: Create a server-side payment order / session
+   */
+  createPaymentOrder: asyncHandler(async (req, res) => {
+    const userId = req.user?.id || req.body.userId || 3;
+    const { bookingId, paymentMethod } = req.body;
+
+    const orderData = await paymentService.createPaymentOrder({
+      bookingId,
+      userId,
+      paymentMethod,
+    });
+
+    return successResponse(res, 'Payment order created successfully', orderData, 201);
+  }),
+
+  /**
+   * POST /api/payments/verify
+   * Feature 5: Verify payment transaction server-side
+   */
+  verifyPayment: asyncHandler(async (req, res) => {
+    const userId = req.user?.id || req.body.userId || 3;
+    const result = await paymentService.verifyPayment({
+      ...req.body,
+      userId,
+    });
+
+    return successResponse(res, 'Payment verified successfully', result, 200);
+  }),
+
+  /**
+   * GET /api/payments/receipt/:identifier
+   * Feature 9 & 10: Retrieve digital booking & payment receipt
+   */
+  getReceipt: asyncHandler(async (req, res) => {
+    const identifier = req.params.identifier;
+    const userId = req.user?.id || req.query.userId || 3;
+
+    const receipt = await paymentService.getReceipt(identifier, userId);
+    return successResponse(res, 'Digital receipt retrieved successfully', receipt);
+  }),
+
+  /**
+   * POST /api/payments/webhook
+   * Feature 14: Payment provider webhook notification
+   */
+  handleWebhook: asyncHandler(async (req, res) => {
+    const signature = req.headers['x-razorpay-signature'] || req.headers['stripe-signature'] || req.headers['x-signature'] || 'sandbox_sig';
+    const result = await paymentService.handleWebhook(req.body, signature);
+    return successResponse(res, 'Webhook processed successfully', result);
+  }),
+
+  /**
    * POST /api/payments/process
-   * Process / charge a payment (Mock Simulation)
+   * Process payment (backward compatible mock)
    */
   processPayment: asyncHandler(async (req, res) => {
     const userId = req.user?.id || req.body.userId || 3;
@@ -18,7 +80,7 @@ const paymentController = {
 
   /**
    * GET /api/payments/history
-   * Retrieve payment transaction history for the user
+   * Retrieve payment transaction history for user
    */
   getPaymentHistory: asyncHandler(async (req, res) => {
     const userId = req.user?.id || req.query.userId || 3;

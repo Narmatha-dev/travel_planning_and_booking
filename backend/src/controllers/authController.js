@@ -40,8 +40,21 @@ const authController = {
       return res.redirect(`${config.clientUrl}/login?error=${encodeURIComponent(errorMsg)}`);
     }
 
+    // Capture dynamic client origin (handles port 5173 or 5174 smoothly)
+    let clientOrigin = config.clientUrl;
+    const referer = req.headers.referer || req.headers.origin;
+    if (referer) {
+      try {
+        const refUrl = new URL(referer);
+        if (refUrl.hostname === 'localhost' || refUrl.hostname === '127.0.0.1') {
+          clientOrigin = `${refUrl.protocol}//${refUrl.host}`;
+        }
+      } catch {}
+    }
+
     const state = {
       redirect: redirect || '/',
+      clientOrigin,
       timestamp: Date.now(),
     };
 
@@ -60,13 +73,15 @@ const authController = {
    */
   handleGoogleCallback: async (req, res) => {
     const { code, state, error, error_description } = req.query;
+    const parsedState = googleAuthService.parseState(state);
+    const targetOrigin = parsedState?.clientOrigin || config.clientUrl;
 
     // Handle Google cancellation / refusal
     if (error) {
       const reason = error_description || error;
       console.warn(`[Google OAuth] Flow cancelled or error received from Google: ${reason}`);
       return res.redirect(
-        `${config.clientUrl}/auth/callback?error=${encodeURIComponent(
+        `${targetOrigin}/auth/callback?error=${encodeURIComponent(
           error === 'access_denied' ? 'Google sign-in was cancelled.' : reason
         )}`
       );
@@ -76,7 +91,7 @@ const authController = {
       const result = await authService.googleAuthCallback({ code, state });
 
       const redirectDestination = result.redirectDestination || '/';
-      const redirectUrl = new URL(`${config.clientUrl}/auth/callback`);
+      const redirectUrl = new URL(`${targetOrigin}/auth/callback`);
       redirectUrl.searchParams.set('token', result.token);
       redirectUrl.searchParams.set('user', JSON.stringify(result.user));
       redirectUrl.searchParams.set('redirect', redirectDestination);
@@ -89,7 +104,7 @@ const authController = {
       console.error('[Google OAuth] Callback authentication error:', err.message);
       const errorMessage = err.message || 'Google authentication failed';
       return res.redirect(
-        `${config.clientUrl}/auth/callback?error=${encodeURIComponent(errorMessage)}`
+        `${targetOrigin}/auth/callback?error=${encodeURIComponent(errorMessage)}`
       );
     }
   },

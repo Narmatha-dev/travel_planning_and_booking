@@ -4,23 +4,33 @@ const destinationModel = require('../models/destinationModel');
 const packageModel = require('../models/packageModel');
 const bookingModel = require('../models/bookingModel');
 const reviewModel = require('../models/reviewModel');
+const rewardModel = require('../models/rewardModel');
+const mlRecommendationService = require('./mlRecommendationService');
 
 // In-memory fallback users store if MySQL is offline
 const inMemoryUsers = [
-  { id: 1, full_name: 'System Administrator', email: 'admin@travelplanner.com', role: 'admin', is_active: 1, created_at: '2026-01-01' },
-  { id: 2, full_name: 'Sarah Jenkins', email: 'sarah.agent@travelplanner.com', role: 'agent', is_active: 1, created_at: '2026-01-02' },
-  { id: 3, full_name: 'Alexander Reed', email: 'alex.reed@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
-  { id: 4, full_name: 'Elena Rostova', email: 'elena.rostova@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
-  { id: 5, full_name: 'Kenji Sato', email: 'kenji.sato@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-05' },
-  { id: 6, full_name: 'Administrator (Legacy)', email: 'admin@example.com', role: 'admin', is_active: 1, created_at: '2026-01-01' },
-  { id: 7, full_name: 'Travel Agent Sarah (Legacy)', email: 'agent@example.com', role: 'agent', is_active: 1, created_at: '2026-01-02' },
-  { id: 8, full_name: 'John Doe (Legacy)', email: 'john@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
-  { id: 9, full_name: 'Emma Watson (Legacy)', email: 'emma@example.com', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
+  { id: 1, full_name: 'System Administrator', email: 'admin@travelplanner.com', phone_number: '+1-555-0100', role: 'admin', is_active: 1, created_at: '2026-01-01' },
+  { id: 2, full_name: 'Sarah Jenkins', email: 'sarah.agent@travelplanner.com', phone_number: '+1-555-0102', role: 'agent', is_active: 1, created_at: '2026-01-02' },
+  { id: 3, full_name: 'Alexander Reed', email: 'alex.reed@example.com', phone_number: '+1-555-0199', role: 'traveler', is_active: 1, created_at: '2026-01-03' },
+  { id: 4, full_name: 'Elena Rostova', email: 'elena.rostova@example.com', phone_number: '+44-20-7946-0912', role: 'traveler', is_active: 1, created_at: '2026-01-04' },
+  { id: 5, full_name: 'Kenji Sato', email: 'kenji.sato@example.com', phone_number: '+81-3-5555-0143', role: 'traveler', is_active: 1, created_at: '2026-01-05' },
+];
+
+const inMemoryTrips = [
+  { id: 1, user_id: 3, customer_name: 'Alexander Reed', destination_name: 'Bali Paradise Island', title: "Alex's Bali Summer Escape", trip_type: 'solo', start_date: '2026-09-10', end_date: '2026-09-17', total_budget: 2000.00, estimated_cost: 1450.00, status: 'planned', created_at: '2026-08-01' },
+  { id: 2, user_id: 4, customer_name: 'Elena Rostova', destination_name: 'Parisian Elegance', title: "Elena's Paris Art & Architecture Tour", trip_type: 'solo', start_date: '2026-10-05', end_date: '2026-10-10', total_budget: 2500.00, estimated_cost: 2100.00, status: 'planned', created_at: '2026-08-05' },
+  { id: 3, user_id: 5, customer_name: 'Kenji Sato', destination_name: 'Kyoto & Tokyo Highlights', title: 'Kenji & Friends Autumn Japan Quest', trip_type: 'friends', start_date: '2026-11-01', end_date: '2026-11-10', total_budget: 4000.00, estimated_cost: 3600.00, status: 'ongoing', created_at: '2026-08-08' },
+];
+
+const inMemoryPayments = [
+  { id: 1, booking_id: 1, booking_reference: 'BK-2026-001', customer_name: 'Alexander Reed', customer_email: 'alex.reed@example.com', transaction_id: 'TXN-STRIPE-891023', payment_method: 'credit_card', payment_status: 'completed', amount: 1099.00, currency: 'USD', payment_gateway: 'Stripe', paid_at: '2026-08-10 14:23:10', created_at: '2026-08-10 14:23:10' },
+  { id: 2, booking_id: 2, booking_reference: 'BK-2026-002', customer_name: 'Elena Rostova', customer_email: 'elena.rostova@example.com', transaction_id: 'TXN-PPAL-771928', payment_method: 'paypal', payment_status: 'completed', amount: 1699.00, currency: 'USD', payment_gateway: 'PayPal', paid_at: '2026-08-12 11:15:45', created_at: '2026-08-12 11:15:45' },
+  { id: 3, booking_id: 3, booking_reference: 'BK-2026-003', customer_name: 'Kenji Sato', customer_email: 'kenji.sato@example.com', transaction_id: 'TXN-STRIPE-338192', payment_method: 'credit_card', payment_status: 'pending', amount: 5398.00, currency: 'USD', payment_gateway: 'Stripe', paid_at: null, created_at: '2026-08-15 10:00:00' },
 ];
 
 const adminService = {
   /**
-   * 1. Get Platform Metrics & Dashboard Statistics
+   * 1. Get Platform Metrics & Dashboard Statistics (Feature 2 & 4)
    */
   async getDashboardStats() {
     try {
@@ -49,14 +59,34 @@ const adminService = {
         FROM packages
       `);
 
+      const [tripStats] = await query(`
+        SELECT 
+          COUNT(*) AS total_trips,
+          SUM(CASE WHEN status = 'planned' THEN 1 ELSE 0 END) AS planned_trips,
+          SUM(CASE WHEN status = 'ongoing' THEN 1 ELSE 0 END) AS ongoing_trips,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_trips
+        FROM trips
+      `);
+
       const [bookingStats] = await query(`
         SELECT 
           COUNT(*) AS total_bookings,
           SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) AS confirmed_bookings,
           SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) AS pending_bookings,
           SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_bookings,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_bookings,
           SUM(CASE WHEN status IN ('confirmed', 'completed') THEN total_amount ELSE 0 END) AS total_revenue
         FROM bookings
+      `);
+
+      const [paymentStats] = await query(`
+        SELECT 
+          COUNT(*) AS total_payments,
+          SUM(CASE WHEN payment_status = 'completed' THEN 1 ELSE 0 END) AS successful_payments,
+          SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) AS pending_payments,
+          SUM(CASE WHEN payment_status = 'failed' THEN 1 ELSE 0 END) AS failed_payments,
+          SUM(CASE WHEN payment_status = 'completed' THEN amount ELSE 0 END) AS verified_revenue
+        FROM payments
       `);
 
       const [reviewStats] = await query(`
@@ -67,71 +97,119 @@ const adminService = {
         FROM reviews
       `);
 
-      const revenueUSD = parseFloat(bookingStats[0]?.total_revenue || 0);
+      const verifiedRevenue = parseFloat(paymentStats[0]?.verified_revenue || bookingStats[0]?.total_revenue || 0);
 
       return {
         users: {
-          total: parseInt(userStats[0]?.total_users || 4, 10),
-          travelers: parseInt(userStats[0]?.total_travelers || 2, 10),
+          total: parseInt(userStats[0]?.total_users || 5, 10),
+          travelers: parseInt(userStats[0]?.total_travelers || 3, 10),
           agents: parseInt(userStats[0]?.total_agents || 1, 10),
           admins: parseInt(userStats[0]?.total_admins || 1, 10),
         },
         destinations: {
-          total: parseInt(destStats[0]?.total_destinations || 8, 10),
-          active: parseInt(destStats[0]?.active_destinations || 8, 10),
+          total: parseInt(destStats[0]?.total_destinations || 5, 10),
+          active: parseInt(destStats[0]?.active_destinations || 5, 10),
           avgRating: parseFloat(destStats[0]?.avg_destination_rating || 4.9).toFixed(2),
         },
         packages: {
-          total: parseInt(pkgStats[0]?.total_packages || 6, 10),
-          available: parseInt(pkgStats[0]?.available_packages || 6, 10),
-          avgPriceUSD: Math.round(parseFloat(pkgStats[0]?.avg_package_price || 1850)),
+          total: parseInt(pkgStats[0]?.total_packages || 5, 10),
+          available: parseInt(pkgStats[0]?.available_packages || 5, 10),
+          avgPriceUSD: Math.round(parseFloat(pkgStats[0]?.avg_package_price || 2300)),
+        },
+        trips: {
+          total: parseInt(tripStats[0]?.total_trips || 3, 10),
+          planned: parseInt(tripStats[0]?.planned_trips || 2, 10),
+          ongoing: parseInt(tripStats[0]?.ongoing_trips || 1, 10),
+          completed: parseInt(tripStats[0]?.completed_trips || 0, 10),
         },
         bookings: {
-          total: parseInt(bookingStats[0]?.total_bookings || 12, 10),
-          confirmed: parseInt(bookingStats[0]?.confirmed_bookings || 8, 10),
-          pending: parseInt(bookingStats[0]?.pending_bookings || 2, 10),
-          cancelled: parseInt(bookingStats[0]?.cancelled_bookings || 2, 10),
-          totalRevenueUSD: revenueUSD,
-          totalRevenueINR: Math.round(revenueUSD * 85),
-          formattedRevenueUSD: `$${revenueUSD.toLocaleString()}`,
-          formattedRevenueINR: `₹${(revenueUSD * 85).toLocaleString()}`,
+          total: parseInt(bookingStats[0]?.total_bookings || 3, 10),
+          confirmed: parseInt(bookingStats[0]?.confirmed_bookings || 2, 10),
+          pending: parseInt(bookingStats[0]?.pending_bookings || 1, 10),
+          cancelled: parseInt(bookingStats[0]?.cancelled_bookings || 0, 10),
+          completed: parseInt(bookingStats[0]?.completed_bookings || 0, 10),
+          totalRevenueUSD: verifiedRevenue,
+          totalRevenueINR: Math.round(verifiedRevenue * 85),
+          formattedRevenueUSD: `$${verifiedRevenue.toLocaleString()}`,
+          formattedRevenueINR: `₹${(verifiedRevenue * 85).toLocaleString()}`,
+        },
+        payments: {
+          total: parseInt(paymentStats[0]?.total_payments || 3, 10),
+          successful: parseInt(paymentStats[0]?.successful_payments || 2, 10),
+          pending: parseInt(paymentStats[0]?.pending_payments || 1, 10),
+          failed: parseInt(paymentStats[0]?.failed_payments || 0, 10),
+          verifiedRevenue,
         },
         reviews: {
-          total: parseInt(reviewStats[0]?.total_reviews || 15, 10),
-          avgRating: parseFloat(reviewStats[0]?.avg_review_rating || 4.92).toFixed(2),
-          approved: parseInt(reviewStats[0]?.approved_reviews || 15, 10),
+          total: parseInt(reviewStats[0]?.total_reviews || 4, 10),
+          avgRating: parseFloat(reviewStats[0]?.avg_review_rating || 4.90).toFixed(2),
+          approved: parseInt(reviewStats[0]?.approved_reviews || 4, 10),
         },
+        rewards: await rewardModel.getAdminStats(),
       };
-    } catch (err) {
-      // Fallback stats
+    } catch {
       return {
-        users: { total: 4, travelers: 2, agents: 1, admins: 1 },
-        destinations: { total: 8, active: 8, avgRating: '4.92' },
-        packages: { total: 6, available: 6, avgPriceUSD: 2199 },
+        users: { total: 5, travelers: 3, agents: 1, admins: 1 },
+        destinations: { total: 5, active: 5, avgRating: '4.90' },
+        packages: { total: 5, available: 5, avgPriceUSD: 2300 },
+        trips: { total: 3, planned: 2, ongoing: 1, completed: 0 },
         bookings: {
-          total: 8,
-          confirmed: 6,
+          total: 3,
+          confirmed: 2,
           pending: 1,
-          cancelled: 1,
-          totalRevenueUSD: 14890,
-          totalRevenueINR: 1265650,
-          formattedRevenueUSD: '$14,890',
-          formattedRevenueINR: '₹12,65,650',
+          cancelled: 0,
+          completed: 0,
+          totalRevenueUSD: 2798,
+          totalRevenueINR: 237830,
+          formattedRevenueUSD: '$2,798',
+          formattedRevenueINR: '₹2,37,830',
         },
-        reviews: { total: 12, avgRating: '4.90', approved: 12 },
+        payments: {
+          total: 3,
+          successful: 2,
+          pending: 1,
+          failed: 0,
+          verifiedRevenue: 2798,
+        },
+        reviews: { total: 4, avgRating: '4.90', approved: 4 },
+        rewards: await rewardModel.getAdminStats(),
       };
     }
   },
 
   /**
-   * 2. User Management
+   * 2. User Management (Feature 5 & 6)
    */
-  async getAllUsers() {
+  async getAllUsers({ search, role, status } = {}) {
     try {
-      const [rows] = await query('SELECT id, full_name, email, phone_number, role, is_active, created_at FROM users ORDER BY id ASC');
+      let sql = 'SELECT id, full_name, email, phone_number, role, is_active, created_at FROM users WHERE 1=1';
+      const params = [];
+
+      if (search) {
+        sql += ' AND (full_name LIKE ? OR email LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`);
+      }
+      if (role && role !== 'all') {
+        sql += ' AND role = ?';
+        params.push(role);
+      }
+      if (status !== undefined && status !== 'all') {
+        sql += ' AND is_active = ?';
+        params.push(status === 'active' || status === '1' || status === 1 ? 1 : 0);
+      }
+
+      sql += ' ORDER BY id ASC';
+      const [rows] = await query(sql, params);
       return rows;
     } catch {
-      return inMemoryUsers;
+      let list = inMemoryUsers;
+      if (search) {
+        list = list.filter((u) => u.full_name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
+      }
+      if (role && role !== 'all') {
+        list = list.filter((u) => u.role === role);
+      }
+      return list;
     }
   },
 
@@ -175,7 +253,7 @@ const adminService = {
   },
 
   /**
-   * 3. Destination Management
+   * 3. Destination Management (Feature 7)
    */
   async getAllDestinations() {
     return destinationModel.findAll({ limit: 100 });
@@ -285,7 +363,7 @@ const adminService = {
   },
 
   /**
-   * 5. Booking Management
+   * 5. Booking Management (Feature 8)
    */
   async getAllBookings({ status, search } = {}) {
     try {
@@ -307,6 +385,10 @@ const adminService = {
         sql += ' AND b.status = ?';
         params.push(status);
       }
+      if (search) {
+        sql += ' AND (b.booking_reference LIKE ? OR u.full_name LIKE ? OR d.name LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      }
       sql += ' ORDER BY b.id DESC LIMIT 100';
       const [rows] = await query(sql, params);
       return rows;
@@ -326,11 +408,87 @@ const adminService = {
   },
 
   /**
-   * 6. Review Management
+   * 6. Trip Management (Feature 9)
    */
-  async getAllReviews() {
+  async getAllTrips({ status, search } = {}) {
     try {
-      const [rows] = await query(`
+      let sql = `
+        SELECT 
+          t.*,
+          u.full_name AS customer_name,
+          u.email AS customer_email,
+          d.name AS destination_name
+        FROM trips t
+        LEFT JOIN users u ON u.id = t.user_id
+        LEFT JOIN destinations d ON d.id = t.destination_id
+        WHERE 1=1
+      `;
+      const params = [];
+      if (status && status !== 'all') {
+        sql += ' AND t.status = ?';
+        params.push(status);
+      }
+      if (search) {
+        sql += ' AND (t.title LIKE ? OR u.full_name LIKE ? OR d.name LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      }
+      sql += ' ORDER BY t.id DESC LIMIT 100';
+      const [rows] = await query(sql, params);
+      return rows;
+    } catch {
+      return inMemoryTrips;
+    }
+  },
+
+  /**
+   * 7. Payment View (Feature 11) - Safe metadata only
+   */
+  async getAllPayments({ status, search } = {}) {
+    try {
+      let sql = `
+        SELECT 
+          p.id,
+          p.booking_id,
+          b.booking_reference,
+          p.user_id,
+          u.full_name AS customer_name,
+          u.email AS customer_email,
+          p.transaction_id,
+          p.payment_method,
+          p.payment_status,
+          p.amount,
+          p.currency,
+          p.payment_gateway,
+          p.paid_at,
+          p.created_at
+        FROM payments p
+        LEFT JOIN bookings b ON b.id = p.booking_id
+        LEFT JOIN users u ON u.id = p.user_id
+        WHERE 1=1
+      `;
+      const params = [];
+      if (status && status !== 'all') {
+        sql += ' AND p.payment_status = ?';
+        params.push(status);
+      }
+      if (search) {
+        sql += ' AND (p.transaction_id LIKE ? OR b.booking_reference LIKE ? OR u.full_name LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+      }
+      sql += ' ORDER BY p.id DESC LIMIT 100';
+      const [rows] = await query(sql, params);
+      return rows;
+    } catch {
+      return inMemoryPayments;
+    }
+  },
+
+  /**
+   * 8. Review Management (Feature 10)
+   */
+  async getAllReviews({ search, approval } = {}) {
+    try {
+      let sql = `
         SELECT 
           r.*,
           u.full_name AS author_name,
@@ -341,12 +499,23 @@ const adminService = {
         LEFT JOIN users u ON u.id = r.user_id
         LEFT JOIN destinations d ON d.id = r.destination_id
         LEFT JOIN packages p ON p.id = r.package_id
-        ORDER BY r.id DESC
-      `);
+        WHERE 1=1
+      `;
+      const params = [];
+      if (approval !== undefined && approval !== 'all') {
+        sql += ' AND r.is_approved = ?';
+        params.push(approval === 'approved' || approval === '1' || approval === 1 ? 1 : 0);
+      }
+      if (search) {
+        sql += ' AND (r.title LIKE ? OR r.comment LIKE ? OR u.full_name LIKE ? OR d.name LIKE ?)';
+        params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      }
+      sql += ' ORDER BY r.id DESC';
+      const [rows] = await query(sql, params);
       return rows;
     } catch {
       const res = await reviewModel.findAll();
-      return res.reviews || [];
+      return res || [];
     }
   },
 
@@ -360,8 +529,51 @@ const adminService = {
   },
 
   async deleteReview(reviewId) {
-    return reviewModel.delete(reviewId);
+    return reviewModel.deleteReview(reviewId);
+  },
+
+  /**
+   * 9. Analytics Data (Feature 3 & 4)
+   */
+  async getAnalyticsData() {
+    const monthlyTrends = [
+      { month: 'Jan 2026', bookings: 18, revenue: 19500 },
+      { month: 'Feb 2026', bookings: 24, revenue: 27800 },
+      { month: 'Mar 2026', bookings: 32, revenue: 38400 },
+      { month: 'Apr 2026', bookings: 28, revenue: 31200 },
+      { month: 'May 2026', bookings: 45, revenue: 52000 },
+      { month: 'Jun 2026', bookings: 62, revenue: 78500 },
+      { month: 'Jul 2026', bookings: 85, revenue: 104200 },
+      { month: 'Aug 2026', bookings: 74, revenue: 92800 },
+    ];
+
+    const categoryBreakdown = [
+      { category: 'Beach & Coastal', count: 42, percentage: 35 },
+      { category: 'Cultural & Heritage', count: 32, percentage: 27 },
+      { category: 'Mountain & Hill Station', count: 28, percentage: 23 },
+      { category: 'City Break & Luxury', count: 18, percentage: 15 },
+    ];
+
+    return {
+      monthlyTrends,
+      categoryBreakdown,
+    };
+  },
+
+  /**
+   * 10. ML Recommendation System Status (Feature 18)
+   */
+  async getMlModelStatus() {
+    return mlRecommendationService.getModelStatus();
+  },
+
+  /**
+   * 11. Trigger ML Model Retraining (Feature 11 & 18)
+   */
+  async trainMlModel() {
+    return mlRecommendationService.trainModel();
   },
 };
 
 module.exports = adminService;
+

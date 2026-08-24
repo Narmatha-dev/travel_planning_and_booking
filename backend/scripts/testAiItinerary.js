@@ -192,7 +192,7 @@ async function testAiItinerarySuite() {
 
     assert(
       'GET /api/trips/:id retrieves saved trip with populated day-by-day itinerary',
-      getRes.status === 200 && getJson.data?.id === savedTripId,
+      getRes.status === 200 && (getJson.data?.id === savedTripId || getJson.data?.id === Number(savedTripId)),
       `Retrieved Trip: ${getJson.data?.title}`
     );
   } catch (err) {

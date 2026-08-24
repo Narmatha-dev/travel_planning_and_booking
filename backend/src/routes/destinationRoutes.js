@@ -13,6 +13,10 @@ router.get('/search', destinationController.searchDestinations);
 // 3. Get popular & featured destinations
 router.get('/popular', destinationController.getPopularDestinations);
 
+// 3a. Get nearby tourist destinations based on GPS coordinates (Phase 2)
+router.get('/nearby', destinationController.getNearbyDestinations);
+router.get('/nearby/:placeId', destinationController.getNearbyPlaceDetails);
+
 // 4. Add destination to favorites (Protected)
 router.post('/:id/favorite', authMiddleware, destinationController.addFavorite);
 
