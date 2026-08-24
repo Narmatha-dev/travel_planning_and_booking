@@ -125,7 +125,28 @@ const adminService = {
     const response = await api.post('/admin/ml/train');
     return response.data.data;
   },
+
+  // 11. Advanced Travel Analytics & CSV Export (Phase 21)
+  async exportAnalyticsCSV(params = {}) {
+    const response = await api.get('/admin/analytics/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  // 12. Predictive Travel Demand & Forecasting (Phase 22)
+  async getForecast(params = {}) {
+    const response = await api.get('/admin/forecast', { params });
+    return response.data.data;
+  },
+
+  async trainForecastModel() {
+    const response = await api.post('/admin/forecast/train');
+    return response.data.data;
+  },
 };
 
 export default adminService;
+
 

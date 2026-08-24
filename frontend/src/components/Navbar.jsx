@@ -133,6 +133,14 @@ function Navbar() {
                 {t('nav.rewards', '🏆 Rewards')}
               </NavLink>
               <NavLink
+                to="/analytics"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                {t('nav.analytics', '📊 Analytics')}
+              </NavLink>
+              <NavLink
                 to="/profile"
                 className={({ isActive }) =>
                   isActive ? 'nav-link active' : 'nav-link'

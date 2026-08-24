@@ -103,5 +103,39 @@
     "mlBadge": "ML Recommended",
     "mlEngine": "ML Recommendation Engine",
     "retrainModel": "Retrain ML Model"
+  },
+  "analytics": {
+    "title": "My Travel Analytics",
+    "eyebrow": "Personal Travel Intelligence",
+    "subtitle": "Real-time overview of your verified trips, successful bookings, spending, and travel style.",
+    "refresh": "Refresh Data",
+    "totalTrips": "Total Trips",
+    "bookings": "Bookings",
+    "placesVisited": "Places Visited",
+    "totalSpending": "Total Spending",
+    "reviewsGiven": "Reviews Given",
+    "savedPlaces": "Saved Places",
+    "travelPoints": "Travel Points",
+    "tripStatus": "Trip Status Breakdown",
+    "monthlySpending": "Monthly Travel Spending",
+    "spendingCategories": "Spending by Service Category",
+    "preferences": "Travel Preferences & Destinations",
+    "transport": "Transport & Accommodation Usage",
+    "timeline": "Recent Travel Activity Timeline"
+  },
+  "predictive": {
+    "title": "Predictive Travel Analytics & Demand Forecasting",
+    "subtitle": "Estimates future booking volume, seasonal peaks, and destination growth trends using historical time-series regression.",
+    "refresh": "Refresh Forecast",
+    "retrain": "Retrain Forecast Model",
+    "horizon": "Forecast Horizon",
+    "projectedDemand": "Projected Booking Demand",
+    "estimatedRevenue": "Estimated Gross Revenue",
+    "monthlyVelocity": "Monthly Demand Velocity",
+    "confidence": "Forecast Confidence",
+    "destinationForecast": "Destination Demand Forecast & Acceleration",
+    "seasonalPeaks": "Seasonal Peak Travel Windows",
+    "telemetry": "Econometric Model Telemetry"
   }
 }
+

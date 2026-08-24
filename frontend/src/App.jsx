@@ -22,6 +22,7 @@ import NotificationsPage from './pages/NotificationsPage';
 import FavoritesPage from './pages/FavoritesPage';
 import SharedTripPage from './pages/SharedTripPage';
 import RewardsPage from './pages/RewardsPage';
+import UserAnalyticsPage from './pages/UserAnalyticsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import './App.css';
 
@@ -84,6 +85,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <RewardsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <UserAnalyticsPage />
                   </ProtectedRoute>
                 }
               />
