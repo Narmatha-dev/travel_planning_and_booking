@@ -18,6 +18,7 @@ import RecommendationsPage from './pages/RecommendationsPage';
 import BookingPage from './pages/BookingPage';
 import MyTripsPage from './pages/MyTripsPage';
 import ProfilePage from './pages/ProfilePage';
+import NotificationsPage from './pages/NotificationsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import './App.css';
 
@@ -55,6 +56,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <MyTripsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <ProtectedRoute>
+                    <NotificationsPage />
                   </ProtectedRoute>
                 }
               />

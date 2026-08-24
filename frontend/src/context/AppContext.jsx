@@ -1,6 +1,7 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import authService from '../services/authService';
 import locationService from '../services/locationService';
+import notificationService from '../services/notificationService';
 
 const AppContext = createContext();
 
@@ -74,6 +75,75 @@ export function AppProvider({ children }) {
     { id: 1, destination: 'Santorini', date: '12 Aug 2026', status: 'Confirmed' },
     { id: 2, destination: 'Bali', date: '03 Sep 2026', status: 'Planning' },
   ]);
+
+  // Notifications State (Phase 10)
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
+    setLoadingNotifications(true);
+    try {
+      const data = await notificationService.getNotifications();
+      setNotifications(data?.notifications || []);
+      setUnreadCount(data?.unreadCount || 0);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingNotifications(false);
+    }
+  }, [user]);
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      await notificationService.markAsRead(id);
+      setNotifications((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
+      );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
+    } catch {}
+  };
+
+  const markAllNotificationsAsRead = async () => {
+    try {
+      await notificationService.markAllAsRead();
+      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
+    } catch {}
+  };
+
+  const deleteNotification = async (id) => {
+    try {
+      await notificationService.deleteNotification(id);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+      setUnreadCount((prev) => {
+        const wasUnread = notifications.find((n) => n.id === id && !n.is_read);
+        return wasUnread ? Math.max(0, prev - 1) : prev;
+      });
+    } catch {}
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      await notificationService.clearAll();
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch {}
+  };
+
+  // Automatically fetch notifications when user logs in or mounts
+  useEffect(() => {
+    if (user && token) {
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 45000); // Polling every 45s
+      return () => clearInterval(interval);
+    }
+  }, [user, token, fetchNotifications]);
 
   // Load authenticated user profile from backend on app startup
   useEffect(() => {
@@ -257,13 +327,18 @@ export function AppProvider({ children }) {
     selectedHotel,
     setSelectedHotel,
     login,
-    register,
-    handleOAuthSuccess,
-    loginWithGoogleToken,
-    logout,
     updateUserProfile,
     trips,
     setTrips,
+    // Notifications Context (Phase 10)
+    notifications,
+    unreadCount,
+    loadingNotifications,
+    fetchNotifications,
+    markNotificationAsRead,
+    markAllNotificationsAsRead,
+    deleteNotification,
+    clearAllNotifications,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

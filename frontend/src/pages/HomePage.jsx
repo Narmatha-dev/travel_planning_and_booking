@@ -65,6 +65,18 @@ function HomePage() {
   const completedTrips = userBookings.filter((b) => b.status !== 'cancelled' && b.travel_date && b.travel_date < todayStr);
   const nextUpcomingTrip = upcomingTrips.length > 0 ? upcomingTrips[0] : null;
 
+  const calculateDaysRemaining = (travelDateStr) => {
+    if (!travelDateStr) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const target = new Date(travelDateStr);
+    target.setHours(0, 0, 0, 0);
+    const diffTime = target.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const daysRemaining = nextUpcomingTrip ? calculateDaysRemaining(nextUpcomingTrip.travel_date) : null;
+
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchWhere.trim()) {
@@ -79,7 +91,7 @@ function HomePage() {
       {/* Current GPS Location Section (Phase 1) */}
       <LocationSection />
 
-      {/* Feature 12: Dashboard Summary Strip for Logged-In Travelers */}
+      {/* Feature 6 & 12: Dashboard Summary Strip & Upcoming Trip Countdown */}
       {isAuthenticated && (
         <div className="container" style={{ paddingTop: '1.25rem', marginBottom: '-0.25rem' }}>
           <div
@@ -93,7 +105,7 @@ function HomePage() {
               justifyContent: 'space-between',
               alignItems: 'center',
               flexWrap: 'wrap',
-              gap: '1rem',
+              gap: '1.25rem',
             }}
           >
             <div>
@@ -107,14 +119,25 @@ function HomePage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              {nextUpcomingTrip ? (
-                <div style={{ fontSize: '0.85rem', color: '#475569' }}>
-                  Next Trip: <strong style={{ color: '#0f172a' }}>{nextUpcomingTrip.destination_name}</strong> ({nextUpcomingTrip.travel_date})
+            {/* Feature 6: Dynamic Upcoming Trip Card */}
+            {nextUpcomingTrip && (
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '0.6rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <span style={{ fontSize: '1.3rem' }}>📅</span>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#15803d', textTransform: 'uppercase' }}>
+                    YOUR NEXT TRIP • {daysRemaining === 1 ? 'Starts Tomorrow!' : daysRemaining === 0 ? 'Starts Today!' : `Starts in ${daysRemaining} days`}
+                  </div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: '800', color: '#0f172a' }}>
+                    📍 {nextUpcomingTrip.destination_name} • 👥 {nextUpcomingTrip.num_travelers || 2} Travelers
+                  </div>
                 </div>
-              ) : (
-                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Ready for your next getaway?</span>
-              )}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Link to="/notifications" className="btn btn-outline btn-sm" style={{ fontWeight: '700', padding: '0.5rem 0.85rem' }}>
+                🔔 Notifications
+              </Link>
               <Link to="/my-trips?tab=upcoming" className="btn btn-primary btn-sm" style={{ fontWeight: '800', padding: '0.5rem 1rem' }}>
                 {nextUpcomingTrip ? 'View My Trip ➔' : 'My Trips Hub ➔'}
               </Link>
