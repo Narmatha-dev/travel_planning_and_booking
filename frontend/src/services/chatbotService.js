@@ -2,12 +2,13 @@ import api from './api';
 
 const chatbotService = {
   /**
-   * Send a chat message to the AI Travel Assistant
+   * Send a chat message to the AI Travel Assistant with optional rich application context
    */
-  async sendMessage(message, sessionId = 'travelora_user_session') {
+  async sendMessage(message, sessionId = 'travelora_user_session', context = {}) {
     const response = await api.post('/chatbot/message', {
       message,
       sessionId,
+      context,
     });
     return response.data.data;
   },

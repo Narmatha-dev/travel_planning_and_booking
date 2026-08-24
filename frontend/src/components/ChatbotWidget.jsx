@@ -1,18 +1,20 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import chatbotService from '../services/chatbotService';
+import { useAppContext } from '../context/AppContext';
 
-const MULTILINGUAL_STARTER_PROMPTS = [
-  { label: '🏖️ Best beach for ₹20,000?', text: 'What is the best beach destination for 4 days with ₹20,000 budget?' },
-  { label: '📦 Swiss Alps package', text: 'Tell me about the Swiss Alps package price and inclusions' },
-  { label: '🏖️ ₹20,000-ல் சிறந்த கடற்கரை (தமிழ்)', text: '₹20,000 பட்ஜெட்டில் 4 நாட்கள் செல்ல சிறந்த கடற்கரை எது?' },
-  { label: '📦 சுவிஸ் பேக்கேஜ் (தமிழ்)', text: 'சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ் விலை மற்றும் விவரங்கள் சொல்லுங்கள்' },
-  { label: '🏖️ 20000 budget beach (Thanglish)', text: 'Goa 4 days stay panna 20000 budget podhuma?' },
-  { label: '📦 Swiss package evlo (Thanglish)', text: 'Swiss Alps package details and vilai sollunga' },
-  { label: '📋 Cancellation & Refund Rules', text: 'What is Travelora cancellation and refund policy?' },
+const QUICK_PROMPTS = [
+  { label: '📍 Suggest places near me', text: 'Suggest places near me' },
+  { label: '✈️ Plan a 3-day trip', text: 'Plan a 3-day trip to Ooty' },
+  { label: '🏨 Find budget stays', text: 'Find budget stays' },
+  { label: '🚗 Suggest transport', text: 'Suggest transport' },
+  { label: '📅 Create itinerary', text: 'Create itinerary' },
+  { label: '💵 Calculate trip budget', text: 'Calculate trip budget for ₹12,000' },
 ];
 
 export default function ChatbotWidget() {
+  const { currentLocation, selectedTransport, selectedHotel, favorites, user } = useAppContext();
+
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,12 +23,13 @@ export default function ChatbotWidget() {
     {
       role: 'assistant',
       content:
-        '👋 **Hello / வணக்கம்!**\n\nI am **Travelora AI**, your personal multilingual 24/7 travel assistant.\n\nAsk me in **English**, **தமிழ் (Tamil)**, or **Thanglish** about destinations, curated packages, budget planning, activity recommendations, or booking policies!',
+        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, plan multi-day itineraries, recommend verified stays, compare transport, and calculate trip budgets using real-time app context.\n\nHow can I help your journey today?',
       suggestions: [
-        '🏖️ Best beach for ₹20,000',
-        '📦 சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ்',
-        '🏖️ Goa-ku 20000 budget podhuma?',
-        '📋 Cancellation policy',
+        'Suggest places near me',
+        'Plan a 3-day trip',
+        'Find budget stays',
+        'Suggest transport',
+        'Calculate trip budget',
       ],
       language: 'en',
       timestamp: new Date().toISOString(),
@@ -36,7 +39,6 @@ export default function ChatbotWidget() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Auto-scroll to bottom of messages
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -63,8 +65,27 @@ export default function ChatbotWidget() {
     setInputMessage('');
     setLoading(true);
 
+    // Build context payload (Feature 4 & 21)
+    const contextPayload = {
+      currentLocation: currentLocation
+        ? { city: currentLocation.city || currentLocation.area || 'Current GPS Location', lat: currentLocation.latitude, lng: currentLocation.longitude }
+        : null,
+      selectedTransport: selectedTransport
+        ? { type: selectedTransport.title || selectedTransport.type, cost: selectedTransport.price }
+        : null,
+      selectedHotel: selectedHotel
+        ? { name: selectedHotel.name, price: selectedHotel.approx_price_per_night }
+        : null,
+      savedFavorites: (favorites || []).slice(0, 6).map((f) => ({
+        title: f.title,
+        type: f.item_type,
+        location: f.location,
+      })),
+      user: user ? { name: user.full_name, email: user.email } : null,
+    };
+
     try {
-      const response = await chatbotService.sendMessage(text);
+      const response = await chatbotService.sendMessage(text, 'travelora_user_session', contextPayload);
       if (response.language) {
         setCurrentLang(response.language);
       }
@@ -80,12 +101,8 @@ export default function ChatbotWidget() {
     } catch (err) {
       const errorMsg = {
         role: 'assistant',
-        content: currentLang === 'ta'
-          ? '⚠️ இணைப்பில் தற்காலிக சிக்கல் ஏற்பட்டுள்ளது. தயவுசெய்து மீண்டும் கேட்கவும்!'
-          : currentLang === 'thanglish'
-          ? '⚠️ Connection-la temporary problem aachu. Please marubadiyum try pannunga!'
-          : '⚠️ I encountered a temporary connection issue. Please try asking again!',
-        suggestions: ['Best beach for ₹20,000', 'Swiss Alps package'],
+        content: '⚠️ **Travel Assistant is temporarily unavailable.** Please try asking again in a moment.',
+        suggestions: ['Suggest places near me', 'Plan a 3-day trip', 'Find budget stays'],
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -95,17 +112,21 @@ export default function ChatbotWidget() {
   };
 
   const handleClearHistory = async () => {
+    const confirmed = window.confirm('Are you sure you want to clear the conversation history?');
+    if (!confirmed) return;
+
     try {
       await chatbotService.clearHistory();
       setCurrentLang('en');
       setMessages([
         {
           role: 'assistant',
-          content: '✨ Chat history reset! / உரையாடல் வரலாறு மீட்டமைக்கப்பட்டது!\n\nHow can I assist your travel planning today? (English | தமிழ் | Thanglish)',
+          content: '✨ **Chat history cleared!**\n\nHow would you like to plan your next getaway?',
           suggestions: [
-            '🏖️ Best beach for ₹20,000',
-            '📦 சுவிஸ் ஆல்ப்ஸ் பேக்கேஜ்',
-            '🏖️ Goa-ku 20000 budget podhuma?',
+            'Suggest places near me',
+            'Plan a 3-day trip',
+            'Find budget stays',
+            'Calculate trip budget',
           ],
           timestamp: new Date().toISOString(),
         },
@@ -113,18 +134,20 @@ export default function ChatbotWidget() {
     } catch {}
   };
 
-  // Helper to format text with simple markdown formatting (bold, headers, bullets)
+  // Helper to format markdown in assistant responses
   const renderFormattedContent = (content) => {
+    if (!content) return null;
     const lines = content.split('\n');
     return lines.map((line, idx) => {
-      // Headers
+      // Header 3
       if (line.startsWith('### ')) {
         return (
-          <h4 key={idx} style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', margin: '0.6rem 0 0.3rem 0' }}>
+          <h4 key={idx} style={{ fontSize: '0.96rem', fontWeight: '800', color: '#0f172a', margin: '0.6rem 0 0.35rem 0' }}>
             {line.replace('### ', '')}
           </h4>
         );
       }
+      // Header 4
       if (line.startsWith('#### ')) {
         return (
           <h5 key={idx} style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0369a1', margin: '0.4rem 0 0.2rem 0' }}>
@@ -137,9 +160,9 @@ export default function ChatbotWidget() {
       const isBullet = line.startsWith('* ') || line.startsWith('- ');
       const cleanLine = isBullet ? line.substring(2) : line;
 
-      // Parse bold tags **text**
+      // Simple bold parsing **text**
       const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
-      const renderedParts = parts.map((part, pIdx) => {
+      const formattedParts = parts.map((part, pIdx) => {
         if (part.startsWith('**') && part.endsWith('**')) {
           return <strong key={pIdx}>{part.slice(2, -2)}</strong>;
         }
@@ -148,9 +171,9 @@ export default function ChatbotWidget() {
 
       if (isBullet) {
         return (
-          <div key={idx} style={{ display: 'flex', gap: '0.35rem', margin: '0.2rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
+          <div key={idx} style={{ display: 'flex', gap: '0.4rem', margin: '0.2rem 0', fontSize: '0.84rem', lineHeight: '1.45' }}>
             <span style={{ color: '#0284c7' }}>•</span>
-            <span>{renderedParts}</span>
+            <span style={{ flex: 1 }}>{formattedParts}</span>
           </div>
         );
       }
@@ -160,170 +183,138 @@ export default function ChatbotWidget() {
       }
 
       return (
-        <p key={idx} style={{ margin: '0.25rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
-          {renderedParts}
+        <p key={idx} style={{ margin: '0.25rem 0', fontSize: '0.84rem', lineHeight: '1.45' }}>
+          {formattedParts}
         </p>
       );
     });
   };
 
-  const getLanguageLabel = () => {
-    if (currentLang === 'ta') return '🇮🇳 தமிழ் (Tamil)';
-    if (currentLang === 'thanglish') return '🇮🇳 Thanglish';
-    return '🌐 English';
-  };
-
   return (
     <>
-      {/* Floating Trigger Pill */}
+      {/* Floating Trigger Button (Feature 1) */}
       {!isOpen && (
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           style={{
             position: 'fixed',
             bottom: '24px',
             right: '24px',
-            background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
             color: '#ffffff',
             border: 'none',
             borderRadius: '9999px',
-            padding: '12px 20px',
+            padding: '0.75rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 8px 24px rgba(2, 132, 199, 0.35)',
+            gap: '0.6rem',
+            boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)',
             cursor: 'pointer',
-            fontWeight: '700',
+            zIndex: 9990,
+            fontWeight: '800',
             fontSize: '0.9rem',
-            zIndex: 9999,
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'translateY(-2px)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'translateY(0)')}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px) scale(1.03)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0) scale(1)';
+          }}
         >
-          <span style={{ fontSize: '1.2rem' }}>💬</span>
-          <span>AI Travel Assistant</span>
-          <span
-            style={{
-              background: 'rgba(255,255,255,0.25)',
-              padding: '2px 6px',
-              borderRadius: '6px',
-              fontSize: '0.7rem',
-              fontWeight: '800',
-            }}
-          >
-            EN | தமிழ்
-          </span>
-          <span
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              background: '#22c55e',
-              boxShadow: '0 0 6px #22c55e',
-            }}
-          />
+          <span style={{ fontSize: '1.25rem' }}>🤖</span>
+          <span>Ask Travel AI</span>
         </button>
       )}
 
-      {/* Expandable Chat Window */}
+      {/* Floating Chat Modal / Popup (Feature 2 & 20) */}
       {isOpen && (
         <div
           style={{
             position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            width: '400px',
-            maxWidth: 'calc(100vw - 32px)',
-            height: '580px',
-            maxHeight: 'calc(100vh - 48px)',
+            bottom: '20px',
+            right: '20px',
+            width: '90vw',
+            maxWidth: '400px',
+            height: '80vh',
+            maxHeight: '580px',
             background: '#ffffff',
             borderRadius: '20px',
-            boxShadow: '0 12px 40px rgba(15, 23, 42, 0.22)',
-            border: '1px solid #cbd5e1',
+            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.22)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            zIndex: 9999,
-            animation: 'fadeInUp 0.25s ease-out',
+            zIndex: 9995,
+            border: '1px solid #e2e8f0',
+            animation: 'fadeIn 0.2s ease',
           }}
         >
-          {/* Chat Header */}
+          {/* Header */}
           <div
             style={{
-              background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+              padding: '0.85rem 1.1rem',
+              background: 'linear-gradient(135deg, #0f172a, #1e293b)',
               color: '#ffffff',
-              padding: '1rem 1.25rem',
               display: 'flex',
-              justifyContent: 'space-between',
               alignItems: 'center',
-              borderBottom: '1px solid #334155',
+              justifyContent: 'space-between',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div
                 style={{
-                  width: '38px',
-                  height: '38px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #0284c7, #38bdf8)',
+                  background: '#0284c7',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '1.15rem',
+                  fontSize: '1.1rem',
                 }}
               >
                 🤖
               </div>
               <div>
-                <div style={{ fontWeight: '800', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>Travelora AI</span>
-                  <span
-                    style={{
-                      background: '#0284c7',
-                      color: '#ffffff',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontSize: '0.68rem',
-                      fontWeight: '700',
-                    }}
-                  >
-                    {getLanguageLabel()}
-                  </span>
-                </div>
-                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                  Multilingual 24/7 Smart Travel Companion
-                </div>
+                <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: '800' }}>Travelora Assistant</h4>
+                <span style={{ fontSize: '0.72rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }}></span>
+                  Context-Aware AI
+                </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              {/* Clear Chat Button (Feature 19) */}
               <button
+                type="button"
                 onClick={handleClearHistory}
                 title="Clear Chat History"
                 style={{
-                  background: 'transparent',
+                  background: 'rgba(255, 255, 255, 0.1)',
                   border: 'none',
-                  color: '#94a3b8',
+                  color: '#cbd5e1',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.75rem',
                   cursor: 'pointer',
-                  fontSize: '0.95rem',
-                  padding: '4px 6px',
-                  borderRadius: '4px',
                 }}
               >
-                🗑️
+                🗑️ Clear
               </button>
+
+              {/* Close Button */}
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                title="Minimize"
                 style={{
-                  background: 'transparent',
+                  background: 'none',
                   border: 'none',
                   color: '#ffffff',
+                  fontSize: '1.25rem',
                   cursor: 'pointer',
-                  fontSize: '1.1rem',
-                  padding: '4px 6px',
-                  borderRadius: '4px',
+                  padding: '0 4px',
                 }}
               >
                 ✕
@@ -331,50 +322,50 @@ export default function ChatbotWidget() {
             </div>
           </div>
 
-          {/* Quick Multilingual Starter Bar */}
+          {/* Quick Suggestion Prompts Carousel (Feature 3) */}
           <div
             style={{
-              padding: '0.5rem 0.75rem',
-              background: '#f1f5f9',
+              padding: '0.45rem 0.6rem',
+              background: '#f8fafc',
               borderBottom: '1px solid #e2e8f0',
               display: 'flex',
               gap: '0.35rem',
               overflowX: 'auto',
               whiteSpace: 'nowrap',
-              fontSize: '0.72rem',
             }}
           >
-            {MULTILINGUAL_STARTER_PROMPTS.map((p, pIdx) => (
+            {QUICK_PROMPTS.map((qp, idx) => (
               <button
-                key={pIdx}
+                key={idx}
                 type="button"
-                onClick={() => handleSendMessage(p.text)}
+                onClick={() => handleSendMessage(qp.text)}
                 style={{
                   background: '#ffffff',
                   border: '1px solid #cbd5e1',
                   borderRadius: '9999px',
-                  padding: '2px 8px',
+                  padding: '3px 9px',
                   fontSize: '0.72rem',
-                  color: '#0369a1',
                   fontWeight: '600',
+                  color: '#0f172a',
                   cursor: 'pointer',
+                  flexShrink: 0,
                 }}
               >
-                {p.label}
+                {qp.label}
               </button>
             ))}
           </div>
 
-          {/* Messages Stream */}
+          {/* Messages Body */}
           <div
             style={{
               flex: 1,
+              padding: '1rem',
               overflowY: 'auto',
-              padding: '1.25rem',
+              background: '#f8fafc',
               display: 'flex',
               flexDirection: 'column',
-              gap: '1rem',
-              background: '#f8fafc',
+              gap: '0.85rem',
             }}
           >
             {messages.map((msg, index) => {
@@ -386,26 +377,34 @@ export default function ChatbotWidget() {
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: isBot ? 'flex-start' : 'flex-end',
-                    maxWidth: '100%',
                   }}
                 >
                   <div
                     style={{
                       background: isBot ? '#ffffff' : '#0284c7',
                       color: isBot ? '#1e293b' : '#ffffff',
-                      borderRadius: isBot ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
-                      padding: '0.85rem 1rem',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                       border: isBot ? '1px solid #e2e8f0' : 'none',
+                      borderRadius: isBot ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
+                      padding: '0.75rem 0.95rem',
                       maxWidth: '88%',
                       wordBreak: 'break-word',
+                      boxShadow: isBot ? '0 2px 8px rgba(0,0,0,0.03)' : '0 2px 8px rgba(2, 132, 199, 0.25)',
                     }}
                   >
                     {renderFormattedContent(msg.content)}
 
-                    {/* Action Links */}
+                    {/* Action Buttons (Feature 11 & 12) */}
                     {isBot && msg.actionLinks && msg.actionLinks.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.75rem', borderTop: '1px dashed #cbd5e1', paddingTop: '0.5rem' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '0.4rem',
+                          flexWrap: 'wrap',
+                          marginTop: '0.75rem',
+                          borderTop: '1px dashed #cbd5e1',
+                          paddingTop: '0.5rem',
+                        }}
+                      >
                         {msg.actionLinks.map((link, lIdx) => (
                           <Link
                             key={lIdx}
@@ -415,14 +414,17 @@ export default function ChatbotWidget() {
                               background: '#f0f9ff',
                               border: '1px solid #bae6fd',
                               color: '#0369a1',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
+                              padding: '4px 9px',
+                              borderRadius: '8px',
                               fontSize: '0.75rem',
                               fontWeight: '700',
                               textDecoration: 'none',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
                             }}
                           >
-                            🔗 {link.label}
+                            {link.label}
                           </Link>
                         ))}
                       </div>
@@ -431,7 +433,7 @@ export default function ChatbotWidget() {
 
                   {/* Suggestion Chips */}
                   {isBot && msg.suggestions && msg.suggestions.length > 0 && index === messages.length - 1 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.5rem', maxWidth: '90%' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.45rem', maxWidth: '90%' }}>
                       {msg.suggestions.map((sug, sIdx) => (
                         <button
                           key={sIdx}
@@ -441,12 +443,11 @@ export default function ChatbotWidget() {
                             background: '#ffffff',
                             border: '1px solid #cbd5e1',
                             borderRadius: '9999px',
-                            padding: '3px 10px',
-                            fontSize: '0.75rem',
+                            padding: '3px 9px',
+                            fontSize: '0.72rem',
                             color: '#0369a1',
                             fontWeight: '600',
                             cursor: 'pointer',
-                            transition: 'all 0.15s ease',
                           }}
                         >
                           {sug}
@@ -458,11 +459,22 @@ export default function ChatbotWidget() {
               );
             })}
 
-            {/* Typing Loader Indicator */}
+            {/* Loading Indicator (Feature 18) */}
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', border: '1px solid #e2e8f0', padding: '0.6rem 0.85rem', borderRadius: '16px 16px 16px 4px', width: 'fit-content' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  padding: '0.6rem 0.85rem',
+                  borderRadius: '16px 16px 16px 4px',
+                  width: 'fit-content',
+                }}
+              >
                 <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
-                  {currentLang === 'ta' ? 'டிராவலோரா சிந்திக்கிறது...' : currentLang === 'thanglish' ? 'Travelora yosikkudhu...' : 'Travelora AI is thinking...'}
+                  🤖 Travel Assistant is thinking...
                 </span>
                 <span style={{ display: 'inline-flex', gap: '2px' }}>
                   <span style={{ animation: 'bounce 0.8s infinite 0.1s' }}>•</span>
@@ -482,24 +494,18 @@ export default function ChatbotWidget() {
               handleSendMessage();
             }}
             style={{
-              padding: '0.75rem 1rem',
+              padding: '0.75rem 0.9rem',
               background: '#ffffff',
               borderTop: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: '0.4rem',
             }}
           >
             <input
               ref={inputRef}
               type="text"
-              placeholder={
-                currentLang === 'ta'
-                  ? 'சுற்றுலா, பட்ஜெட், பேக்கேஜ் பற்றி தமிழில் கேட்கலாம்...'
-                  : currentLang === 'thanglish'
-                  ? 'Ask in English / Tamil / Thanglish...'
-                  : 'Ask about destinations, budget, packages (English / தமிழ்)...'
-              }
+              placeholder="Ask about places, stays, budget or itinerary..."
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               disabled={loading}
@@ -508,7 +514,7 @@ export default function ChatbotWidget() {
                 padding: '0.65rem 0.85rem',
                 borderRadius: '9999px',
                 border: '1px solid #cbd5e1',
-                fontSize: '0.85rem',
+                fontSize: '0.84rem',
                 outline: 'none',
               }}
             />
@@ -527,7 +533,7 @@ export default function ChatbotWidget() {
                 justifyContent: 'center',
                 cursor: inputMessage.trim() && !loading ? 'pointer' : 'default',
                 fontSize: '1rem',
-                transition: 'background 0.2s ease',
+                flexShrink: 0,
               }}
             >
               ➤
