@@ -20,6 +20,12 @@ export default function ChatbotWidget() {
   const [loading, setLoading] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
 
+  // Voice Assistant States (Phase 18)
+  const [isListening, setIsListening] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState(null);
+  const [voiceNotice, setVoiceNotice] = useState(null);
+  const recognitionRef = useRef(null);
+
   const QUICK_PROMPTS = [
     { label: `📍 ${t('chatbot.suggestPlaces', 'Suggest places near me')}`, text: t('chatbot.suggestPlaces', 'Suggest places near me') },
     { label: `✈️ ${t('chatbot.planTrip', 'Plan a 3-day trip')}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
@@ -33,7 +39,7 @@ export default function ChatbotWidget() {
     {
       role: 'assistant',
       content:
-        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, plan multi-day itineraries, recommend verified stays, compare transport, and calculate trip budgets using real-time app context.\n\nHow can I help your journey today?',
+        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, plan multi-day itineraries, recommend verified stays, compare transport, and calculate trip budgets using real-time app context.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
       suggestions: [
         'Suggest places near me',
         'Plan a 3-day trip',
@@ -60,9 +66,154 @@ export default function ChatbotWidget() {
     }
   }, [isOpen, messages]);
 
+  // Clean speech synthesis & recognition on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch {}
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  // Clean Markdown syntax for natural text-to-speech
+  const cleanTextForSpeech = (markdownText) => {
+    if (!markdownText) return '';
+    return markdownText
+      .replace(/###/g, '')
+      .replace(/\*\*/g, '')
+      .replace(/\*/g, '')
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+      .replace(/[-•]/g, '')
+      .replace(/[👋🤖🔒ℹ️🎉✨✈️🏨🚗📅💵📍⭐🏖️🏛️🌲🎒🏡🌟]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+  };
+
+  const startListening = () => {
+    if (typeof window === 'undefined') return;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceNotice(t('voice.notSupported', 'Voice input is not supported in this browser. Please type your message.'));
+      setTimeout(() => setVoiceNotice(null), 4000);
+      return;
+    }
+
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+
+      const rec = new SpeechRecognition();
+      rec.lang = language === 'ta' ? 'ta-IN' : 'en-IN';
+      rec.interimResults = true;
+      rec.continuous = false;
+
+      rec.onstart = () => {
+        setIsListening(true);
+        setVoiceNotice(null);
+      };
+
+      rec.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          setInputMessage(transcript);
+        }
+      };
+
+      rec.onerror = (event) => {
+        setIsListening(false);
+        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+          setVoiceNotice(t('voice.micDenied', 'Microphone access is required for voice input. You can continue using text chat.'));
+          setTimeout(() => setVoiceNotice(null), 5000);
+        } else if (event.error === 'no-speech') {
+          setVoiceNotice(t('voice.noSpeech', 'No speech was detected. Please tap Speak and try again.'));
+          setTimeout(() => setVoiceNotice(null), 4000);
+        }
+      };
+
+      rec.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current = rec;
+      rec.start();
+    } catch (err) {
+      setIsListening(false);
+      setVoiceNotice(t('voice.notSupported', 'Voice input error. Please type your message.'));
+      setTimeout(() => setVoiceNotice(null), 4000);
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {}
+    }
+    setIsListening(false);
+  };
+
+  const speakMessage = (content, index, msgLang) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) {
+      setVoiceNotice('Text-to-speech is not supported in this browser.');
+      setTimeout(() => setVoiceNotice(null), 3000);
+      return;
+    }
+
+    // Toggle stop if already speaking this message
+    if (speakingIndex === index) {
+      window.speechSynthesis.cancel();
+      setSpeakingIndex(null);
+      return;
+    }
+
+    window.speechSynthesis.cancel();
+
+    const cleanText = cleanTextForSpeech(content);
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const targetLang = (msgLang === 'ta' || language === 'ta') ? 'ta-IN' : 'en-US';
+    utterance.lang = targetLang;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    const voices = window.speechSynthesis.getVoices() || [];
+    const matchedVoice = voices.find((v) => v.lang.startsWith(targetLang.slice(0, 2)) || v.lang === targetLang);
+    if (matchedVoice) {
+      utterance.voice = matchedVoice;
+    }
+
+    utterance.onstart = () => {
+      setSpeakingIndex(index);
+    };
+
+    utterance.onend = () => {
+      setSpeakingIndex(null);
+    };
+
+    utterance.onerror = () => {
+      setSpeakingIndex(null);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
   const handleSendMessage = async (textToSend) => {
     const text = (textToSend || inputMessage).trim();
     if (!text || loading) return;
+
+    // Stop speaking when user sends a new message
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      setSpeakingIndex(null);
+    }
 
     // Append user message
     const userMsg = {
@@ -333,6 +484,33 @@ export default function ChatbotWidget() {
             </div>
           </div>
 
+          {/* Voice Notification / Error Banner (Feature 2, 17, 18) */}
+          {voiceNotice && (
+            <div
+              style={{
+                background: '#fff1f2',
+                color: '#be123c',
+                borderBottom: '1px solid #fecdd3',
+                padding: '0.45rem 0.85rem',
+                fontSize: '0.76rem',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '0.5rem',
+              }}
+            >
+              <span>ℹ️ {voiceNotice}</span>
+              <button
+                type="button"
+                onClick={() => setVoiceNotice(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#be123c', fontWeight: '800' }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
           {/* Quick Suggestion Prompts Carousel (Feature 3) */}
           <div
             style={{
@@ -440,6 +618,39 @@ export default function ChatbotWidget() {
                         ))}
                       </div>
                     )}
+
+                    {/* Text-To-Speech Listen Button (Feature 5 & 6) */}
+                    {isBot && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.55rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.4rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => speakMessage(msg.content, index, msg.language)}
+                          style={{
+                            background: speakingIndex === index ? '#fef2f2' : '#f8fafc',
+                            color: speakingIndex === index ? '#ef4444' : '#0284c7',
+                            border: '1px solid ' + (speakingIndex === index ? '#fca5a5' : '#e2e8f0'),
+                            borderRadius: '6px',
+                            padding: '3px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            transition: 'all 0.15s ease',
+                          }}
+                          aria-label={speakingIndex === index ? t('voice.stop', 'Stop') : t('voice.listen', 'Listen')}
+                        >
+                          {speakingIndex === index ? `⏹ ${t('voice.stop', 'Stop')}` : `🔊 ${t('voice.listen', 'Listen')}`}
+                        </button>
+                        {speakingIndex === index && (
+                          <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }}></span>
+                            {t('voice.speaking', 'Speaking...')}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Suggestion Chips */}
@@ -470,7 +681,7 @@ export default function ChatbotWidget() {
               );
             })}
 
-            {/* Loading Indicator (Feature 18) */}
+            {/* Loading Indicator (Feature 7 & 18) */}
             {loading && (
               <div
                 style={{
@@ -485,7 +696,7 @@ export default function ChatbotWidget() {
                 }}
               >
                 <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
-                  🤖 Travel Assistant is thinking...
+                  🤖 {t('voice.processing', 'Thinking...')}
                 </span>
                 <span style={{ display: 'inline-flex', gap: '2px' }}>
                   <span style={{ animation: 'bounce 0.8s infinite 0.1s' }}>•</span>
@@ -497,6 +708,43 @@ export default function ChatbotWidget() {
 
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Listening Live Indicator Bar (Feature 7) */}
+          {isListening && (
+            <div
+              style={{
+                background: '#fef2f2',
+                borderTop: '1px solid #fecdd3',
+                padding: '0.4rem 0.9rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                color: '#dc2626',
+                fontSize: '0.76rem',
+                fontWeight: '700',
+              }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#dc2626', animation: 'pulse 1s infinite' }}></span>
+                {t('voice.listening', 'Listening...')} ({language === 'ta' ? 'தமிழ்' : 'English'})
+              </span>
+              <button
+                type="button"
+                onClick={stopListening}
+                style={{
+                  background: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  fontSize: '0.7rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Done
+              </button>
+            </div>
+          )}
 
           {/* Chat Input Bar */}
           <form
@@ -513,6 +761,31 @@ export default function ChatbotWidget() {
               gap: '0.4rem',
             }}
           >
+            {/* Voice Input Microphone Button (Feature 1, 2, 7 & 15) */}
+            <button
+              type="button"
+              onClick={isListening ? stopListening : startListening}
+              style={{
+                background: isListening ? '#dc2626' : '#f1f5f9',
+                color: isListening ? '#ffffff' : '#0284c7',
+                border: '1px solid ' + (isListening ? '#b91c1c' : '#cbd5e1'),
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                flexShrink: 0,
+                transition: 'all 0.2s ease',
+              }}
+              title={isListening ? t('voice.listening', 'Listening...') : t('voice.speak', 'Speak')}
+              aria-label={isListening ? 'Stop listening' : 'Start voice recognition'}
+            >
+              {isListening ? '⏹' : '🎙️'}
+            </button>
+
             <input
               ref={inputRef}
               type="text"
