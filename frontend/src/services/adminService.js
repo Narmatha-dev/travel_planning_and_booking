@@ -7,9 +7,15 @@ const adminService = {
     return response.data.data;
   },
 
-  // 2. User Management
-  async getUsers() {
-    const response = await api.get('/admin/users');
+  // 2. Analytics & Monthly Trends
+  async getAnalytics() {
+    const response = await api.get('/admin/analytics');
+    return response.data.data;
+  },
+
+  // 3. User Management
+  async getUsers(params = {}) {
+    const response = await api.get('/admin/users', { params });
     return response.data.data;
   },
 
@@ -28,7 +34,7 @@ const adminService = {
     return response.data.data;
   },
 
-  // 3. Destination Management
+  // 4. Destination Management
   async getDestinations() {
     const response = await api.get('/admin/destinations');
     return response.data.data;
@@ -49,7 +55,7 @@ const adminService = {
     return response.data.data;
   },
 
-  // 4. Package Management
+  // 5. Package Management
   async getPackages() {
     const response = await api.get('/admin/packages');
     return response.data.data;
@@ -70,7 +76,7 @@ const adminService = {
     return response.data.data;
   },
 
-  // 5. Booking Management
+  // 6. Booking Management
   async getBookings(params = {}) {
     const response = await api.get('/admin/bookings', { params });
     return response.data.data;
@@ -81,9 +87,21 @@ const adminService = {
     return response.data.data;
   },
 
-  // 6. Review Moderation
-  async getReviews() {
-    const response = await api.get('/admin/reviews');
+  // 7. Trip Management
+  async getTrips(params = {}) {
+    const response = await api.get('/admin/trips', { params });
+    return response.data.data;
+  },
+
+  // 8. Payment View
+  async getPayments(params = {}) {
+    const response = await api.get('/admin/payments', { params });
+    return response.data.data;
+  },
+
+  // 9. Review Moderation
+  async getReviews(params = {}) {
+    const response = await api.get('/admin/reviews', { params });
     return response.data.data;
   },
 
