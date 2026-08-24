@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReviewsSection from './ReviewsSection';
 
 export default function HotelDetailModal({
   hotel,
@@ -190,6 +191,11 @@ export default function HotelDetailModal({
               </button>
             </div>
           </div>
+        </div>
+
+        {/* Phase 11: Verified Guest Reviews for Accommodation */}
+        <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #cbd5e1' }}>
+          <ReviewsSection destinationId={hotel.destination_id || 1} title={hotel.name} />
         </div>
       </div>
     </div>

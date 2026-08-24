@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import InteractiveMapSection from './InteractiveMapSection';
 import TransportOptionsSection from './TransportOptionsSection';
 import HotelRecommendationsSection from './HotelRecommendationsSection';
+import ReviewsSection from './ReviewsSection';
 
 export default function DestinationDetailModal({ place, userLocation, onClose }) {
   const [activeImage, setActiveImage] = useState(
@@ -176,6 +177,11 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
                 longitude={place.longitude}
                 onContinueToTripPlanning={handlePlanClick}
               />
+            </div>
+
+            {/* Phase 11: Verified Customer Reviews & Ratings */}
+            <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px dashed #cbd5e1' }}>
+              <ReviewsSection destinationId={place.id || 1} title={place.name} />
             </div>
           </div>
         )}

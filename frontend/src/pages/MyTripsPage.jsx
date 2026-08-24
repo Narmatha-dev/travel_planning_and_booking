@@ -7,6 +7,7 @@ import ItineraryTimeline from '../components/ItineraryTimeline';
 import LocationSection from '../components/LocationSection';
 import InteractiveMapSection from '../components/InteractiveMapSection';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
+import TripReviewModal from '../components/TripReviewModal';
 
 const tripStatusColors = {
   planned: { bg: '#dbeafe', color: '#1d4ed8' },
@@ -56,6 +57,9 @@ export default function MyTripsPage() {
   // Digital Receipt Modal State (Phase 9)
   const [receiptModalBookingRef, setReceiptModalBookingRef] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+
+  // Trip Feedback & Reviews State (Phase 11)
+  const [reviewModalBooking, setReviewModalBooking] = useState(null);
 
   const loadUserTrips = async () => {
     setLoadingTrips(true);
@@ -281,6 +285,24 @@ export default function MyTripsPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {/* Feature 1: Rate Completed / Confirmed Trip (Phase 11) */}
+            {booking.status !== 'cancelled' && (
+              <button
+                onClick={() => setReviewModalBooking(booking)}
+                className="btn btn-sm"
+                style={{
+                  background: '#fef3c7',
+                  color: '#92400e',
+                  border: '1px solid #fcd34d',
+                  fontWeight: '800',
+                  padding: '0.5rem 0.85rem',
+                }}
+                title="Rate your trip, places, stay and transport"
+              >
+                ⭐ Rate Trip
+              </button>
+            )}
+
             <button
               onClick={() => {
                 setReceiptModalBookingRef(booking.booking_reference);
@@ -955,6 +977,15 @@ export default function MyTripsPage() {
           isOpen={showReceiptModal}
           onClose={() => setShowReceiptModal(false)}
         />
+
+        {/* Trip Feedback & Review Modal (Phase 11) */}
+        {reviewModalBooking && (
+          <TripReviewModal
+            booking={reviewModalBooking}
+            onClose={() => setReviewModalBooking(null)}
+            onReviewUpdated={loadUserBookings}
+          />
+        )}
       </div>
     </section>
   );
