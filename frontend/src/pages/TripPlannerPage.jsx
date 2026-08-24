@@ -3,31 +3,24 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import destinationService from '../services/destinationService';
 import tripService from '../services/tripService';
+import AiItineraryView from '../components/AiItineraryView';
 import ItineraryTimeline from '../components/ItineraryTimeline';
 
-const TRAVEL_TYPES = [
-  { id: 'family', label: 'Family Vacation', icon: '👨‍👩‍👧‍👦', sub: 'Kid-friendly, safe & relaxed' },
-  { id: 'couple', label: 'Romantic Couple', icon: '💑', sub: 'Scenic views & candlelit dining' },
-  { id: 'solo', label: 'Solo Explorer', icon: '🎒', sub: 'Walkable, social & authentic' },
-  { id: 'friends', label: 'Friends Group', icon: '👥', sub: 'Group activities, sports & fun' },
-  { id: 'luxury', label: 'Luxury Elite', icon: '👑', sub: '5-star resorts & VIP transfers' },
-];
-
-const INTEREST_OPTIONS = [
-  { id: 'beach', label: '🏖️ Beach & Coastal', key: 'beach' },
-  { id: 'sightseeing', label: '🏛️ Historic Sightseeing', key: 'sightseeing' },
-  { id: 'culture', label: '🎭 Culture & Heritage', key: 'culture' },
-  { id: 'adventure', label: '🧗 Adventure & Trekking', key: 'adventure' },
-  { id: 'wildlife', label: '🦁 Wildlife Safari', key: 'wildlife' },
-  { id: 'dining', label: '🍽️ Food & Gastronomy', key: 'dining' },
-  { id: 'wellness', label: '🧘 Wellness & Spa', key: 'wellness' },
-  { id: 'nature', label: '🌿 Nature & Scenic Lakes', key: 'nature' },
+const PREFERENCE_OPTIONS = [
+  { id: 'nature', label: '🌿 Nature', sub: 'Parks, viewpoints & waterfalls' },
+  { id: 'historical', label: '🏛️ Historical', sub: 'UNESCO heritage & temples' },
+  { id: 'adventure', label: '🧗 Adventure', sub: 'Treks, safaris & watersports' },
+  { id: 'beach', label: '🏖️ Beach', sub: 'Coastline, shacks & sunset strolls' },
+  { id: 'family', label: '👨‍👩‍👧‍👦 Family', sub: 'Kid-friendly, safe & relaxed' },
+  { id: 'comfort', label: '👑 Comfort', sub: 'Resorts & convenient travel' },
+  { id: 'budget', label: '💰 Budget', sub: 'Economical stays & free sights' },
+  { id: 'relaxed', label: '🧘 Relaxed', sub: 'Scenic strolls & cozy cafes' },
 ];
 
 export default function TripPlannerPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { isAuthenticated } = useAppContext();
+  const { isAuthenticated, selectedTransport, currentLocation } = useAppContext();
 
   const [destinations, setDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
@@ -35,13 +28,13 @@ export default function TripPlannerPage() {
   // Form State
   const [formData, setFormData] = useState({
     destinationId: searchParams.get('destinationId') || '101',
-    destinationName: 'Goa Coastal Haven',
-    numberOfDays: searchParams.get('duration') ? Number(searchParams.get('duration')) : 4,
+    destinationName: searchParams.get('destinationName') || searchParams.get('destination') || 'Mahabalipuram',
+    numberOfDays: searchParams.get('duration') ? Number(searchParams.get('duration')) : 3,
+    travelers: searchParams.get('travelers') ? Number(searchParams.get('travelers')) : 2,
     currency: 'INR',
-    budget: 20000,
-    travelType: 'family',
-    interests: ['beach', 'dining', 'sightseeing'],
-    startDate: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    budget: searchParams.get('budget') ? Number(searchParams.get('budget')) : 10000,
+    travelPreference: searchParams.get('preference') || 'nature',
+    startDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
   });
 
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
@@ -131,10 +124,12 @@ export default function TripPlannerPage() {
         destinationId: formData.destinationId,
         destinationName: formData.destinationName,
         numberOfDays: formData.numberOfDays,
+        travelers: formData.travelers,
         budget: formData.budget,
         currency: formData.currency,
-        travelType: formData.travelType,
-        interests: formData.interests,
+        travelPreference: formData.travelPreference,
+        selectedTransport: selectedTransport || null,
+        currentLocation: currentLocation || null,
         startDate: formData.startDate,
       });
 
@@ -162,20 +157,20 @@ export default function TripPlannerPage() {
 
       await tripService.createTrip({
         destinationId: formData.destinationId || 1,
-        title: `${formData.destinationName} (${formData.numberOfDays} Days)`,
-        tripType: formData.travelType,
+        title: `${formData.destinationName} (${formData.numberOfDays} Days AI Plan)`,
+        tripType: formData.travelPreference,
         startDate: formData.startDate,
         endDate: end.toISOString().split('T')[0],
         totalBudget: formData.budget,
-        travelers: 2,
-        notes: `Personalized AI itinerary for ${formData.travelType} travel with interests: ${formData.interests.join(', ')}`,
+        travelers: formData.travelers,
+        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}`,
         itineraryItems: generatedItinerary?.itineraryItems || [],
       });
 
       setSaveSuccess(true);
       setTimeout(() => {
         navigate('/my-trips');
-      }, 1500);
+      }, 1200);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to save itinerary');
     } finally {
@@ -193,22 +188,58 @@ export default function TripPlannerPage() {
             borderRadius: '24px',
             padding: '3rem 2.5rem',
             color: '#ffffff',
-            marginBottom: '3rem',
+            marginBottom: '2.5rem',
             boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)',
           }}
         >
-          <div style={{ maxWidth: '750px' }}>
+          <div style={{ maxWidth: '780px' }}>
             <span style={{ background: 'rgba(255,255,255,0.15)', color: '#38bdf8', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              ✨ AI Smart Itinerary Generator
+              ✨ Phase 6 • AI-Powered Travel Intelligence
             </span>
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '900', margin: '0.75rem 0 0.5rem 0', lineHeight: 1.2 }}>
-              Day-by-Day Intelligent Travel Itinerary
+            <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: '0.75rem 0 0.5rem 0', lineHeight: 1.2 }}>
+              AI Trip Planner & Smart Recommendations
             </h1>
             <p style={{ color: '#cbd5e1', fontSize: '1.05rem', lineHeight: '1.6', margin: 0 }}>
-              Specify your destination, duration, budget, and travel style. Our AI synthesizes visitable places, time-slotted activities, and authentic culinary suggestions (Breakfast, Lunch, Dinner).
+              Generate an intelligent day-wise itinerary with time-slotted visits, authentic culinary suggestions, geographic route clustering, and budget optimization.
             </p>
           </div>
         </div>
+
+        {/* Selected Transport Reminder Tag from Phase 4 */}
+        {selectedTransport && (
+          <div
+            style={{
+              background: '#f0fdf4',
+              border: '1.5px solid #86efac',
+              borderRadius: '14px',
+              padding: '1rem 1.25rem',
+              marginBottom: '2rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <span style={{ fontSize: '1.75rem' }}>{selectedTransport.icon || '🚆'}</span>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#16a34a' }}>
+                  Confirmed Transport (Phase 4)
+                </span>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#14532d' }}>
+                  {selectedTransport.title} • {selectedTransport.cost_text || `₹${selectedTransport.estimated_cost}`}
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#166534' }}>
+                  Estimated Travel Time: {selectedTransport.duration_text} ({selectedTransport.distance_text})
+                </p>
+              </div>
+            </div>
+            <Link to="/destinations" className="btn btn-outline btn-sm" style={{ background: 'white' }}>
+              Change Transport
+            </Link>
+          </div>
+        )}
 
         {/* Interactive Configuration Card */}
         <div
@@ -218,11 +249,11 @@ export default function TripPlannerPage() {
             border: '1px solid #e2e8f0',
             padding: '2.5rem',
             boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            marginBottom: '3rem',
+            marginBottom: '2.5rem',
           }}
         >
           <form onSubmit={handleGenerateItinerary}>
-            {/* 1. Destination & Duration */}
+            {/* Row 1: Destination & Duration */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
@@ -241,17 +272,16 @@ export default function TripPlannerPage() {
                     background: '#ffffff',
                   }}
                 >
-                  <option value="101">Goa Coastal Haven (India)</option>
-                  <option value="102">Kerala Backwaters & Beaches (India)</option>
-                  <option value="103">Andaman Marine & Coral Islands (India)</option>
-                  <option value="1">Bali Paradise Island (Indonesia)</option>
+                  <option value="101">Mahabalipuram Shore Temples (Tamil Nadu)</option>
+                  <option value="102">Ooty Nilgiri Hill Station (Tamil Nadu)</option>
+                  <option value="103">Chennai Coastal & Heritage (Tamil Nadu)</option>
+                  <option value="104">Kanyakumari Cape Comorin (Tamil Nadu)</option>
+                  <option value="105">Goa Coastal Haven (India)</option>
+                  <option value="106">Kerala Backwaters & Munnar (India)</option>
                   <option value="4">Parisian Elegance & Romance (France)</option>
                   <option value="3">Swiss Alpine Wonders (Switzerland)</option>
-                  <option value="2">Kyoto & Tokyo Highlights (Japan)</option>
-                  <option value="5">Santorini Sunsets (Greece)</option>
-                  <option value="6">Serengeti Wildlife Safari (Tanzania)</option>
-                  <option value="104">Manali & Solang Alpine Retreat (India)</option>
-                  <option value="105">Jaipur Royal Heritage (India)</option>
+                  <option value="1">Bali Paradise Island (Indonesia)</option>
+                  <option value="2">Tokyo & Kyoto Highlights (Japan)</option>
                 </select>
               </div>
 
@@ -280,12 +310,12 @@ export default function TripPlannerPage() {
               </div>
             </div>
 
-            {/* 2. Budget & Currency */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+            {/* Row 2: Budget, Currency & Travelers */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
-                    3. Total Budget Allowance
+                    3. Total Budget
                   </label>
                   {/* Currency Switcher */}
                   <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '2px' }}>
@@ -301,7 +331,6 @@ export default function TripPlannerPage() {
                         padding: '3px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        boxShadow: formData.currency === 'INR' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                       }}
                     >
                       INR (₹)
@@ -318,7 +347,6 @@ export default function TripPlannerPage() {
                         padding: '3px 8px',
                         borderRadius: '6px',
                         cursor: 'pointer',
-                        boxShadow: formData.currency === 'USD' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
                       }}
                     >
                       USD ($)
@@ -326,7 +354,7 @@ export default function TripPlannerPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                   <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0284c7' }}>
                     {formData.currency === 'INR' ? '₹' : '$'}
                   </span>
@@ -347,7 +375,7 @@ export default function TripPlannerPage() {
 
                 {/* Quick Presets */}
                 <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {(formData.currency === 'INR' ? [15000, 20000, 35000, 60000] : [300, 600, 1500, 3000]).map((val) => (
+                  {(formData.currency === 'INR' ? [8000, 15000, 25000, 50000] : [200, 500, 1200, 2500]).map((val) => (
                     <button
                       key={val}
                       type="button"
@@ -371,7 +399,32 @@ export default function TripPlannerPage() {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
-                  4. Departure Start Date
+                  4. Number of Travelers
+                </label>
+                <select
+                  value={formData.travelers}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, travelers: Number(e.target.value) }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    background: '#ffffff',
+                  }}
+                >
+                  <option value="1">1 Solo Traveler</option>
+                  <option value="2">2 Travelers (Couple / Friends)</option>
+                  <option value="3">3 Travelers (Small Group)</option>
+                  <option value="4">4 Travelers (Family Group)</option>
+                  <option value="5">5+ Travelers</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
+                  5. Departure Start Date
                 </label>
                 <input
                   type="date"
@@ -390,50 +443,18 @@ export default function TripPlannerPage() {
               </div>
             </div>
 
-            {/* 3. Interests & Travel Types */}
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>
-                5. Travel Interests (Select all that apply)
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem' }}>
-                {INTEREST_OPTIONS.map((item) => {
-                  const isSelected = formData.interests.includes(item.id);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleInterestToggle(item.id)}
-                      style={{
-                        padding: '0.55rem 1.1rem',
-                        borderRadius: '9999px',
-                        border: isSelected ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                        background: isSelected ? '#e0f2fe' : '#ffffff',
-                        color: isSelected ? '#0369a1' : '#475569',
-                        fontWeight: isSelected ? '700' : '500',
-                        fontSize: '0.88rem',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* 4. Travel Style Cards */}
+            {/* Row 3: Travel Preferences */}
             <div style={{ marginBottom: '2.5rem' }}>
               <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>
-                6. Travel Style & Companions
+                6. Travel Style & Preference
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
-                {TRAVEL_TYPES.map((type) => {
-                  const isSelected = formData.travelType === type.id;
+                {PREFERENCE_OPTIONS.map((pref) => {
+                  const isSelected = formData.travelPreference === pref.id;
                   return (
                     <div
-                      key={type.id}
-                      onClick={() => setFormData((prev) => ({ ...prev, travelType: type.id }))}
+                      key={pref.id}
+                      onClick={() => setFormData((prev) => ({ ...prev, travelPreference: pref.id }))}
                       style={{
                         border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
                         borderRadius: '12px',
@@ -443,16 +464,15 @@ export default function TripPlannerPage() {
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <div style={{ fontSize: '1.75rem', marginBottom: '0.35rem' }}>{type.icon}</div>
-                      <div style={{ fontWeight: '700', fontSize: '0.9rem', color: '#0f172a' }}>{type.label}</div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '0.2rem' }}>{type.sub}</div>
+                      <div style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{pref.label}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{pref.sub}</div>
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Actions */}
+            {/* Submit Action */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
               <button
                 type="submit"
@@ -460,7 +480,7 @@ export default function TripPlannerPage() {
                 className="btn btn-primary"
                 style={{ padding: '0.9rem 2.5rem', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <span>{isGenerating ? '⚡ Generating Schedule...' : '✨ Generate AI Smart Itinerary'}</span>
+                <span>🤖 {isGenerating ? 'AI is Planning Your Trip...' : 'Generate AI Trip Plan'}</span>
               </button>
             </div>
           </form>
@@ -469,105 +489,30 @@ export default function TripPlannerPage() {
         {/* Error Alert */}
         {error && (
           <div style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fca5a5', padding: '1rem', borderRadius: '12px', marginBottom: '2rem' }}>
-            {error}
+            ⚠️ {error}
           </div>
         )}
 
         {/* Save Success Alert */}
         {saveSuccess && (
-          <div style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '1rem', borderRadius: '12px', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span>✅</span>
-            <span><strong>Trip Saved Successfully!</strong> Redirecting to your trips dashboard...</span>
-          </div>
-        )}
-
-        {/* Results Section */}
-        {generatedItinerary && (
-          <div>
-            {/* AI Workflow Explainer Box */}
-            {generatedItinerary.aiWorkflow && (
-              <div
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  marginBottom: '2rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                  <span style={{ fontSize: '1.25rem' }}>🧠</span>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0369a1', margin: 0 }}>
-                    AI Generation Workflow & Logic
-                  </h3>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', fontSize: '0.85rem', color: '#334155' }}>
-                  <div>
-                    <strong>1. Vibe Profiling:</strong> {generatedItinerary.aiWorkflow.step1_profiling}
-                  </div>
-                  <div>
-                    <strong>2. Budget Pacing:</strong> {generatedItinerary.aiWorkflow.step2_budgetPacing}
-                  </div>
-                  <div>
-                    <strong>3. Geographic Clustering:</strong> {generatedItinerary.aiWorkflow.step3_geographicClustering}
-                  </div>
-                  <div>
-                    <strong>4. Culinary Matchmaking:</strong> {generatedItinerary.aiWorkflow.step4_culinaryCuration}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Generated Header & Action Bar */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                marginBottom: '1.5rem',
-                background: '#ffffff',
-                padding: '1.25rem 1.75rem',
-                borderRadius: '16px',
-                border: '1px solid #e2e8f0',
-              }}
-            >
-              <div>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.25rem 0' }}>
-                  {generatedItinerary.destination} — {generatedItinerary.totalDays} Days Schedule
-                </h2>
-                <span style={{ fontSize: '0.88rem', color: '#64748b' }}>
-                  Total Budget: {formData.currency === 'INR' ? `₹${formData.budget.toLocaleString()}` : `$${formData.budget.toLocaleString()}`} • {formData.travelType.toUpperCase()} Style
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="btn btn-outline"
-                  style={{ padding: '0.65rem 1.25rem', fontSize: '0.88rem', fontWeight: '700' }}
-                >
-                  🖨️ Print Schedule
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveTrip}
-                  disabled={isSaving}
-                  className="btn btn-primary"
-                  style={{ padding: '0.65rem 1.5rem', fontSize: '0.88rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                >
-                  <span>💾</span>
-                  <span>{isSaving ? 'Saving...' : 'Save Itinerary to My Trips'}</span>
-                </button>
-              </div>
+          <div style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '1.25rem', borderRadius: '14px', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>✅</span>
+            <div>
+              <strong style={{ fontSize: '1.05rem' }}>AI Trip Saved Successfully!</strong>
+              <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>Redirecting to your My Trips dashboard...</p>
             </div>
-
-            {/* Day-by-Day Timeline Render */}
-            <ItineraryTimeline days={generatedItinerary.days} />
           </div>
         )}
+
+        {/* AI Itinerary View Component (Phase 6) */}
+        <AiItineraryView
+          itinerary={generatedItinerary}
+          isGenerating={isGenerating}
+          isSaving={isSaving}
+          onRegenerate={handleGenerateItinerary}
+          onSave={handleSaveTrip}
+          error={error}
+        />
       </div>
     </section>
   );
