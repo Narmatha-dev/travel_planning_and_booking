@@ -6,6 +6,7 @@ import paymentService from '../services/paymentService';
 import ItineraryTimeline from '../components/ItineraryTimeline';
 import LocationSection from '../components/LocationSection';
 import InteractiveMapSection from '../components/InteractiveMapSection';
+import DigitalReceiptModal from '../components/DigitalReceiptModal';
 
 const tripStatusColors = {
   planned: { bg: '#dbeafe', color: '#1d4ed8' },
@@ -51,6 +52,10 @@ export default function MyTripsPage() {
   const [payments, setPayments] = useState([]);
   const [loadingPayments, setLoadingPayments] = useState(true);
   const [paymentError, setPaymentError] = useState('');
+
+  // Digital Receipt Modal State (Phase 9)
+  const [receiptModalBookingRef, setReceiptModalBookingRef] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   const loadUserTrips = async () => {
     setLoadingTrips(true);
@@ -215,8 +220,24 @@ export default function MyTripsPage() {
                   textTransform: 'uppercase',
                 }}
               >
-                ● {statusStyle.label}
+                ● Booking: {statusStyle.label}
               </span>
+
+              {/* Phase 9: Payment Status Badge */}
+              <span
+                style={{
+                  background: booking.payment_status === 'completed' || booking.status === 'confirmed' ? '#dcfce7' : booking.status === 'cancelled' ? '#ede9fe' : '#fef3c7',
+                  color: booking.payment_status === 'completed' || booking.status === 'confirmed' ? '#15803d' : booking.status === 'cancelled' ? '#6d28d9' : '#b45309',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '0.75rem',
+                  fontWeight: '800',
+                  textTransform: 'uppercase',
+                }}
+              >
+                💳 Payment: {booking.payment_status === 'completed' || booking.status === 'confirmed' ? 'Paid' : booking.status === 'cancelled' ? 'Refunded' : 'Pending'}
+              </span>
+
               <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0284c7' }}>
                 #{booking.booking_reference}
               </span>
@@ -255,18 +276,31 @@ export default function MyTripsPage() {
           <div>
             <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</span>
             <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0f172a' }}>
-              ${parseFloat(booking.final_amount || 0).toLocaleString()}
+              ₹{parseFloat(booking.final_amount || 0).toLocaleString()}
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => {
+                setReceiptModalBookingRef(booking.booking_reference);
+                setShowReceiptModal(true);
+              }}
+              className="btn btn-outline btn-sm"
+              style={{ fontWeight: '800', padding: '0.5rem 0.85rem', color: '#0284c7', borderColor: '#7dd3fc' }}
+              title="View / Print Digital Receipt"
+            >
+              🧾 Receipt
+            </button>
+
             <button
               onClick={() => handleViewBookingDetails(booking)}
               className="btn btn-outline btn-sm"
-              style={{ fontWeight: '700', padding: '0.5rem 1rem' }}
+              style={{ fontWeight: '700', padding: '0.5rem 0.95rem' }}
             >
-              🔍 View Details
+              🔍 Details
             </button>
+
             {canCancel && booking.status !== 'cancelled' && (
               <button
                 onClick={() => setCancelModalBooking(booking)}
@@ -817,16 +851,28 @@ export default function MyTripsPage() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Final Amount</span>
                   <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0284c7' }}>
-                    ${parseFloat(selectedBookingDetails.final_amount).toLocaleString()}
+                    ₹{parseFloat(selectedBookingDetails.final_amount).toLocaleString()}
                   </div>
                 </div>
-                <button onClick={() => setSelectedBookingDetails(null)} className="btn btn-secondary" style={{ padding: '0.65rem 1.5rem' }}>
-                  Close
-                </button>
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => {
+                      setReceiptModalBookingRef(selectedBookingDetails.booking_reference);
+                      setShowReceiptModal(true);
+                    }}
+                    className="btn btn-primary btn-sm"
+                    style={{ padding: '0.65rem 1.25rem', fontWeight: '800', background: '#0284c7' }}
+                  >
+                    🧾 View Digital Receipt
+                  </button>
+                  <button onClick={() => setSelectedBookingDetails(null)} className="btn btn-secondary btn-sm" style={{ padding: '0.65rem 1.5rem' }}>
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -902,6 +948,13 @@ export default function MyTripsPage() {
             </div>
           </div>
         )}
+
+        {/* Digital Receipt Modal (Phase 9) */}
+        <DigitalReceiptModal
+          identifier={receiptModalBookingRef}
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+        />
       </div>
     </section>
   );

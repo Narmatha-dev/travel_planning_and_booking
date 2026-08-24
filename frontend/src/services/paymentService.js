@@ -2,6 +2,41 @@ import api from './api';
 
 const paymentService = {
   /**
+   * Get public payment gateway configuration
+   */
+  async getGatewayConfig() {
+    const response = await api.get('/payments/config');
+    return response.data.data;
+  },
+
+  /**
+   * Feature 4: Create a server-side payment order / session
+   */
+  async createPaymentOrder(bookingId, paymentMethod = 'upi') {
+    const response = await api.post('/payments/create-order', {
+      bookingId,
+      paymentMethod,
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Feature 5: Verify payment transaction server-side
+   */
+  async verifyPayment(verificationData) {
+    const response = await api.post('/payments/verify', verificationData);
+    return response.data.data;
+  },
+
+  /**
+   * Feature 9 & 10: Retrieve digital booking & payment receipt
+   */
+  async getReceipt(identifier) {
+    const response = await api.get(`/payments/receipt/${identifier}`);
+    return response.data.data;
+  },
+
+  /**
    * Process / charge a payment (Mock Simulation)
    */
   async processPayment(paymentData) {

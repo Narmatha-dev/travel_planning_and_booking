@@ -3885,6 +3885,43 @@ main {
   }
 }
 
+/* ==================================================== */
+/* PHASE 9: DIGITAL RECEIPT PRINT STYLES                */
+/* ==================================================== */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-modal-backdrop {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  .receipt-modal-container,
+  .digital-receipt-card,
+  .digital-receipt-card * {
+    visibility: visible !important;
+  }
+
+  .receipt-modal-container {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    padding: 1rem !important;
+    border: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+
 
 
 

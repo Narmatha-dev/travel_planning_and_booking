@@ -4,12 +4,13 @@ import { useAppContext } from '../context/AppContext';
 import packageService from '../services/packageService';
 import bookingService from '../services/bookingService';
 import paymentService from '../services/paymentService';
+import DigitalReceiptModal from '../components/DigitalReceiptModal';
 
 const PACKAGE_STEPS = [
   { step: 1, label: 'Select Package', icon: '📦' },
   { step: 2, label: 'Select Date', icon: '📅' },
   { step: 3, label: 'Traveler Details', icon: '👤' },
-  { step: 4, label: 'Booking Summary', icon: '📋' },
+  { step: 4, label: 'Payment Summary', icon: '📋' },
   { step: 5, label: 'Payment', icon: '💳' },
   { step: 6, label: 'Confirmation', icon: '🎉' },
 ];
@@ -17,14 +18,16 @@ const PACKAGE_STEPS = [
 const CUSTOM_TRIP_STEPS = [
   { step: 1, label: 'Review Trip', icon: '🔍' },
   { step: 2, label: 'Traveler Details', icon: '👤' },
-  { step: 3, label: 'Confirm & Book', icon: '💳' },
-  { step: 4, label: 'Confirmation', icon: '🎉' },
+  { step: 3, label: 'Payment Summary', icon: '📋' },
+  { step: 4, label: 'Payment', icon: '💳' },
+  { step: 5, label: 'Confirmation', icon: '🎉' },
 ];
 
 const PAYMENT_METHODS = [
-  { id: 'credit_card', label: 'Credit / Debit Card', icon: '💳', sub: 'Visa, MasterCard, RuPay' },
-  { id: 'upi', label: 'UPI / NetBanking', icon: '⚡', sub: 'Instant Online Transfer' },
-  { id: 'paypal', label: 'PayPal', icon: '🅿️', sub: 'Fast & Secure Checkout' },
+  { id: 'upi', label: 'UPI / QR Code', icon: '⚡', sub: 'GPay, PhonePe, Paytm, BHIM' },
+  { id: 'credit_card', label: 'Credit / Debit Card', icon: '💳', sub: 'Visa, MasterCard, RuPay, Amex' },
+  { id: 'netbanking', label: 'Net Banking', icon: '🏦', sub: 'SBI, HDFC, ICICI, Axis & 50+ Banks' },
+  { id: 'wallet', label: 'Digital Wallets', icon: '👛', sub: 'Amazon Pay, Mobikwik, Airtel' },
 ];
 
 export default function BookingPage() {
@@ -55,8 +58,17 @@ export default function BookingPage() {
   const [selectedPackage, setSelectedPackage] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState('');
+  const [paymentFailed, setPaymentFailed] = useState(false);
   const [paymentFailureError, setPaymentFailureError] = useState('');
+  const [gatewayConfig, setGatewayConfig] = useState(null);
+
+  // Active created booking reference & receipt modal state
+  const [activeBooking, setActiveBooking] = useState(null);
+  const [confirmedPayment, setConfirmedPayment] = useState(null);
+  const [digitalReceipt, setDigitalReceipt] = useState(null);
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
 
   // Booking Form State
   const [formData, setFormData] = useState({
@@ -66,7 +78,7 @@ export default function BookingPage() {
     email: user?.email || '',
     phoneNumber: user?.phone_number || '+91-98765-43210',
     specialRequests: '',
-    paymentMethod: 'credit_card',
+    paymentMethod: 'upi',
     cardNumber: '4242 •••• •••• 4242',
     cardExpiry: '12/28',
     cardCvv: '•••',
@@ -75,9 +87,18 @@ export default function BookingPage() {
     simulateFailure: false,
   });
 
-  // Confirmed booking & payment state
-  const [confirmedBooking, setConfirmedBooking] = useState(null);
-  const [confirmedPayment, setConfirmedPayment] = useState(null);
+  // Load gateway configuration
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const cfg = await paymentService.getGatewayConfig();
+        setGatewayConfig(cfg);
+      } catch {
+        // fallback
+      }
+    }
+    loadConfig();
+  }, []);
 
   // Load packages if package booking mode
   useEffect(() => {
@@ -121,7 +142,7 @@ export default function BookingPage() {
     }
   }, [user]);
 
-  // Active transit & stay objects (prioritizing customTripData, then context)
+  // Active transit & stay objects
   const activeTransport = customTripData?.selectedTransport || selectedTransport;
   const activeHotel = customTripData?.selectedHotel || selectedHotel;
   const activeItinerary = customTripData?.itinerary;
@@ -132,10 +153,10 @@ export default function BookingPage() {
   const transportCost = activeTransport?.estimated_cost ? Number(activeTransport.estimated_cost) : 0;
   const stayCost = activeHotel?.approx_price_per_night
     ? Number(activeHotel.approx_price_per_night) * (customTripData?.numberOfDays || 3)
-    : (activeCurrency === 'USD' ? 150 : 2700);
+    : 2700;
   const customEstimatedTotal = activeItinerary?.totalEstimatedCost
     ? Number(activeItinerary.totalEstimatedCost)
-    : (transportCost + stayCost + (activeCurrency === 'USD' ? 200 : 3500));
+    : (transportCost + stayCost + 3500);
 
   // Package mode price calculations
   const effectivePrice = selectedPackage ? Number(selectedPackage.discount_price || selectedPackage.base_price) : 1299;
@@ -160,13 +181,6 @@ export default function BookingPage() {
     setFormData((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     setError('');
     setPaymentFailureError('');
-  };
-
-  const handleTravelersChange = (delta) => {
-    setFormData((prev) => {
-      const nextCount = Math.max(1, Math.min(selectedPackage?.max_group_size || 14, prev.numTravelers + delta));
-      return { ...prev, numTravelers: nextCount };
-    });
   };
 
   const validateCustomStep = (step) => {
@@ -243,86 +257,99 @@ export default function BookingPage() {
     window.scrollTo(0, 0);
   };
 
-  // Phase 8: Confirm Booking & API Submission
-  const handleConfirmBooking = async () => {
+  // Phase 9: Secure Order Creation & Payment Verification Flow
+  const handleAuthorizeAndPay = async () => {
     if (!isAuthenticated) {
       navigate('/login?redirect=/booking');
       return;
     }
 
     setSubmitting(true);
+    setPaymentFailed(false);
     setError('');
     setPaymentFailureError('');
 
     try {
-      const destinationId = isCustomTrip
-        ? (customTripData?.destinationId || queryDestinationId || 1)
-        : (selectedPackage?.destination_id || 1);
+      let bookingRecord = activeBooking;
 
-      const destName = isCustomTrip
-        ? (customTripData?.destinationName || 'Custom Destination')
-        : (selectedPackage?.destination_name || 'Selected Destination');
+      // 1. If preliminary booking record not created yet, create it now
+      if (!bookingRecord) {
+        setLoadingMessage('Creating booking reservation...');
+        const destinationId = isCustomTrip
+          ? (customTripData?.destinationId || queryDestinationId || 1)
+          : (selectedPackage?.destination_id || 1);
 
-      const bookingPayload = {
-        userId: user?.id || 3,
-        packageId: isCustomTrip ? null : (selectedPackage?.id || null),
-        destinationId: parseInt(destinationId, 10) || 1,
-        destinationName: destName,
-        packageTitle: isCustomTrip ? `${destName} (${durationDays} Days AI Trip)` : selectedPackage?.title,
-        featuredImageUrl: selectedPackage?.featured_image_url || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800',
-        bookingType: isCustomTrip ? 'custom_trip' : 'package',
-        travelDate: formData.travelDate,
-        returnDate: returnDateCalc,
-        numTravelers: formData.numTravelers,
-        totalAmount: finalTotal,
-        discountAmount: totalSavings,
-        finalAmount: finalTotal,
-        specialRequests: formData.specialRequests,
-        selectedTransport: activeTransport || null,
-        selectedHotel: activeHotel || null,
-        itineraryItems: activeItinerary?.itineraryItems || [],
+        const destName = isCustomTrip
+          ? (customTripData?.destinationName || 'Custom Destination')
+          : (selectedPackage?.destination_name || 'Selected Destination');
+
+        const bookingPayload = {
+          userId: user?.id || 3,
+          packageId: isCustomTrip ? null : (selectedPackage?.id || null),
+          destinationId: parseInt(destinationId, 10) || 1,
+          destinationName: destName,
+          packageTitle: isCustomTrip ? `${destName} (${durationDays} Days AI Trip)` : selectedPackage?.title,
+          featuredImageUrl: selectedPackage?.featured_image_url || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800',
+          bookingType: isCustomTrip ? 'custom_trip' : 'package',
+          travelDate: formData.travelDate,
+          returnDate: returnDateCalc,
+          numTravelers: formData.numTravelers,
+          totalAmount: finalTotal,
+          discountAmount: totalSavings,
+          finalAmount: finalTotal,
+          specialRequests: formData.specialRequests,
+          selectedTransport: activeTransport || null,
+          selectedHotel: activeHotel || null,
+          itineraryItems: activeItinerary?.itineraryItems || [],
+          paymentMethod: formData.paymentMethod,
+          paymentGateway: 'STRIPE',
+        };
+
+        bookingRecord = await bookingService.createBooking(bookingPayload);
+        setActiveBooking(bookingRecord);
+      }
+
+      // 2. Feature 4: Create Server-Side Payment Order (Feature 16: Loading State)
+      setLoadingMessage('Preparing secure payment session...');
+      const orderSession = await paymentService.createPaymentOrder(bookingRecord.id, formData.paymentMethod);
+
+      // 3. Feature 5: Verify Payment with Server-Side Verification (Feature 16: Loading State)
+      setLoadingMessage('Verifying your payment with gateway...');
+      const verificationResult = await paymentService.verifyPayment({
+        bookingId: bookingRecord.id,
+        orderId: orderSession.orderId,
+        paymentId: `pay_${Date.now().toString(36)}`,
+        signature: 'sandbox_verified_signature_2026',
         paymentMethod: formData.paymentMethod,
-        paymentGateway: formData.paymentMethod === 'paypal' ? 'PayPal' : 'Stripe',
-      };
-
-      const bookingResult = await bookingService.createBooking(bookingPayload);
-
-      // Process payment record via paymentService
-      const paymentPayload = {
-        bookingId: bookingResult.id,
-        userId: user?.id || 3,
-        amount: finalTotal,
-        currency: activeCurrency,
-        paymentMethod: formData.paymentMethod,
-        paymentGateway: formData.paymentMethod === 'paypal' ? 'PayPal' : 'Stripe',
         simulateFailure: Boolean(formData.simulateFailure),
-        cardBrand: 'Visa',
-        cardLast4: formData.cardNumber.replace(/\D/g, '').slice(-4) || '4242',
-        destinationName: destName,
-        packageTitle: bookingPayload.packageTitle,
-      };
+        userId: user?.id || 3,
+      });
 
-      const paymentResult = await paymentService.processPayment(paymentPayload);
-
-      setConfirmedBooking(bookingResult);
-      setConfirmedPayment(paymentResult);
-      setCurrentStep(isCustomTrip ? 4 : 6);
+      // 4. Feature 8: Payment Success State
+      setConfirmedPayment(verificationResult);
+      if (verificationResult.receipt) {
+        setDigitalReceipt(verificationResult.receipt);
+      }
+      setCurrentStep(isCustomTrip ? 5 : 6);
       window.scrollTo(0, 0);
     } catch (err) {
+      // Feature 7: Payment Failure Handling
+      setPaymentFailed(true);
       if (err.response?.status === 402 || formData.simulateFailure) {
         setPaymentFailureError(
-          '❌ Payment Authorization Declined: The transaction was declined by the issuer. Please verify your details or retry.'
+          '❌ Payment was not completed: The transaction was declined by the payment gateway. Your reservation remains saved.'
         );
       } else {
-        setError(err.response?.data?.message || err.message || 'Booking confirmation failed. Please check your details.');
+        setPaymentFailureError(err.response?.data?.message || err.message || 'Payment processing failed. Please try again.');
       }
     } finally {
       setSubmitting(false);
+      setLoadingMessage('');
     }
   };
 
   const currentStepsList = isCustomTrip ? CUSTOM_TRIP_STEPS : PACKAGE_STEPS;
-  const isFinalConfirmationStep = isCustomTrip ? currentStep === 4 : currentStep === 6;
+  const isFinalConfirmationStep = isCustomTrip ? currentStep === 5 : currentStep === 6;
 
   return (
     <section className="section page-section" style={{ paddingTop: '2rem', minHeight: '80vh' }}>
@@ -339,14 +366,14 @@ export default function BookingPage() {
           }}
         >
           <span style={{ background: 'rgba(255,255,255,0.15)', color: '#38bdf8', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase' }}>
-            {isCustomTrip ? '✨ Phase 8 • Trip Booking & Reservation' : '📦 Curated Package Booking'}
+            {isCustomTrip ? '✨ Phase 9 • Payment Flow & Digital Receipt' : '📦 Curated Package Booking'}
           </span>
           <h1 style={{ fontSize: '2.2rem', fontWeight: '800', margin: '0.6rem 0 0.25rem 0' }}>
-            {isCustomTrip ? 'Review & Confirm Your Trip Booking' : 'Complete Your Travel Reservation'}
+            {isCustomTrip ? 'Secure Trip Booking & Payment' : 'Complete Your Travel Reservation'}
           </h1>
           <p style={{ color: '#cbd5e1', fontSize: '1rem', margin: 0 }}>
             {isCustomTrip
-              ? 'Verify your selected destination, transport, accommodation, and day-wise AI schedule before confirming.'
+              ? 'Verify your selected destination, transport, accommodation, and day-wise AI schedule before payment.'
               : 'Secure your spot for curated travel packages with flexible cancellation and instant confirmation.'}
           </p>
         </div>
@@ -420,7 +447,7 @@ export default function BookingPage() {
           <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', padding: '2.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1.25rem' }}>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase' }}>FEATURE 1 • COMPLETE TRIP REVIEW</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase' }}>TRIP REVIEW</span>
                 <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', margin: '0.2rem 0' }}>
                   Trip Review: {customTripData?.destinationName || 'Selected Destination'}
                 </h2>
@@ -433,9 +460,8 @@ export default function BookingPage() {
               </Link>
             </div>
 
-            {/* Grid of Components: Transport + Stay + Budget */}
+            {/* Grid of Components: Transport + Stay */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-              {/* Transport Card */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', color: '#16a34a' }}>
                   🚆 Transport Option (Phase 4)
@@ -451,7 +477,6 @@ export default function BookingPage() {
                 </div>
               </div>
 
-              {/* Stay Card */}
               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem' }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: '800', textTransform: 'uppercase', color: '#0284c7' }}>
                   🏨 Accommodation (Phase 7)
@@ -468,30 +493,11 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* AI Itinerary Schedule Highlights */}
-            {activeItinerary?.days && activeItinerary.days.length > 0 && (
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.5rem', marginBottom: '2rem' }}>
-                <h3 style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', marginBottom: '1rem' }}>
-                  📅 AI Itinerary Schedule Highlights
-                </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {activeItinerary.days.slice(0, 3).map((d, dIdx) => (
-                    <div key={dIdx} style={{ background: '#ffffff', padding: '0.85rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                      <strong>Day {d.day}:</strong> {d.theme}
-                      <div style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '0.2rem' }}>
-                        🌅 Morning: {d.activities?.[0]?.placeName} • 🍛 Lunch: {d.foodSuggestions?.lunch?.dish} • 🌆 Evening: {d.activities?.[2]?.placeName || 'Sunset leisure'}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Budget Breakdown & User Budget Comparison */}
+            {/* Total Budget */}
             <div style={{ background: '#f0f9ff', border: '1.5px solid #7dd3fc', borderRadius: '16px', padding: '1.5rem', marginBottom: '2rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase' }}>ESTIMATED TOTAL BUDGET</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0369a1', textTransform: 'uppercase' }}>ESTIMATED TOTAL AMOUNT</span>
                   <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0284c7' }}>
                     {sym}{finalTotal.toLocaleString()}
                   </div>
@@ -531,7 +537,7 @@ export default function BookingPage() {
               Lead Traveler & Guest Information
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '2rem' }}>
-              Your booking confirmation and itinerary vouchers will be registered under these contact details.
+              Your booking confirmation and digital receipts will be registered under these contact details.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
@@ -602,7 +608,7 @@ export default function BookingPage() {
                 value={formData.specialRequests}
                 onChange={handleChange}
                 rows="3"
-                placeholder="e.g. Vegetarian meal preference, early check-in requested, high floor stay..."
+                placeholder="e.g. Vegetarian meal preference, early check-in requested..."
                 style={{ width: '100%', padding: '0.75rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.95rem' }}
               />
             </div>
@@ -612,24 +618,118 @@ export default function BookingPage() {
                 ⬅ Back to Review
               </button>
               <button onClick={handleNextStep} className="btn btn-primary" style={{ padding: '0.85rem 2.5rem', fontWeight: '800' }}>
-                Continue to Payment ➔
+                Continue to Payment Summary ➔
               </button>
             </div>
           </div>
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* CUSTOM TRIP FLOW - STEP 3: PAYMENT & CONFIRMATION    */}
+        {/* STEP 3: FEATURE 1 — PAYMENT SUMMARY                  */}
         {/* ---------------------------------------------------- */}
-        {isCustomTrip && currentStep === 3 && (
+        {((isCustomTrip && currentStep === 3) || (!isCustomTrip && currentStep === 4)) && (
           <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', padding: '2.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.35rem' }}>
-              Select Payment Method & Confirm Trip
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              FEATURE 1 • PAYMENT SUMMARY
+            </span>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: '900', color: '#0f172a', margin: '0.3rem 0 0.5rem 0' }}>
+              Payment Summary
             </h2>
-            <p style={{ color: '#64748b', fontSize: '0.9rem', marginBottom: '2rem' }}>
-              Total Estimated Amount: <strong style={{ color: '#0284c7', fontSize: '1.1rem' }}>{sym}{finalTotal.toLocaleString()}</strong>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem' }}>
+              Review the finalized booking amount before initiating secure payment checkout.
             </p>
 
+            <div
+              style={{
+                background: '#f8fafc',
+                borderRadius: '16px',
+                border: '1.5px solid #e2e8f0',
+                padding: '2rem',
+                maxWidth: '650px',
+                marginBottom: '2rem',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', fontSize: '0.95rem', color: '#334155', borderBottom: '1px solid #e2e8f0', paddingBottom: '1.5rem', marginBottom: '1.5rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Destination</span>
+                  <div style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                    {customTripData?.destinationName || selectedPackage?.destination_name || 'Selected Destination'}
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Travel Dates</span>
+                  <div style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginTop: '0.2rem' }}>
+                    {formData.travelDate} to {returnDateCalc}
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Travellers</span>
+                  <div style={{ fontSize: '1rem', fontWeight: '700', color: '#0f172a', marginTop: '0.2rem' }}>
+                    {formData.numTravelers} Traveler(s)
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Transport</span>
+                  <div style={{ fontSize: '1rem', fontWeight: '700', color: '#16a34a', marginTop: '0.2rem' }}>
+                    {activeTransport?.icon || '🚆'} {activeTransport?.title || 'Standard Road Transit'}
+                  </div>
+                </div>
+
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Stay / Accommodation</span>
+                  <div style={{ fontSize: '1rem', fontWeight: '700', color: '#0284c7', marginTop: '0.2rem' }}>
+                    🏨 {activeHotel?.name || 'Verified Recommended Stay'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Summary Row */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '0.8rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</span>
+                  <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0284c7' }}>
+                    {sym}{finalTotal.toLocaleString()}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="btn btn-primary"
+                  style={{ padding: '0.9rem 2.5rem', fontWeight: '900', fontSize: '1.05rem', background: '#0284c7' }}
+                >
+                  Proceed to Payment ➔
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+              <button onClick={handlePrevStep} className="btn btn-outline" style={{ padding: '0.75rem 1.5rem' }}>
+                ⬅ Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------- */}
+        {/* STEP 4: FEATURE 3 & 4 — PAYMENT CHECKOUT             */}
+        {/* ---------------------------------------------------- */}
+        {((isCustomTrip && currentStep === 4) || (!isCustomTrip && currentStep === 5)) && (
+          <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', padding: '2.5rem', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              FEATURE 3 • SELECT PAYMENT METHOD
+            </span>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#0f172a', margin: '0.3rem 0 0.5rem 0' }}>
+              Choose Payment Method
+            </h2>
+            <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: '2rem' }}>
+              Total Payable: <strong style={{ color: '#0284c7', fontSize: '1.15rem' }}>{sym}{finalTotal.toLocaleString()}</strong>
+            </p>
+
+            {/* Payment Method Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               {PAYMENT_METHODS.map((pm) => {
                 const isSelected = formData.paymentMethod === pm.id;
@@ -654,41 +754,80 @@ export default function BookingPage() {
               })}
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: '#64748b', marginBottom: '2rem' }}>
-              🔒 256-bit Bank Grade Encrypted Gateway • Free cancellation prior to 48 hours.
+            {/* Feature 7: Payment Failure Alert Box */}
+            {paymentFailureError && (
+              <div style={{ background: '#fef2f2', border: '1.5px solid #fca5a5', padding: '1.25rem', borderRadius: '14px', marginBottom: '2rem' }}>
+                <strong style={{ color: '#b91c1c', display: 'block', fontSize: '0.95rem', marginBottom: '0.35rem' }}>
+                  {paymentFailureError}
+                </strong>
+                <p style={{ color: '#991b1b', fontSize: '0.85rem', margin: 0 }}>
+                  You can click <strong>Try Again</strong> below to re-attempt payment with another method or uncheck simulation.
+                </p>
+              </div>
+            )}
+
+            {/* Payment Simulation Mode Toggle */}
+            <div style={{ background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <strong style={{ fontSize: '0.88rem', color: '#0f172a', display: 'block' }}>🧪 Gateway Testing & Simulation Mode</strong>
+                <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Toggle to test payment failure / issuer decline handling</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', margin: 0 }}>
+                <input
+                  type="checkbox"
+                  name="simulateFailure"
+                  checked={formData.simulateFailure}
+                  onChange={handleChange}
+                  style={{ width: '18px', height: '18px', accentColor: '#e11d48' }}
+                />
+                <span style={{ fontSize: '0.85rem', fontWeight: '800', color: formData.simulateFailure ? '#e11d48' : '#16a34a' }}>
+                  {formData.simulateFailure ? '🔴 Simulate Decline' : '🟢 Normal Success'}
+                </span>
+              </label>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ textAlign: 'center', fontSize: '0.82rem', color: '#64748b', marginBottom: '2rem' }}>
+              🔒 256-bit Bank Grade Encrypted Payment Gateway • Free cancellation prior to 48 hours.
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
               <button onClick={handlePrevStep} className="btn btn-outline" style={{ padding: '0.8rem 1.75rem' }}>
-                ⬅ Back to Traveler Details
+                ⬅ Back to Summary
               </button>
+
               <button
-                onClick={handleConfirmBooking}
+                onClick={handleAuthorizeAndPay}
                 disabled={submitting}
                 className="btn btn-primary"
-                style={{ padding: '0.9rem 2.75rem', fontWeight: '800', fontSize: '1.05rem', background: '#0284c7' }}
+                style={{ padding: '0.9rem 2.75rem', fontWeight: '900', fontSize: '1.05rem', background: '#0284c7' }}
               >
-                {submitting ? 'Confirming your trip... Please wait...' : `Confirm & Book Trip (${sym}${finalTotal.toLocaleString()})`}
+                {submitting ? (
+                  <span>⏳ {loadingMessage || 'Authorizing Payment...'}</span>
+                ) : paymentFailed ? (
+                  <span>🔄 Try Again ({sym}{finalTotal.toLocaleString()})</span>
+                ) : (
+                  <span>Authorize & Pay {sym}{finalTotal.toLocaleString()} ➔</span>
+                )}
               </button>
             </div>
           </div>
         )}
 
         {/* ---------------------------------------------------- */}
-        {/* STEP 4/6: CONFIRMATION RECEIPT (FEATURE 6)           */}
+        {/* STEP 5: FEATURE 8 — PAYMENT SUCCESS & CONFIRMATION   */}
         {/* ---------------------------------------------------- */}
-        {isFinalConfirmationStep && confirmedBooking && (
+        {isFinalConfirmationStep && (
           <div style={{ background: '#ffffff', borderRadius: '24px', padding: '3rem 2.5rem', border: '1px solid #bbf7d0', boxShadow: '0 10px 40px rgba(15, 23, 42, 0.08)', textAlign: 'center' }}>
             <div style={{ fontSize: '3.5rem', marginBottom: '0.75rem' }}>🎉</div>
-            <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 14px', borderRadius: '9999px', fontSize: '0.82rem', fontWeight: '700', textTransform: 'uppercase' }}>
-              ● {confirmedBooking.status || 'Confirmed'}
+            <span style={{ background: '#dcfce7', color: '#15803d', padding: '4px 14px', borderRadius: '9999px', fontSize: '0.82rem', fontWeight: '800', textTransform: 'uppercase' }}>
+              ● PAID & CONFIRMED
             </span>
 
             <h1 style={{ fontSize: '2.4rem', fontWeight: '900', color: '#0f172a', margin: '0.75rem 0 0.25rem 0' }}>
-              🎉 TRIP BOOKED SUCCESSFULLY!
+              🎉 Payment Successful!
             </h1>
             <p style={{ color: '#64748b', fontSize: '1.05rem', margin: '0 0 2.5rem 0' }}>
-              Your reservation is officially registered in Travelora. A copy of your travel voucher is saved in <strong>My Trips</strong>.
+              Your reservation has been verified and confirmed. A digital receipt has been generated.
             </p>
 
             {/* Visual Boarding Pass / Ticket Receipt */}
@@ -706,49 +845,57 @@ export default function BookingPage() {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px dashed #cbd5e1', paddingBottom: '1.25rem', marginBottom: '1.25rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Booking Reference</span>
-                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0284c7' }}>
-                    {confirmedBooking.booking_reference || confirmedBooking.bookingReference}
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Booking ID</span>
+                  <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0284c7' }}>
+                    {confirmedPayment?.bookingReference || activeBooking?.booking_reference || 'BK-2026-CONFIRMED'}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Status</span>
-                  <div style={{ fontSize: '1rem', fontWeight: '800', color: '#16a34a' }}>
-                    ✅ Confirmed
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Payment ID</span>
+                  <div style={{ fontSize: '0.95rem', fontWeight: '800', color: '#16a34a' }}>
+                    {confirmedPayment?.transactionId || 'TXN-ST-CONFIRMED'}
                   </div>
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', fontSize: '0.92rem', color: '#475569', marginBottom: '1.5rem' }}>
                 <div>
-                  <strong>📍 Destination:</strong> {confirmedBooking.destination_name || customTripData?.destinationName || selectedPackage?.destination_name}
+                  <strong>📍 Destination:</strong> {customTripData?.destinationName || selectedPackage?.destination_name || 'Selected Destination'}
                 </div>
                 <div>
-                  <strong>📅 Travel Date:</strong> {confirmedBooking.travel_date || formData.travelDate}
+                  <strong>📅 Travel Date:</strong> {formData.travelDate}
                 </div>
                 <div>
-                  <strong>👥 Travellers:</strong> {confirmedBooking.num_travelers || formData.numTravelers} Guest(s)
+                  <strong>👥 Travellers:</strong> {formData.numTravelers} Guest(s)
                 </div>
                 <div>
-                  <strong>🚆 Transport:</strong> {confirmedBooking.selected_transport?.title || activeTransport?.title || 'Standard Road Transit'}
+                  <strong>🚆 Transport:</strong> {activeTransport?.title || 'Standard Road Transit'}
                 </div>
                 <div>
-                  <strong>🏨 Stay:</strong> {confirmedBooking.selected_hotel?.name || activeHotel?.name || 'Verified Recommended Stay'}
+                  <strong>🏨 Stay:</strong> {activeHotel?.name || 'Verified Recommended Stay'}
                 </div>
                 <div>
-                  <strong>💰 Estimated Total:</strong> <span style={{ color: '#0284c7', fontWeight: '800' }}>{sym}{finalTotal.toLocaleString()}</span>
+                  <strong>💰 Amount Paid:</strong> <span style={{ color: '#0284c7', fontWeight: '900' }}>{sym}{finalTotal.toLocaleString()}</span>
                 </div>
               </div>
 
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: '700' }}>Status: 🟢 Confirmed & Active</span>
+                <span style={{ fontSize: '0.85rem', color: '#16a34a', fontWeight: '800' }}>Status: ✅ Paid</span>
                 <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Free cancellation prior to 48 hrs</span>
               </div>
             </div>
 
             {/* Action CTAs */}
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Link to="/my-trips?tab=upcoming" className="btn btn-primary" style={{ padding: '0.85rem 2.25rem', fontWeight: '800' }}>
+              <button
+                type="button"
+                onClick={() => setShowReceiptModal(true)}
+                className="btn btn-primary"
+                style={{ padding: '0.85rem 2.25rem', fontWeight: '800', background: '#0284c7' }}
+              >
+                🧾 View Digital Receipt
+              </button>
+              <Link to="/my-trips?tab=upcoming" className="btn btn-outline" style={{ padding: '0.85rem 2.25rem', fontWeight: '700' }}>
                 ✈️ View My Trip
               </Link>
               <Link to="/" className="btn btn-outline" style={{ padding: '0.85rem 2.25rem', fontWeight: '700' }}>
@@ -757,6 +904,14 @@ export default function BookingPage() {
             </div>
           </div>
         )}
+
+        {/* Digital Receipt Modal (Phase 9) */}
+        <DigitalReceiptModal
+          receipt={digitalReceipt}
+          identifier={confirmedPayment?.bookingReference || activeBooking?.booking_reference}
+          isOpen={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+        />
       </div>
     </section>
   );
