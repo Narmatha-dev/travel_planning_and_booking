@@ -114,6 +114,14 @@ function Navbar() {
                 ❤️ Saved
               </NavLink>
               <NavLink
+                to="/rewards"
+                className={({ isActive }) =>
+                  isActive ? 'nav-link active' : 'nav-link'
+                }
+              >
+                🏆 Rewards
+              </NavLink>
+              <NavLink
                 to="/profile"
                 className={({ isActive }) =>
                   isActive ? 'nav-link active' : 'nav-link'
