@@ -6,6 +6,7 @@ import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
 import LocationSection from '../components/LocationSection';
 import NearbyPlacesSection from '../components/NearbyPlacesSection';
+import PersonalizedRecommendationsSection from '../components/PersonalizedRecommendationsSection';
 import destinationService from '../services/destinationService';
 import packageService from '../services/packageService';
 import bookingService from '../services/bookingService';
@@ -268,6 +269,9 @@ function HomePage() {
 
       {/* Phase 2: Real Nearby Tourist Attractions & Places */}
       <NearbyPlacesSection />
+
+      {/* Phase 19: Smart Personalized Recommendations Engine */}
+      <PersonalizedRecommendationsSection />
 
       {/* Popular Destinations Section */}
       <section className="section">
