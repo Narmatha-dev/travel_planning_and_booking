@@ -28,24 +28,24 @@ export default function ChatbotWidget() {
 
   const QUICK_PROMPTS = [
     { label: `📍 ${t('chatbot.suggestPlaces', 'Suggest places near me')}`, text: t('chatbot.suggestPlaces', 'Suggest places near me') },
+    { label: `🛡️ ${language === 'ta' ? 'பாதுகாப்பு & அவசர உதவி' : 'Emergency & Safety Help'}`, text: language === 'ta' ? 'அவசர உதவி மற்றும் மருத்துவமனை' : 'Find nearest hospital and emergency help' },
     { label: `✈️ ${t('chatbot.planTrip', 'Plan a 3-day trip')}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
     { label: `🏨 ${t('chatbot.budgetStays', 'Find budget stays')}`, text: t('chatbot.budgetStays', 'Find budget stays') },
     { label: `🚗 ${t('chatbot.transport', 'Suggest transport')}`, text: t('chatbot.transport', 'Suggest transport') },
     { label: `📅 ${t('chatbot.itinerary', 'Create itinerary')}`, text: t('chatbot.itinerary', 'Create itinerary') },
-    { label: `🏆 ${t('chatbot.rewardPrompt', 'How do travel rewards work?')}`, text: t('chatbot.rewardPrompt', 'How do travel rewards work?') },
   ];
 
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content:
-        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, plan multi-day itineraries, recommend verified stays, compare transport, and calculate trip budgets using real-time app context.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
+        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, find emergency safety services (hospitals, police, pharmacies), plan multi-day itineraries, recommend verified stays, and calculate trip budgets.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
       suggestions: [
         'Suggest places near me',
+        'Find nearest hospital',
+        'Emergency numbers',
         'Plan a 3-day trip',
         'Find budget stays',
-        'Suggest transport',
-        'Calculate trip budget',
       ],
       language: 'en',
       timestamp: new Date().toISOString(),

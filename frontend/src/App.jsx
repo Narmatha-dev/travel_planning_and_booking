@@ -15,6 +15,7 @@ import PackagesPage from './pages/PackagesPage';
 import PackageDetailPage from './pages/PackageDetailPage';
 import TripPlannerPage from './pages/TripPlannerPage';
 import RecommendationsPage from './pages/RecommendationsPage';
+import SafetyPage from './pages/SafetyPage';
 import BookingPage from './pages/BookingPage';
 import MyTripsPage from './pages/MyTripsPage';
 import ProfilePage from './pages/ProfilePage';
@@ -45,6 +46,7 @@ function App() {
               <Route path="/packages/:id" element={<PackageDetailPage />} />
               <Route path="/trip-planner" element={<TripPlannerPage />} />
               <Route path="/recommendations" element={<RecommendationsPage />} />
+              <Route path="/safety" element={<SafetyPage />} />
               <Route path="/shared-trip/:token" element={<SharedTripPage />} />
 
               {/* Protected Routes */}

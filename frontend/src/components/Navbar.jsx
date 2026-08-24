@@ -31,6 +31,7 @@ function Navbar() {
     { to: '/packages', label: t('nav.packages', 'Packages') },
     { to: '/trip-planner', label: t('nav.tripPlanner', 'Trip Planner') },
     { to: '/recommendations', label: t('nav.aiSuggestions', 'AI Suggestions ✨') },
+    { to: '/safety', label: t('nav.safety', '🛡️ Safety') },
   ];
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);

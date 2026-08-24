@@ -9,6 +9,7 @@ import InteractiveMapSection from '../components/InteractiveMapSection';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import TripReviewModal from '../components/TripReviewModal';
 import ShareTripModal from '../components/ShareTripModal';
+import TripSafetyCard from '../components/TripSafetyCard';
 import { useAppContext } from '../context/AppContext';
 
 const tripStatusColors = {
@@ -886,6 +887,9 @@ export default function MyTripsPage() {
                 )}
               </div>
 
+              {/* Trip Safety Card (Phase 25 - Feature 10) */}
+              <TripSafetyCard trip={selectedBookingDetails} />
+
               {/* Interactive Route Map (Phase 3) */}
               <div style={{ marginBottom: '1.5rem' }}>
                 <h4 style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>📍 Route & Destination Map</h4>
@@ -991,6 +995,9 @@ export default function MyTripsPage() {
                   📍 {selectedTripDetails.destination_name} • 📅 {selectedTripDetails.start_date} to {selectedTripDetails.end_date} • 💵 Total Budget: ${selectedTripDetails.total_budget}
                 </p>
               </div>
+
+              {/* Trip Safety Card (Phase 25 - Feature 10) */}
+              <TripSafetyCard trip={selectedTripDetails} />
 
               {/* Itinerary Timeline */}
               <ItineraryTimeline days={selectedTripDetails.days} />
