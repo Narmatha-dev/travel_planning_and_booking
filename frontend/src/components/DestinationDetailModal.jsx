@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import InteractiveMapSection from './InteractiveMapSection';
 
 export default function DestinationDetailModal({ place, userLocation, onClose }) {
   const [activeImage, setActiveImage] = useState(
@@ -46,6 +47,7 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
       <div
         className="place-modal-content"
         onClick={(e) => e.stopPropagation()}
+        style={{ maxWidth: '960px' }}
       >
         {/* Close Button */}
         <button
@@ -140,39 +142,20 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
               <h3>About this place</h3>
               <p>{place.description || 'A popular and scenic tourist attraction with memorable sights and rich travel experiences.'}</p>
             </div>
-
-            {/* Plan notice banner */}
-            {showPlanNotice && (
-              <div className="place-modal-plan-notice">
-                <span>✈️</span>
-                <div>
-                  <strong>Trip Planning coming soon!</strong>
-                  <p>Day-by-day itinerary and transport planning for {place.name} will be active in the next phase.</p>
-                </div>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="place-modal-actions">
-              <a
-                href={googleMapsUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-outline btn-maps"
-              >
-                🗺️ View on Google Maps ↗
-              </a>
-
-              <button
-                type="button"
-                className="btn btn-primary btn-plan-trip"
-                onClick={handlePlanClick}
-              >
-                ✈️ Plan This Trip
-              </button>
-            </div>
           </div>
         </div>
+
+        {/* Phase 3: Interactive Google Map & Road Route Section */}
+        {userLocation && place.latitude && place.longitude && (
+          <div style={{ padding: '0 1.5rem 1.5rem', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+            <InteractiveMapSection
+              origin={userLocation}
+              destination={place}
+              title={`Live Route to ${place.name}`}
+              onPlanTripClick={handlePlanClick}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

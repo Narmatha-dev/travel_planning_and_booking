@@ -75,6 +75,30 @@ const locationService = {
       detectedAt: new Date().toISOString(),
     };
   },
+
+  /**
+   * Calculates live route, road distance, and travel time between origin and destination (Phase 3)
+   */
+  async getRouteDirections({ originLat, originLng, destLat, destLng, travelMode = 'driving' }) {
+    const response = await api.get('/location/route', {
+      params: {
+        originLat,
+        originLng,
+        destLat,
+        destLng,
+        mode: travelMode,
+      },
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Fetches map configuration (Google Maps API Key)
+   */
+  async getMapConfig() {
+    const response = await api.get('/location/map-config');
+    return response.data.data;
+  },
 };
 
 export default locationService;

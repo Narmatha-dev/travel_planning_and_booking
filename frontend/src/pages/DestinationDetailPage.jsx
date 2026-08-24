@@ -3,11 +3,12 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import destinationService from '../services/destinationService';
 import ReviewsSection from '../components/ReviewsSection';
+import InteractiveMapSection from '../components/InteractiveMapSection';
 
 export default function DestinationDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAppContext();
+  const { isAuthenticated, currentLocation } = useAppContext();
 
   const [destination, setDestination] = useState(null);
   const [activeImage, setActiveImage] = useState('');
@@ -347,6 +348,23 @@ export default function DestinationDetailPage() {
             )}
           </div>
         </div>
+
+        {/* Phase 3: Interactive Route & Google Map Navigation */}
+        {currentLocation && destination && (
+          <div style={{ marginTop: '2.5rem', marginBottom: '2.5rem' }}>
+            <InteractiveMapSection
+              origin={currentLocation}
+              destination={{
+                latitude: destination.latitude || 13.0827,
+                longitude: destination.longitude || 80.2707,
+                name: destination.name,
+                address: `${destination.city}, ${destination.country}`,
+                category: destination.category,
+              }}
+              title={`Live Route & Directions to ${destination.name}`}
+            />
+          </div>
+        )}
 
         {/* Verified Reviews Section */}
         <ReviewsSection destinationId={destination.id} title={destination.name} />
