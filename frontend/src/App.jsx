@@ -20,6 +20,7 @@ import MyTripsPage from './pages/MyTripsPage';
 import ProfilePage from './pages/ProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
 import FavoritesPage from './pages/FavoritesPage';
+import SharedTripPage from './pages/SharedTripPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import './App.css';
 
@@ -42,6 +43,7 @@ function App() {
               <Route path="/packages/:id" element={<PackageDetailPage />} />
               <Route path="/trip-planner" element={<TripPlannerPage />} />
               <Route path="/recommendations" element={<RecommendationsPage />} />
+              <Route path="/shared-trip/:token" element={<SharedTripPage />} />
 
               {/* Protected Routes */}
               <Route

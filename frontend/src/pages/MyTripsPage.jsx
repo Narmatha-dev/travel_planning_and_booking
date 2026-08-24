@@ -8,6 +8,8 @@ import LocationSection from '../components/LocationSection';
 import InteractiveMapSection from '../components/InteractiveMapSection';
 import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import TripReviewModal from '../components/TripReviewModal';
+import ShareTripModal from '../components/ShareTripModal';
+import { useAppContext } from '../context/AppContext';
 
 const tripStatusColors = {
   planned: { bg: '#dbeafe', color: '#1d4ed8' },
@@ -39,6 +41,7 @@ export default function MyTripsPage() {
   const [selectedTripDetails, setSelectedTripDetails] = useState(null);
   const [loadingTripDetails, setLoadingTripDetails] = useState(false);
   const [deletingTripId, setDeletingTripId] = useState(null);
+  const [sharingTrip, setSharingTrip] = useState(null);
 
   // Bookings State
   const [bookings, setBookings] = useState([]);
@@ -640,6 +643,21 @@ export default function MyTripsPage() {
 
                       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
+                          onClick={() => setSharingTrip(trip)}
+                          className="btn btn-outline btn-sm"
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            color: '#0284c7',
+                            borderColor: '#bae6fd',
+                            background: '#f0f9ff',
+                            fontWeight: '700',
+                          }}
+                        >
+                          🔗 Share
+                        </button>
+                        <button
                           onClick={() => toggleFavoriteItem('trip', {
                             ...trip,
                             id: trip.id,
@@ -999,6 +1017,14 @@ export default function MyTripsPage() {
             booking={reviewModalBooking}
             onClose={() => setReviewModalBooking(null)}
             onReviewUpdated={loadUserBookings}
+          />
+        )}
+
+        {/* Share Trip Modal (Phase 15) */}
+        {sharingTrip && (
+          <ShareTripModal
+            trip={sharingTrip}
+            onClose={() => setSharingTrip(null)}
           />
         )}
       </div>
