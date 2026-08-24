@@ -36,6 +36,24 @@ const destinationService = {
   },
 
   /**
+   * Get real nearby tourist destinations based on user GPS coordinates (Phase 2)
+   */
+  async getNearbyDestinations(latitude, longitude, { category = 'all', radius = 150, limit = 12 } = {}) {
+    const response = await api.get('/destinations/nearby', {
+      params: { lat: latitude, lng: longitude, category, radius, limit },
+    });
+    return response.data.data;
+  },
+
+  /**
+   * Get real place details by place ID (Phase 2)
+   */
+  async getNearbyPlaceDetails(placeId) {
+    const response = await api.get(`/destinations/nearby/${placeId}`);
+    return response.data.data;
+  },
+
+  /**
    * Add destination to favorites (requires auth)
    */
   async addFavorite(destinationId) {

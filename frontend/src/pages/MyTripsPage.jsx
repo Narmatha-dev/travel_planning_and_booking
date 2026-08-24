@@ -4,6 +4,7 @@ import tripService from '../services/tripService';
 import bookingService from '../services/bookingService';
 import paymentService from '../services/paymentService';
 import ItineraryTimeline from '../components/ItineraryTimeline';
+import LocationSection from '../components/LocationSection';
 
 const tripStatusColors = {
   planned: { bg: '#dbeafe', color: '#1d4ed8' },
@@ -194,6 +195,11 @@ export default function MyTripsPage() {
               ➕ Plan New Trip
             </Link>
           </div>
+        </div>
+
+        {/* Current GPS Location Section (Phase 1) */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <LocationSection />
         </div>
 
         {/* Stats Summary Strip */}

@@ -3,6 +3,8 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { quickStats } from '../services/travelData';
 import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
+import LocationSection from '../components/LocationSection';
+import NearbyPlacesSection from '../components/NearbyPlacesSection';
 import destinationService from '../services/destinationService';
 import packageService from '../services/packageService';
 
@@ -51,6 +53,9 @@ function HomePage() {
 
   return (
     <>
+      {/* Current GPS Location Section (Phase 1) */}
+      <LocationSection />
+
       {welcomeBanner && (
         <div className="container" style={{ paddingTop: '1.5rem', marginBottom: '-0.5rem' }}>
           <div style={{
@@ -170,6 +175,9 @@ function HomePage() {
           </form>
         </div>
       </section>
+
+      {/* Phase 2: Real Nearby Tourist Attractions & Places */}
+      <NearbyPlacesSection />
 
       {/* Popular Destinations Section */}
       <section className="section">
