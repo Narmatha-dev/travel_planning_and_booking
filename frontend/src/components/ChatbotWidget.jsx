@@ -13,12 +13,22 @@ const QUICK_PROMPTS = [
 ];
 
 export default function ChatbotWidget() {
-  const { currentLocation, selectedTransport, selectedHotel, favorites, user } = useAppContext();
+  const { currentLocation, selectedTransport, selectedHotel, favorites, user, language, t } = useAppContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [currentLang, setCurrentLang] = useState('en');
+
+  const QUICK_PROMPTS = [
+    { label: `📍 ${t('chatbot.suggestPlaces', 'Suggest places near me')}`, text: t('chatbot.suggestPlaces', 'Suggest places near me') },
+    { label: `✈️ ${t('chatbot.planTrip', 'Plan a 3-day trip')}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
+    { label: `🏨 ${t('chatbot.budgetStays', 'Find budget stays')}`, text: t('chatbot.budgetStays', 'Find budget stays') },
+    { label: `🚗 ${t('chatbot.transport', 'Suggest transport')}`, text: t('chatbot.transport', 'Suggest transport') },
+    { label: `📅 ${t('chatbot.itinerary', 'Create itinerary')}`, text: t('chatbot.itinerary', 'Create itinerary') },
+    { label: `🏆 ${t('chatbot.rewardPrompt', 'How do travel rewards work?')}`, text: t('chatbot.rewardPrompt', 'How do travel rewards work?') },
+  ];
+
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -67,6 +77,7 @@ export default function ChatbotWidget() {
 
     // Build context payload (Feature 4 & 21)
     const contextPayload = {
+      language: language || 'en',
       currentLocation: currentLocation
         ? { city: currentLocation.city || currentLocation.area || 'Current GPS Location', lat: currentLocation.latitude, lng: currentLocation.longitude }
         : null,
@@ -505,7 +516,7 @@ export default function ChatbotWidget() {
             <input
               ref={inputRef}
               type="text"
-              placeholder="Ask about places, stays, budget or itinerary..."
+              placeholder={t('chatbot.placeholder', 'Ask about places, stays, budget or itinerary...')}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               disabled={loading}

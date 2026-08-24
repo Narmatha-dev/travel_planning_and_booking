@@ -1,0 +1,80 @@
+{
+  "nav": {
+    "home": "Home",
+    "destinations": "Destinations",
+    "packages": "Packages",
+    "tripPlanner": "Trip Planner",
+    "aiSuggestions": "AI Suggestions ✨",
+    "booking": "Booking",
+    "myTrips": "My Trips",
+    "saved": "❤️ Saved",
+    "rewards": "🏆 Rewards",
+    "profile": "Profile",
+    "admin": "Admin 🛡️",
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "language": "Language"
+  },
+  "hero": {
+    "title": "Your Smart Journey Starts Here",
+    "subtitle": "Explore real destinations, AI personalized itineraries, verified stays, and smart travel routes.",
+    "planTrip": "🚀 Plan Your Trip",
+    "explore": "🌍 Explore Destinations",
+    "featured": "🌟 Featured Destinations",
+    "curatedPackages": "📦 Curated Travel Packages"
+  },
+  "tripPlanner": {
+    "title": "Smart AI Trip Planner",
+    "subtitle": "Generate customized day-by-day itineraries, select verified stays, and calculate live transport fares.",
+    "whereTo": "Where do you want to go?",
+    "duration": "Duration (Days)",
+    "travelers": "Number of Travelers",
+    "budget": "Estimated Budget",
+    "style": "Travel Style",
+    "generate": "✨ Generate AI Itinerary",
+    "saveTrip": "💾 Save Trip Plan"
+  },
+  "rewards": {
+    "title": "My Travel Rewards & Loyalty Hub",
+    "subtitle": "Earn points through genuine travel activities, unlock elite tiers, and enjoy travel perks.",
+    "points": "Travel Points",
+    "tier": "Tier",
+    "levelProgress": "Level Progress",
+    "howToEarn": "💡 How to Earn Travel Points",
+    "history": "📜 Points Activity History",
+    "completeTrip": "Complete a Trip",
+    "verifiedReview": "Submit a Verified Review",
+    "savePlan": "Save a Trip Plan"
+  },
+  "common": {
+    "loading": "Loading...",
+    "loadingRewards": "Loading your travel rewards...",
+    "findingNearby": "Finding nearby places...",
+    "somethingWentWrong": "Something went wrong. Please try again.",
+    "tryAgain": "Try Again",
+    "viewDetails": "View Details",
+    "bookNow": "Book Now",
+    "viewSchedule": "View Schedule",
+    "delete": "Delete",
+    "share": "Share",
+    "copied": "Copied to clipboard!",
+    "days": "Days",
+    "budget": "Budget",
+    "duration": "Duration",
+    "perPerson": "per traveler",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications yet"
+  },
+  "chatbot": {
+    "title": "AI Travel Assistant",
+    "placeholder": "Ask anything (e.g. 'Plan 3-day Ooty trip', 'Nearby stays')...",
+    "suggestPlaces": "Suggest places near me",
+    "planTrip": "Plan a 3-day trip",
+    "budgetStays": "Find budget stays",
+    "transport": "Suggest transport",
+    "itinerary": "Create itinerary",
+    "clearChat": "Clear Chat",
+    "rewardPrompt": "How do travel rewards work?"
+  }
+}

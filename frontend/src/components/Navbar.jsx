@@ -19,8 +19,19 @@ function Navbar() {
     unreadCount,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    language,
+    setLanguage,
+    t,
   } = useAppContext();
   const navigate = useNavigate();
+
+  const publicNavItems = [
+    { to: '/', label: t('nav.home', 'Home') },
+    { to: '/destinations', label: t('nav.destinations', 'Destinations') },
+    { to: '/packages', label: t('nav.packages', 'Packages') },
+    { to: '/trip-planner', label: t('nav.tripPlanner', 'Trip Planner') },
+    { to: '/recommendations', label: t('nav.aiSuggestions', 'AI Suggestions ✨') },
+  ];
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);
   const notifRef = useRef(null);
@@ -95,7 +106,7 @@ function Navbar() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
-                Booking
+                {t('nav.booking', 'Booking')}
               </NavLink>
               <NavLink
                 to="/my-trips"
@@ -103,7 +114,7 @@ function Navbar() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
-                My Trips
+                {t('nav.myTrips', 'My Trips')}
               </NavLink>
               <NavLink
                 to="/favorites"
@@ -111,7 +122,7 @@ function Navbar() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
-                ❤️ Saved
+                {t('nav.saved', '❤️ Saved')}
               </NavLink>
               <NavLink
                 to="/rewards"
@@ -119,7 +130,7 @@ function Navbar() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
-                🏆 Rewards
+                {t('nav.rewards', '🏆 Rewards')}
               </NavLink>
               <NavLink
                 to="/profile"
@@ -127,7 +138,7 @@ function Navbar() {
                   isActive ? 'nav-link active' : 'nav-link'
                 }
               >
-                Profile
+                {t('nav.profile', 'Profile')}
               </NavLink>
               {user?.role === 'admin' && (
                 <NavLink
@@ -137,7 +148,7 @@ function Navbar() {
                   }
                   style={{ color: '#0284c7', fontWeight: '800' }}
                 >
-                  Admin 🛡️
+                  {t('nav.admin', 'Admin 🛡️')}
                 </NavLink>
               )}
             </>
@@ -304,6 +315,57 @@ function Navbar() {
                 )}
               </div>
 
+              {/* Language Selector (Feature 1 & 15) */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#f1f5f9',
+                  borderRadius: '10px',
+                  padding: '2px',
+                  border: '1px solid #e2e8f0',
+                }}
+                role="group"
+                aria-label="Language selector"
+              >
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  style={{
+                    background: language === 'en' ? '#ffffff' : 'transparent',
+                    color: language === 'en' ? '#0284c7' : '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.76rem',
+                    fontWeight: language === 'en' ? '800' : '600',
+                    cursor: 'pointer',
+                    boxShadow: language === 'en' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                  aria-label="Switch language to English"
+                >
+                  English
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('ta')}
+                  style={{
+                    background: language === 'ta' ? '#ffffff' : 'transparent',
+                    color: language === 'ta' ? '#0284c7' : '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.76rem',
+                    fontWeight: language === 'ta' ? '800' : '600',
+                    cursor: 'pointer',
+                    boxShadow: language === 'ta' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                  aria-label="Switch language to Tamil"
+                >
+                  தமிழ்
+                </button>
+              </div>
+
               {/* User Profile Capsule */}
               <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none', color: 'inherit' }}>
                 <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>
@@ -326,18 +388,69 @@ function Navbar() {
                 className="btn btn-secondary"
                 style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
               >
-                Logout
+                {t('nav.logout', 'Logout')}
               </button>
             </div>
           ) : (
-            <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              {/* Language Selector for Guests */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#f1f5f9',
+                  borderRadius: '10px',
+                  padding: '2px',
+                  border: '1px solid #e2e8f0',
+                }}
+                role="group"
+                aria-label="Language selector"
+              >
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  style={{
+                    background: language === 'en' ? '#ffffff' : 'transparent',
+                    color: language === 'en' ? '#0284c7' : '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.76rem',
+                    fontWeight: language === 'en' ? '800' : '600',
+                    cursor: 'pointer',
+                    boxShadow: language === 'en' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                  aria-label="Switch language to English"
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLanguage('ta')}
+                  style={{
+                    background: language === 'ta' ? '#ffffff' : 'transparent',
+                    color: language === 'ta' ? '#0284c7' : '#64748b',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '4px 8px',
+                    fontSize: '0.76rem',
+                    fontWeight: language === 'ta' ? '800' : '600',
+                    cursor: 'pointer',
+                    boxShadow: language === 'ta' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                  aria-label="Switch language to Tamil"
+                >
+                  தமிழ்
+                </button>
+              </div>
+
               <Link to="/login" className="btn btn-secondary">
-                Login
+                {t('nav.login', 'Login')}
               </Link>
               <Link to="/register" className="btn btn-primary">
-                Register
+                {t('nav.register', 'Register')}
               </Link>
-            </>
+            </div>
           )}
         </div>
       </div>

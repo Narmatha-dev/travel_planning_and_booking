@@ -3,6 +3,13 @@ import authService from '../services/authService';
 import locationService from '../services/locationService';
 import notificationService from '../services/notificationService';
 import favoriteService from '../services/favoriteService';
+import enLocale from '../locales/en.json';
+import taLocale from '../locales/ta.json';
+
+const LOCALES = {
+  en: enLocale,
+  ta: taLocale,
+};
 
 const AppContext = createContext();
 
@@ -11,6 +18,51 @@ export function AppProvider({ children }) {
   const [token, setToken] = useState(() => authService.getToken());
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+
+  // Language & i18n State (Phase 17)
+  const [language, setLanguageState] = useState(() => {
+    return localStorage.getItem('travelora_language') || 'en';
+  });
+
+  const setLanguage = useCallback((lang) => {
+    const valid = lang === 'ta' ? 'ta' : 'en';
+    setLanguageState(valid);
+    localStorage.setItem('travelora_language', valid);
+  }, []);
+
+  const t = useCallback(
+    (keyPath, fallback = '') => {
+      if (!keyPath) return fallback;
+      const keys = keyPath.split('.');
+
+      // Try selected language
+      let res = LOCALES[language];
+      for (const k of keys) {
+        if (res && res[k] !== undefined) {
+          res = res[k];
+        } else {
+          res = null;
+          break;
+        }
+      }
+      if (res !== null && res !== undefined) return res;
+
+      // Fallback to English
+      let fallbackRes = LOCALES.en;
+      for (const k of keys) {
+        if (fallbackRes && fallbackRes[k] !== undefined) {
+          fallbackRes = fallbackRes[k];
+        } else {
+          fallbackRes = null;
+          break;
+        }
+      }
+      if (fallbackRes !== null && fallbackRes !== undefined) return fallbackRes;
+
+      return fallback || keyPath;
+    },
+    [language]
+  );
 
   // Location States (Phase 1)
   const [currentLocation, setCurrentLocation] = useState(() => {
@@ -447,6 +499,10 @@ export function AppProvider({ children }) {
     toggleFavoriteItem,
     fetchFavorites,
     showToast,
+    // Multilingual Context (Phase 17)
+    language,
+    setLanguage,
+    t,
   };
 
   return (
