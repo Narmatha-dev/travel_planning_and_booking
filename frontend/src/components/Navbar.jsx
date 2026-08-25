@@ -22,6 +22,7 @@ function Navbar() {
     language,
     setLanguage,
     t,
+    isOnline,
   } = useAppContext();
   const navigate = useNavigate();
 
@@ -32,6 +33,7 @@ function Navbar() {
     { to: '/trip-planner', label: t('nav.tripPlanner', 'Trip Planner') },
     { to: '/recommendations', label: t('nav.aiSuggestions', 'AI Suggestions ✨') },
     { to: '/safety', label: t('nav.safety', '🛡️ Safety') },
+    { to: '/offline-trips', label: isOnline ? '📱 Offline' : '📴 Offline' },
   ];
 
   const [showNotifDropdown, setShowNotifDropdown] = useState(false);

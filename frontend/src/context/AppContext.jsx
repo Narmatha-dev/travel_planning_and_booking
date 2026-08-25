@@ -5,6 +5,7 @@ import notificationService from '../services/notificationService';
 import favoriteService from '../services/favoriteService';
 import enLocale from '../locales/en.json';
 import taLocale from '../locales/ta.json';
+import offlineStorageService from '../services/offlineStorageService';
 
 const LOCALES = {
   en: enLocale,
@@ -18,6 +19,39 @@ export function AppProvider({ children }) {
   const [token, setToken] = useState(() => authService.getToken());
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
+
+  // Network & Offline Status (Phase 29)
+  const [isOnline, setIsOnline] = useState(() => (typeof window !== 'undefined' ? window.navigator.onLine : true));
+  const [syncStatus, setSyncStatus] = useState('synced');
+
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
+      setSyncStatus('syncing');
+      try {
+        const res = await offlineStorageService.syncPendingChanges(user?.id || 3);
+        if (res.synced) {
+          setSyncStatus('synced');
+        } else {
+          setSyncStatus('failed');
+        }
+      } catch {
+        setSyncStatus('failed');
+      }
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [user]);
 
   // Language & i18n State (Phase 17)
   const [language, setLanguageState] = useState(() => {
@@ -503,11 +537,41 @@ export function AppProvider({ children }) {
     language,
     setLanguage,
     t,
+    // Network & Offline Status (Phase 29)
+    isOnline,
+    syncStatus,
+    setSyncStatus,
   };
 
   return (
     <AppContext.Provider value={value}>
       {children}
+      {/* Offline Status Persistent Pill */}
+      {!isOnline && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '72px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'linear-gradient(135deg, #ef4444, #b91c1c)',
+            color: '#ffffff',
+            padding: '0.45rem 1.25rem',
+            borderRadius: '9999px',
+            fontWeight: '700',
+            fontSize: '0.85rem',
+            boxShadow: '0 8px 20px rgba(239, 68, 68, 0.35)',
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            letterSpacing: '0.02em',
+          }}
+        >
+          <span>📴</span>
+          <span>{language === 'ta' ? 'ஆஃப்லைன் பயன்முறை — சேமிக்கப்பட்ட பயணங்கள் கிடைக்கின்றன' : 'Offline Mode — Saved trip data is available'}</span>
+        </div>
+      )}
       {/* Small floating Toast Notification (Feature 17) */}
       {toastMessage && (
         <div

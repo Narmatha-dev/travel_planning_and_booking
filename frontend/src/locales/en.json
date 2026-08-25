@@ -200,6 +200,75 @@
     "hideForecast": "Hide Forecast",
     "forecastNotAvailable": "Weather forecast not available yet for this future date.",
     "liveSatelliteData": "Live meteorological data powered by Open-Meteo"
+  },
+  "packing": {
+    "title": "Smart Packing Assistant",
+    "subtitle": "Personalized packing checklist tailored to your destination, weather, activities, and duration.",
+    "categories": {
+      "clothing": "Clothing",
+      "documents": "Travel Documents",
+      "personal": "Personal Items",
+      "electronics": "Electronics",
+      "essentials": "Essentials",
+      "gear": "Travel Gear",
+      "weather": "Weather Items",
+      "activity": "Activity Gear"
+    },
+    "packed": "Packed",
+    "remaining": "Remaining",
+    "itemsPacked": "Items Packed",
+    "addItem": "Add Custom Item",
+    "saveList": "Save Checklist",
+    "filterAll": "All Items",
+    "filterPacked": "Packed",
+    "filterPending": "Not Packed",
+    "weatherReason": "Weather Recommendation",
+    "searchPlaceholder": "Search packing items..."
+  },
+  "checklist": {
+    "title": "Travel Document & Pre-Trip Manager",
+    "subtitle": "Track and organize your required travel documents and pre-trip preparation tasks.",
+    "readinessScore": "Trip Readiness Score",
+    "ready": "Ready",
+    "pending": "Pending",
+    "hotelBooking": "Hotel Booking",
+    "transportBooking": "Transport Booking",
+    "packingCheck": "Packing Status",
+    "weatherCheck": "Weather Check",
+    "itineraryCheck": "Itinerary Status",
+    "safetyCheck": "Safety Contacts",
+    "addDocument": "Add Document / Task",
+    "notes": "Preparation Notes",
+    "categories": {
+      "identification": "Identification",
+      "transport": "Transport Documents",
+      "hotel": "Hotel & Stay",
+      "activities": "Activity Bookings",
+      "documents": "Other Documents",
+      "pre_trip": "Pre-Trip Preparation"
+    }
+  },
+  "offline": {
+    "title": "Offline Trips",
+    "subtitle": "Access your saved itineraries, stay vouchers, packing lists, and safety contacts without internet.",
+    "offlineMode": "Offline Mode Active",
+    "offlineBanner": "You are currently offline. Saved trip data is available.",
+    "saveForOffline": "Save for Offline",
+    "savedOffline": "Available Offline",
+    "downloading": "Downloading trip data...",
+    "openOffline": "Open Offline",
+    "removeOffline": "Remove Offline Cache",
+    "synced": "Synced",
+    "pendingSync": "Pending Sync",
+    "syncing": "Syncing Changes...",
+    "lastUpdated": "Last cached",
+    "mapsUnavailable": "Interactive map navigation requires internet connection. Saved addresses are available below.",
+    "weatherDisclaimer": "Previously cached weather snapshot. Live meteorology updates require internet.",
+    "costDisclaimer": "Previously calculated estimate. Live prices paused offline.",
+    "aiOffline": "AI Travel Assistant requires an internet connection.",
+    "storageUsage": "Offline Storage Used",
+    "noOfflineTrips": "No trips saved for offline access yet.",
+    "savePrompt": "Save an upcoming trip from My Trips to view it offline anywhere."
   }
 }
 

@@ -94,6 +94,13 @@ export default function ChatbotWidget() {
 
   const startListening = () => {
     if (typeof window === 'undefined') return;
+
+    if (!isOnline) {
+      setVoiceNotice(language === 'ta' ? 'குரல் உதவியாளருக்கு இணைய இணைப்பு தேவை.' : 'Internet connection is required for voice assistant.');
+      setTimeout(() => setVoiceNotice(null), 4000);
+      return;
+    }
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setVoiceNotice(t('voice.notSupported', 'Voice input is not supported in this browser. Please type your message.'));
@@ -224,6 +231,26 @@ export default function ChatbotWidget() {
 
     setMessages((prev) => [...prev, userMsg]);
     setInputMessage('');
+
+    // Feature 16: Offline AI Guard
+    if (!isOnline) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content:
+            language === 'ta'
+              ? '📴 **நீங்கள் தற்போது ஆஃப்லைனில் உள்ளீர்கள்.**\n\nAI பயண உதவியாளருக்கு இணைய இணைப்பு தேவை. உங்கள் சேமிக்கப்பட்ட பயணத்திட்டங்கள், தங்குமிட விவரங்கள் மற்றும் சரிபார்ப்பு பட்டியல்களை **ஆஃப்லைன் பயணங்கள் (Offline Trips)** பக்கத்தில் அணுகலாம்.'
+              : '📴 **You are currently offline.**\n\nAI Travel Assistant requires an active internet connection. You can still view your saved itineraries, stay vouchers, packing lists, and safety contacts in the **Offline Trips** page.',
+          suggestions: ['Go to Offline Trips', 'Open My Trips'],
+          actionLinks: [{ label: '📱 Open Offline Trips', url: '/offline-trips' }],
+          language: language || 'en',
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+      return;
+    }
+
     setLoading(true);
 
     // Build context payload (Feature 4 & 21)

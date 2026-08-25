@@ -11,6 +11,8 @@ import TripReviewModal from '../components/TripReviewModal';
 import ShareTripModal from '../components/ShareTripModal';
 import TripSafetyCard from '../components/TripSafetyCard';
 import WeatherCard from '../components/WeatherCard';
+import offlineStorageService from '../services/offlineStorageService';
+import api from '../services/api';
 import { useAppContext } from '../context/AppContext';
 
 const tripStatusColors = {
@@ -66,6 +68,37 @@ export default function MyTripsPage() {
 
   // Trip Feedback & Reviews State (Phase 11)
   const [reviewModalBooking, setReviewModalBooking] = useState(null);
+
+  // Offline Caching State (Phase 29)
+  const [savedOfflineIds, setSavedOfflineIds] = useState(new Set());
+  const [savingOfflineId, setSavingOfflineId] = useState(null);
+
+  const checkSavedOffline = async () => {
+    try {
+      const trips = await offlineStorageService.getOfflineTrips(user?.id || 3);
+      setSavedOfflineIds(new Set(trips.map((t) => t.id)));
+    } catch {}
+  };
+
+  useEffect(() => {
+    checkSavedOffline();
+  }, [user]);
+
+  const handleSaveForOffline = async (booking) => {
+    setSavingOfflineId(booking.id);
+    try {
+      const res = await api.get(`/offline/trip/${booking.id}/bundle`);
+      if (res.data?.data) {
+        await offlineStorageService.saveTripForOffline(res.data.data);
+        setSavedOfflineIds((prev) => new Set([...prev, booking.id]));
+        alert('✅ Trip saved for offline access! You can view it in the Offline Trips page anytime.');
+      }
+    } catch (err) {
+      alert(`Could not download offline bundle: ${err.message}`);
+    } finally {
+      setSavingOfflineId(null);
+    }
+  };
 
   const loadUserTrips = async () => {
     setLoadingTrips(true);
@@ -320,6 +353,29 @@ export default function MyTripsPage() {
             >
               🧾 Receipt
             </button>
+
+            {/* Phase 29: Save for Offline Button */}
+            {booking.status !== 'cancelled' && (
+              <button
+                onClick={() => handleSaveForOffline(booking)}
+                disabled={savingOfflineId === booking.id}
+                className="btn btn-sm"
+                style={{
+                  background: savedOfflineIds.has(booking.id) ? '#dcfce7' : '#f0fdf4',
+                  color: savedOfflineIds.has(booking.id) ? '#166534' : '#15803d',
+                  border: `1px solid ${savedOfflineIds.has(booking.id) ? '#86efac' : '#bbf7d0'}`,
+                  fontWeight: '800',
+                  padding: '0.5rem 0.85rem',
+                }}
+                title="Save itinerary, stays, checklists & contacts for offline use"
+              >
+                {savingOfflineId === booking.id
+                  ? '⏳ Saving...'
+                  : savedOfflineIds.has(booking.id)
+                  ? '📱 Saved Offline'
+                  : '💾 Save Offline'}
+              </button>
+            )}
 
             <button
               onClick={() => handleViewBookingDetails(booking)}
