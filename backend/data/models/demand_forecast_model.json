@@ -1,7 +1,7 @@
 {
   "modelType": "Linear Time-Series Trend with Holt-Winters Seasonality Index",
   "modelVersion": "v1.4.0",
-  "trainedAt": "2026-08-25T04:15:31.648Z",
+  "trainedAt": "2026-08-25T04:16:52.992Z",
   "trainingDataPoints": 12,
   "regression": {
     "slope": 14.944,

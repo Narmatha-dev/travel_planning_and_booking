@@ -215,6 +215,7 @@ const paymentService = {
         message: `Payment of ₹${paymentRecord.amount.toLocaleString()} for booking #${booking.booking_reference} was successfully completed.`,
         type: 'payment_status',
         linkUrl: '/my-trips?tab=upcoming',
+        preventDuplicate: false,
       });
     } catch {}
 

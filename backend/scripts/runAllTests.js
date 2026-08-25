@@ -38,10 +38,39 @@ const SCRIPTS = [
   { name: '34. Phase 26 Weather-Based Smart Travel Planner', file: 'testPhase26Weather.js' },
 ];
 
-function runAllTests() {
+const { fork } = require('child_process');
+
+async function ensureServerRunning() {
+  try {
+    const res = await fetch('http://localhost:5000/api/health', { signal: AbortSignal.timeout(1000) });
+    if (res.ok) return null;
+  } catch {}
+
+  // Spawn background server
+  const serverProc = fork(path.join(__dirname, '../src/server.js'), {
+    stdio: 'ignore',
+    env: { ...process.env, PORT: '5000' },
+  });
+
+  // Wait up to 5s for server to start
+  for (let i = 0; i < 25; i++) {
+    await new Promise((r) => setTimeout(r, 200));
+    try {
+      const res = await fetch('http://localhost:5000/api/health', { signal: AbortSignal.timeout(1000) });
+      if (res.ok) {
+        return serverProc;
+      }
+    } catch {}
+  }
+  return serverProc;
+}
+
+async function runAllTests() {
   console.log('\n================================================================');
   console.log('  🚀 TRAVELORA FULL END-TO-END REGRESSION & SECURITY TEST SUITE ');
   console.log('================================================================\n');
+
+  const serverProc = await ensureServerRunning();
 
   const startTime = Date.now();
   const results = [];
@@ -65,6 +94,10 @@ function runAllTests() {
     }
   }
 
+  if (serverProc) {
+    serverProc.kill();
+  }
+
   const durationSec = ((Date.now() - startTime) / 1000).toFixed(2);
   const totalPassed = results.filter((r) => r.passed).length;
   const totalSuites = results.length;
@@ -83,7 +116,7 @@ function runAllTests() {
   console.log('================================================================\n');
 
   if (totalPassed === totalSuites) {
-    console.log('🌟 ALL 11 TEST SUITES PASSED! System is 100% stable, secure & production-ready.\n');
+    console.log(`🌟 ALL ${totalSuites} TEST SUITES PASSED! System is 100% stable, secure & production-ready.\n`);
     process.exitCode = 0;
     return true;
   } else {

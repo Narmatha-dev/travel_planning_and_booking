@@ -86,6 +86,7 @@ const bookingService = {
         message: `Your trip to ${createdBooking.destination_name || 'your destination'} has been successfully booked.`,
         type: 'booking_update',
         linkUrl: '/my-trips?tab=upcoming',
+        preventDuplicate: false,
       });
     } catch {}
 
@@ -121,6 +122,7 @@ const bookingService = {
         message: `Your reservation #${existing.booking_reference} for ${existing.destination_name || 'your destination'} has been cancelled.`,
         type: 'booking_update',
         linkUrl: '/my-trips?tab=cancelled',
+        preventDuplicate: false,
       });
     } catch {}
 

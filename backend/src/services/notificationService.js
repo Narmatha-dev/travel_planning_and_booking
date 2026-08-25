@@ -198,6 +198,20 @@ const notificationService = {
             }
           } catch {}
         }
+
+        // 4. Phase 27: Smart Packing Reminder for Upcoming Trips (2 to 3 Days out)
+        if (diffDays >= 2 && diffDays <= 3) {
+          const packTitle = `🎒 Packing Reminder: ${destName} Trip in ${diffDays} Days`;
+          const packMessage = `Your trip to ${destName} is approaching in ${diffDays} days! Review and complete your personalized packing checklist.`;
+          await this.createSystemNotification({
+            userId,
+            title: packTitle,
+            message: packMessage,
+            type: 'packing_reminder',
+            linkUrl: `/packing?tripId=${booking.id}`,
+            preventDuplicate: true,
+          });
+        }
       }
     } catch {
       // Gracefully continue without throwing

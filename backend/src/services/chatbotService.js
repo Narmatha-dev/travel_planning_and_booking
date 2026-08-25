@@ -582,6 +582,74 @@ const chatbotService = {
       }
     }
 
+    // =========================================================================
+    // Phase 27: Intent P27 - Smart Packing Assistant & Checklists (Feature 13 & 14)
+    // =========================================================================
+    else if (
+      query.includes('pack') ||
+      query.includes('packing') ||
+      query.includes('checklist') ||
+      query.includes('what to bring') ||
+      query.includes('luggage') ||
+      query.includes('பேக்கிங்') ||
+      query.includes('பேக்') ||
+      query.includes('பட்டியல்') ||
+      query.includes('pack panna')
+    ) {
+      const packingService = require('./packingService');
+
+      // Extract duration or default to 3
+      let days = 3;
+      const dayMatch = query.match(/(\d+)\s*(?:day|days|நாள்|நாட்கள்)/i);
+      if (dayMatch) {
+        days = Math.min(14, Math.max(1, parseInt(dayMatch[1], 10)));
+      }
+
+      // Extract destination
+      let targetDestName = 'Ooty';
+      if (query.includes('chennai') || query.includes('சென்னை')) targetDestName = 'Chennai';
+      else if (query.includes('mahabalipuram') || query.includes('மகாபலிபுரம்') || query.includes('mamallapuram')) targetDestName = 'Mahabalipuram';
+      else if (query.includes('kanyakumari') || query.includes('கன்னியாகுமரி')) targetDestName = 'Kanyakumari';
+      else if (query.includes('goa') || query.includes('கோவா')) targetDestName = 'Goa';
+      else if (query.includes('kerala') || query.includes('கேரளா') || query.includes('munnar')) targetDestName = 'Kerala';
+      else if (query.includes('paris') || query.includes('பாரிஸ்')) targetDestName = 'Paris';
+      else if (query.includes('bali') || query.includes('பாலி')) targetDestName = 'Bali';
+      else if (query.includes('swiss') || query.includes('சுவிஸ்')) targetDestName = 'Switzerland';
+      else if (context.currentLocation?.city) targetDestName = context.currentLocation.city;
+
+      const checklist = await packingService.generateSmartChecklist({
+        destination: targetDestName,
+        durationDays: days,
+        tripType: 'nature',
+        travelers: 2,
+      });
+
+      if (lang === 'ta') {
+        reply = `### 🎒 ${targetDestName} பயணத்திற்கான ஸ்மார்ட் பேக்கிங் பட்டியல் (${days} நாட்கள்)\n\n` +
+          `வானிலை முன்னறிவிப்பு மற்றும் ${days} நாள் பயண கால அளவின் அடிப்படையில் தயார் செய்யப்பட்ட பரிந்துரைகள்:\n\n` +
+          `* 👕 **ஆடைகள்:** காட்டன் டி-ஷர்ட்கள் (${days + 1}), பேன்ட் (${Math.min(3, Math.ceil(days / 2))}), நடை காலணிகள், இரவு உடைகள்.\n` +
+          `* 📄 **பயண ஆவணங்கள்:** அரசு புகைப்பட அடையாள அட்டை, முன்பதிவு ரசீது, தங்குமிட விவரங்கள்.\n` +
+          `* 📱 **மின்னணு சாதனங்கள்:** ஸ்மார்ட்போன், ஃபாஸ்ட் சார்ஜர், பவர் பேங்க் (10,000mAh), இயர்போன்கள்.\n` +
+          `* 💊 **அத்தியாவசிய பொருட்கள்:** முதலுதவி பெட்டி, தினசரி மருந்துகள், கை சுத்திகரிப்பான் (Sanitizer), ORS எலக்ட்ரோலைட்.\n` +
+          `* ☔ **வானிலை சார்ந்தது:** ${checklist.weatherReason || 'வானிலைக்கேற்ப பாதுகாப்பு பொருட்கள்'}.\n\n` +
+          `💡 **தகவல்:** உங்கள் ஊடாடும் பேக்கிங் பட்டியலில் பொருட்களை டிக் செய்து முன்னேற்றத்தைக் கண்காணிக்கலாம்.`;
+      } else {
+        reply = `### 🎒 Smart Packing Checklist for ${targetDestName} (${days}-Day Trip)\n\n` +
+          `Tailored for your destination climate and a **${days}-day** journey:\n\n` +
+          `* 👕 **Clothing:** ${days + 1}x Comfortable tops/t-shirts, ${Math.min(3, Math.ceil(days / 2))}x pants/bottoms, ${days}x pairs of socks, walking shoes.\n` +
+          `* 📄 **Travel Documents:** Government photo ID, Travelora booking voucher, hotel check-in details.\n` +
+          `* 📱 **Electronics:** Smartphone, fast charging cable, 10,000mAh power bank, earphones.\n` +
+          `* 💊 **Health & Essentials:** First-aid basics, personal prescriptions, hand sanitizer, electrolyte packs.\n` +
+          `* ☔ **Weather Protection:** ${checklist.weatherReason || 'Tailored to live destination forecast'}.\n` +
+          `* 🎒 **Gear:** Daypack, reusable water bottle, travel locks.\n\n` +
+          `💡 *Tip: You can open your interactive packing checklist to check off items and add custom gear.*`;
+      }
+
+      suggestions.push(`What is the weather in ${targetDestName}?`, `Plan a ${days}-day trip to ${targetDestName}`, `Add camera to checklist`, `Find budget stays`);
+      actionLinks.push({ label: `🎒 Open Smart Packing Assistant`, url: `/packing?destination=${encodeURIComponent(targetDestName)}&days=${days}` });
+      actionLinks.push({ label: `🌤️ Check ${targetDestName} Weather`, url: `/trip-planner?destination=${encodeURIComponent(targetDestName)}` });
+    }
+
     // Intent P14-1: Suggest Places Near Me / GPS Location (Feature 3 & 4)
     else if (
       (query.includes('near me') ||
