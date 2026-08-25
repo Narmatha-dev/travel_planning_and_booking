@@ -111,6 +111,7 @@ export function AppProvider({ children }) {
     localStorage.getItem('travel_current_location') ? 'success' : 'idle'
   );
   const [locationError, setLocationError] = useState(null);
+  const [permissionState, setPermissionState] = useState('prompt');
 
   // Transport Selection State (Phase 4)
   const [selectedTransport, setSelectedTransportState] = useState(() => {
@@ -361,6 +362,44 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener('travel_auth_expired', handleAuthExpired);
   }, []);
 
+  // Monitor browser geolocation permission state
+  useEffect(() => {
+    let permStatusObj = null;
+
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      navigator.permissions
+        .query({ name: 'geolocation' })
+        .then((permStatus) => {
+          permStatusObj = permStatus;
+          setPermissionState(permStatus.state);
+          if (permStatus.state === 'denied' && !currentLocation) {
+            setLocationStatus('denied');
+            setLocationError('Location access is blocked. Please enable location permission in your browser settings.');
+          }
+
+          permStatus.onchange = () => {
+            setPermissionState(permStatus.state);
+            if (permStatus.state === 'granted') {
+              detectLocation();
+            } else if (permStatus.state === 'denied') {
+              setLocationStatus('denied');
+              setLocationError('Location access is blocked. Please enable location permission in your browser settings.');
+            } else if (permStatus.state === 'prompt' && !currentLocation) {
+              setLocationStatus('idle');
+              setLocationError(null);
+            }
+          };
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      if (permStatusObj) {
+        permStatusObj.onchange = null;
+      }
+    };
+  }, [currentLocation]);
+
   /**
    * Detect current GPS location and reverse geocode (Phase 1)
    */
@@ -373,17 +412,40 @@ export function AppProvider({ children }) {
       const data = await locationService.detectCurrentLocation();
       setCurrentLocation(data);
       setLocationStatus('success');
+      setPermissionState('granted');
       localStorage.setItem('travel_current_location', JSON.stringify(data));
       return { success: true, data };
     } catch (err) {
+      console.error('[AppContext] Geolocation error:', err);
       const isDenied = err.code === 'PERMISSION_DENIED';
       setLocationStatus(isDenied ? 'denied' : 'error');
+      setPermissionState(isDenied ? 'denied' : 'prompt');
       setLocationError(
-        err.message ||
-          'Location access is disabled. Please allow location permission to get personalized travel recommendations.'
+        isDenied
+          ? 'Location access is blocked. Please enable location permission in your browser settings.'
+          : err.message || 'Location could not be determined. Please try again or select a city manually.'
       );
       return { success: false, error: err.message };
     }
+  };
+
+  /**
+   * Set manual location (city/coordinates)
+   */
+  const setManualLocation = (locationData) => {
+    if (!locationData) return;
+    const formatted = {
+      city: locationData.city || locationData.name || 'Custom Location',
+      state: locationData.state || '',
+      country: locationData.country || 'India',
+      latitude: parseFloat(locationData.latitude || locationData.lat || 13.0827),
+      longitude: parseFloat(locationData.longitude || locationData.lng || 80.2707),
+      isManual: true,
+    };
+    setCurrentLocation(formatted);
+    setLocationStatus('success');
+    setLocationError(null);
+    localStorage.setItem('travel_current_location', JSON.stringify(formatted));
   };
 
   // Auto-detect location when user signs in if not detected yet
@@ -499,11 +561,19 @@ export function AppProvider({ children }) {
     loading,
     authError,
     setAuthError,
+    login,
+    register,
+    handleOAuthSuccess,
+    loginWithGoogleToken,
+    logout,
+    updateUserProfile,
     // Location Context (Phase 1)
     currentLocation,
     locationStatus,
     locationError,
+    permissionState,
     detectLocation,
+    setManualLocation,
     // Transport Context (Phase 4)
     selectedTransport,
     setSelectedTransport,
@@ -512,8 +582,6 @@ export function AppProvider({ children }) {
     // Hotel Context (Phase 7)
     selectedHotel,
     setSelectedHotel,
-    login,
-    updateUserProfile,
     trips,
     setTrips,
     // Notifications Context (Phase 10)

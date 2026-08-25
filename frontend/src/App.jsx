@@ -26,6 +26,7 @@ import RewardsPage from './pages/RewardsPage';
 import UserAnalyticsPage from './pages/UserAnalyticsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import OfflineTripsPage from './pages/OfflineTripsPage';
+import AiCopilotPage from './pages/AiCopilotPage';
 import './App.css';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
               <Route path="/packages/:id" element={<PackageDetailPage />} />
               <Route path="/trip-planner" element={<TripPlannerPage />} />
               <Route path="/recommendations" element={<RecommendationsPage />} />
+              <Route path="/copilot" element={<AiCopilotPage />} />
               <Route path="/safety" element={<SafetyPage />} />
               <Route path="/offline-trips" element={<OfflineTripsPage />} />
               <Route path="/shared-trip/:token" element={<SharedTripPage />} />

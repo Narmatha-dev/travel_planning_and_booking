@@ -54,6 +54,16 @@ const destinationService = {
   },
 
   /**
+   * Get Pan-India tourist destinations across all 7 regions
+   */
+  async getIndiaDestinations({ region = 'all', category = 'all', search = '', sortBy = 'popular', latitude = null, longitude = null, limit = 50, offset = 0 } = {}) {
+    const response = await api.get('/destinations/india', {
+      params: { region, category, search, sortBy, lat: latitude, lng: longitude, limit, offset },
+    });
+    return response.data.data;
+  },
+
+  /**
    * Add destination to favorites (requires auth)
    */
   async addFavorite(destinationId) {

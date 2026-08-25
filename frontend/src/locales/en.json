@@ -269,6 +269,38 @@
     "storageUsage": "Offline Storage Used",
     "noOfflineTrips": "No trips saved for offline access yet.",
     "savePrompt": "Save an upcoming trip from My Trips to view it offline anywhere."
+  },
+  "copilot": {
+    "title": "AI Travel Copilot",
+    "subtitle": "Your unified intelligent command center for live weather, stays, routes, budgets, packing, safety, and readiness.",
+    "askPlaceholder": "Ask anything about your trip, weather, budget, packing, or safety...",
+    "readiness": "Trip Readiness",
+    "ready": "Ready to Travel! 🚀",
+    "inProgress": "Preparation in Progress 👍",
+    "quickPrompts": "Quick Actions",
+    "nearbyPlaces": "Nearby Places",
+    "checkWeather": "Check Weather",
+    "tripBudget": "Trip Budget",
+    "viewItinerary": "View Itinerary",
+    "packingList": "Packing List",
+    "checklist": "Pre-Trip Checklist",
+    "safety": "Safety Contacts",
+    "offlineTrips": "Offline Trips",
+    "facets": {
+      "location": "Live Location",
+      "destination": "Destination",
+      "weather": "Live Weather",
+      "hotel": "Hotel Stay",
+      "transport": "Transport",
+      "budget": "Estimated Budget",
+      "itinerary": "Itinerary",
+      "packing": "Packing Progress",
+      "checklist": "Document Readiness",
+      "safety": "Safety Protection",
+      "offline": "Offline Availability"
+    },
+    "voicePrompt": "Speak to Copilot",
+    "confirmAction": "Please review and confirm to continue:"
   }
 }
 

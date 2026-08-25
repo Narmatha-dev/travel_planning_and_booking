@@ -31,6 +31,7 @@ function Navbar() {
     { to: '/destinations', label: t('nav.destinations', 'Destinations') },
     { to: '/packages', label: t('nav.packages', 'Packages') },
     { to: '/trip-planner', label: t('nav.tripPlanner', 'Trip Planner') },
+    { to: '/copilot', label: '🤖 Copilot' },
     { to: '/recommendations', label: t('nav.aiSuggestions', 'AI Suggestions ✨') },
     { to: '/safety', label: t('nav.safety', '🛡️ Safety') },
     { to: '/offline-trips', label: isOnline ? '📱 Offline' : '📴 Offline' },

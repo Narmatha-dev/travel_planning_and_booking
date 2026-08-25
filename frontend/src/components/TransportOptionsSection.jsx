@@ -1,12 +1,53 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import transportService from '../services/transportService';
 
-const PREFERENCE_TABS = [
-  { key: 'any', label: '🌟 All Options' },
-  { key: 'cheapest', label: '💰 Cheapest' },
-  { key: 'fastest', label: '⚡ Fastest' },
-  { key: 'comfortable', label: '🛋️ Comfortable' },
+const DEMO_PROMOS = [
+  {
+    id: 'promo_flight_air',
+    title: 'Flight Deal — Domestic Skies',
+    discountLabel: '₹1,200 OFF',
+    discountAmount: 1200,
+    applicableType: 'flight',
+    transportLabel: '✈️ Flights',
+    validity: 'Valid till 31 Oct 2026',
+    code: 'FLYINDIA1200',
+    description: 'Instant discount on domestic airfare across all metro & regional routes.',
+  },
+  {
+    id: 'promo_train_express',
+    title: 'Special Train Fare — Vande Bharat',
+    discountLabel: '15% OFF',
+    discountPercent: 15,
+    applicableType: 'train',
+    transportLabel: '🚆 Trains',
+    validity: 'Valid till 15 Nov 2026',
+    code: 'RAILEXPRESS15',
+    description: 'Special concession on Superfast & Vande Bharat express train tickets.',
+  },
+  {
+    id: 'promo_bus_luxury',
+    title: 'Bus Travel Discount — Multi-Axle Volvo',
+    discountLabel: '₹300 OFF',
+    discountAmount: 300,
+    applicableType: 'bus',
+    transportLabel: '🚌 Buses',
+    validity: 'Valid till 30 Nov 2026',
+    code: 'BUSCOMFORT300',
+    description: 'Comfortable sleeper & AC Volvo bus discount for intercity travel.',
+  },
+  {
+    id: 'promo_cab_outstation',
+    title: 'Weekend Cab Offer — Chauffeur Driven',
+    discountLabel: '20% OFF',
+    discountPercent: 20,
+    applicableType: 'cab',
+    transportLabel: '🚗 Cabs & Cars',
+    validity: 'Valid on Weekends',
+    code: 'ROADTRIP20',
+    description: 'Flat discount on outstation AC sedan & SUV private chauffeur rentals.',
+  },
 ];
 
 export default function TransportOptionsSection({
@@ -16,306 +57,396 @@ export default function TransportOptionsSection({
   duration,
   onContinueToTripPlanning,
 }) {
-  const {
-    selectedTransport,
-    setSelectedTransport,
-    transportPreference,
-    setTransportPreference,
-  } = useAppContext();
+  const { selectedTransport, setSelectedTransport } = useAppContext();
+  const navigate = useNavigate();
 
   const [transportData, setTransportData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showContinueNotice, setShowContinueNotice] = useState(false);
+  const [selectedType, setSelectedType] = useState('cab');
+  const [appliedPromo, setAppliedPromo] = useState(null);
 
   const oLat = origin?.latitude;
   const oLng = origin?.longitude;
   const dLat = destination?.latitude;
   const dLng = destination?.longitude;
 
-  // Fetch transport options on origin, destination, or preference changes
+  // Calculate transport costs dynamically
   useEffect(() => {
-    if (!oLat || !oLng || !dLat || !dLng) {
-      setLoading(false);
-      return;
-    }
-
     let isMounted = true;
+    const dist = parseFloat(distanceKm || 320);
 
-    async function fetchTransport() {
-      setLoading(true);
-      setError(null);
+    // Dynamic multi-modal options calculation
+    const calculated = {
+      train: {
+        type: 'train',
+        title: 'Superfast Express Rail (Vande Bharat / Rajdhani)',
+        duration: `${Math.floor(dist / 65)} hrs ${Math.round((dist % 65) * 0.8)} min`,
+        price: Math.max(450, Math.round(dist * 1.8)),
+        price_display: `₹${Math.max(450, Math.round(dist * 1.8)).toLocaleString()}`,
+        available_routes: '2-4 Daily Scheduled Express Trains',
+        icon: '🚆',
+      },
+      bus: {
+        type: 'bus',
+        title: 'AC Multi-Axle Volvo Sleeper Coach',
+        duration: `${Math.floor(dist / 50)} hrs ${Math.round((dist % 50) * 1.2)} min`,
+        price: Math.max(350, Math.round(dist * 2.2)),
+        price_display: `₹${Math.max(350, Math.round(dist * 2.2)).toLocaleString()}`,
+        available_routes: '6+ Daily Departures (Evening & Night)',
+        icon: '🚌',
+      },
+      flight: {
+        type: 'flight',
+        title: 'Domestic Non-Stop Airline (Air India / IndiGo)',
+        duration: `${((dist / 750) + 1.2).toFixed(1)} hrs`,
+        price: Math.max(2800, Math.round(dist * 6.5)),
+        price_display: `₹${Math.max(2800, Math.round(dist * 6.5)).toLocaleString()}`,
+        available_routes: 'Daily Direct Flights Available',
+        icon: '✈️',
+      },
+      cab: {
+        type: 'cab',
+        title: 'Private AC Chauffeur Driven Sedan / SUV',
+        duration: `${Math.floor(dist / 60)} hrs ${Math.round((dist % 60) * 0.9)} min`,
+        price: Math.max(1200, Math.round(dist * 13.5)),
+        price_display: `₹${Math.max(1200, Math.round(dist * 13.5)).toLocaleString()}`,
+        available_routes: 'Instant Door-to-Door Private Pickup',
+        icon: '🚗',
+      },
+    };
 
-      try {
-        const data = await transportService.getTransportOptions({
-          originLat: oLat,
-          originLng: oLng,
-          destLat: dLat,
-          destLng: dLng,
-          distanceKm,
-          duration,
-          preference: transportPreference,
-        });
-
-        if (isMounted) {
-          setTransportData(data);
-        }
-      } catch (err) {
-        if (isMounted) {
-          console.warn('[Transport] Error calculating options:', err.message);
-          setError('Transport information is currently unavailable. Please try again.');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    }
-
-    fetchTransport();
+    setTransportData(calculated);
+    setLoading(false);
 
     return () => {
       isMounted = false;
     };
-  }, [oLat, oLng, dLat, dLng, distanceKm, duration, transportPreference]);
+  }, [distanceKm]);
 
-  const handleSelectTransport = (option) => {
-    setSelectedTransport({
-      ...option,
-      originCity: origin?.city || 'Current Location',
-      destinationName: destination?.name || 'Destination',
-      selectedAt: new Date().toISOString(),
-    });
-  };
-
-  const handleContinue = () => {
-    if (onContinueToTripPlanning) {
-      onContinueToTripPlanning(selectedTransport);
-    } else {
-      setShowContinueNotice(true);
-      setTimeout(() => setShowContinueNotice(false), 4500);
+  const handleSelectOption = (typeKey) => {
+    setSelectedType(typeKey);
+    const chosen = transportData?.[typeKey];
+    if (chosen) {
+      setSelectedTransport({
+        ...chosen,
+        originCity: origin?.city || 'Current Location',
+        destinationName: destination?.name || 'Destination',
+        selectedAt: new Date().toISOString(),
+      });
     }
   };
 
-  if (!oLat || !dLat) {
-    return null;
+  const handleApplyPromo = (promo) => {
+    if (appliedPromo?.id === promo.id) {
+      setAppliedPromo(null); // toggle off
+    } else {
+      setAppliedPromo(promo);
+      setSelectedType(promo.applicableType);
+      handleSelectOption(promo.applicableType);
+    }
+  };
+
+  const currentOption = transportData?.[selectedType] || transportData?.cab;
+  const baseCost = currentOption?.price || 2500;
+
+  // Calculate discount
+  let discountValue = 0;
+  if (appliedPromo) {
+    if (appliedPromo.discountAmount) {
+      discountValue = appliedPromo.discountAmount;
+    } else if (appliedPromo.discountPercent) {
+      discountValue = Math.round((baseCost * appliedPromo.discountPercent) / 100);
+    }
   }
 
-  const recommendedOption = transportData?.options?.find(
-    (opt) => opt.id === transportData.recommended_transport_id
-  );
+  const finalTotal = Math.max(0, baseCost - discountValue);
+
+  const handleContinuePlanning = () => {
+    if (onContinueToTripPlanning) {
+      onContinueToTripPlanning({
+        ...currentOption,
+        finalTotal,
+        appliedPromo,
+      });
+    } else {
+      navigate(
+        `/trip-planner?destination=${encodeURIComponent(destination?.city || destination?.name || 'Ooty')}&origin=${encodeURIComponent(origin?.city || 'Chennai')}&transport=${selectedType}`
+      );
+    }
+  };
 
   return (
-    <div className="transport-options-container">
-      {/* Header & Preferences */}
-      <div className="transport-section-header">
-        <div>
-          <span className="eyebrow">Phase 4 • Getting There</span>
-          <h3 className="transport-section-title">
-            Transportation to {destination?.name || 'Destination'}
-          </h3>
-          <p className="transport-section-subtitle">
-            Compare approximate costs, travel times, and comfort from{' '}
-            <strong>{origin?.city || 'Your Location'}</strong> ({transportData?.distance_text || `${transportData?.distance_km || distanceKm || '—'} km`})
-          </p>
-        </div>
-
-        {/* User Preference Filter Tabs */}
-        <div className="transport-pref-tabs">
-          {PREFERENCE_TABS.map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              className={`transport-pref-btn ${transportPreference === tab.key ? 'active' : ''}`}
-              onClick={() => setTransportPreference(tab.key)}
-              disabled={loading}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+    <div className="transport-section-container" style={{ padding: '0.5rem 0' }}>
+      {/* Section Header */}
+      <div style={{ marginBottom: '1.5rem' }}>
+        <span className="eyebrow">Travel Transport Options</span>
+        <h3 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#0f172a', margin: '0.2rem 0' }}>
+          Choose Your Transport
+        </h3>
+        <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
+          Compare travel time, live schedules, and estimated fare from <strong>{origin?.city || 'Your Location'}</strong> to <strong>{destination?.name || 'Destination'}</strong>.
+        </p>
       </div>
 
-      {/* Recommended Transport Spotlight Banner */}
-      {recommendedOption && !loading && (
-        <div className="transport-recommendation-spotlight">
-          <div className="spotlight-badge">⭐ Recommended for you</div>
-          <div className="spotlight-body">
-            <div className="spotlight-mode-info">
-              <span className="spotlight-icon">{recommendedOption.icon}</span>
-              <div>
-                <h4 className="spotlight-title">{recommendedOption.title}</h4>
-                <p className="spotlight-reason">{transportData.recommended_reason}</p>
-              </div>
-            </div>
-
-            <div className="spotlight-stats">
-              <div className="spotlight-stat-item">
-                <span className="stat-label">Estimated Fare</span>
-                <strong className="stat-val text-primary">{recommendedOption.cost_text} approx.</strong>
-              </div>
-              <div className="spotlight-stat-item">
-                <span className="stat-label">Travel Time</span>
-                <strong className="stat-val text-success">{recommendedOption.duration_text}</strong>
-              </div>
-              <button
-                type="button"
-                className={`btn btn-sm ${
-                  selectedTransport?.id === recommendedOption.id ? 'btn-success' : 'btn-primary'
-                }`}
-                onClick={() => handleSelectTransport(recommendedOption)}
-              >
-                {selectedTransport?.id === recommendedOption.id ? '✓ Selected' : 'Select Recommended'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Loading Skeleton State */}
-      {loading && (
-        <div className="transport-cards-grid">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="transport-card transport-card-skeleton">
-              <div className="skeleton-icon" />
-              <div className="skeleton-line" style={{ width: '60%', height: '18px', margin: '0.5rem 0' }} />
-              <div className="skeleton-line" style={{ width: '40%', height: '14px', marginBottom: '1rem' }} />
-              <div className="skeleton-line" style={{ width: '90%', height: '36px', borderRadius: '8px' }} />
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && !loading && (
-        <div className="transport-error-state">
-          <p>⚠️ {error}</p>
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={() => setTransportPreference(transportPreference)}
-          >
-            Retry Loading Transport Options
-          </button>
-        </div>
-      )}
-
-      {/* Transport Cards Grid */}
-      {!loading && !error && transportData?.options && (
-        <div className="transport-cards-grid">
-          {transportData.options.map((option) => {
-            const isSelected = selectedTransport?.id === option.id;
-            const isRecommended = transportData.recommended_transport_id === option.id;
+      {/* 4 Multi-Modal Transport Cards */}
+      {transportData && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          {['train', 'bus', 'flight', 'cab'].map((typeKey) => {
+            const opt = transportData[typeKey];
+            const isSelected = selectedType === typeKey;
 
             return (
               <div
-                key={option.id}
-                className={`transport-card ${isSelected ? 'selected' : ''} ${
-                  isRecommended ? 'recommended-border' : ''
-                }`}
+                key={typeKey}
+                onClick={() => handleSelectOption(typeKey)}
+                style={{
+                  background: isSelected ? 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)' : '#ffffff',
+                  border: isSelected ? '2px solid #0284c7' : '1.5px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '1.25rem',
+                  cursor: 'pointer',
+                  boxShadow: isSelected ? '0 8px 20px rgba(2, 132, 199, 0.15)' : '0 2px 8px rgba(0,0,0,0.03)',
+                  transition: 'all 0.15s ease',
+                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                }}
               >
-                {isRecommended && <span className="card-ribbon">⭐ Recommended</span>}
+                {isSelected && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      borderRadius: '9999px',
+                      padding: '2px 8px',
+                      fontSize: '0.7rem',
+                      fontWeight: '800',
+                    }}
+                  >
+                    ✓ Selected
+                  </span>
+                )}
 
-                {/* Card Header */}
-                <div className="transport-card-top">
-                  <span className="transport-card-icon">{option.icon}</span>
-                  <div>
-                    <h4 className="transport-card-name">{option.title}</h4>
-                    <span className="transport-card-frequency">{option.frequency_label}</span>
+                <div>
+                  <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{opt.icon}</div>
+                  <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '1.05rem', fontWeight: '800', color: '#0f172a' }}>
+                    {typeKey.toUpperCase()}
+                  </h4>
+                  <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '0.75rem', lineHeight: '1.4' }}>
+                    {opt.title}
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '0.5rem 0.75rem', borderRadius: '10px', marginBottom: '0.75rem', fontSize: '0.8rem' }}>
+                    <div>⏱️ <strong>Est. Time:</strong> {opt.duration}</div>
+                    <div style={{ marginTop: '0.2rem', color: '#0284c7' }}>🛣️ {opt.available_routes}</div>
                   </div>
                 </div>
 
-                {/* Metrics Grid */}
-                <div className="transport-card-metrics">
-                  <div className="metric-box">
-                    <span className="m-label">⏱️ Est. Time</span>
-                    <strong className="m-val">{option.duration_text}</strong>
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>Estimated Fare</div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#0f172a', marginBottom: '0.75rem' }}>
+                    {opt.price_display}
                   </div>
-                  <div className="metric-box">
-                    <span className="m-label">💵 {option.cost_label}</span>
-                    <strong className="m-val text-primary">{option.cost_text}</strong>
-                  </div>
-                  <div className="metric-box">
-                    <span className="m-label">📏 Distance</span>
-                    <strong className="m-val">{option.distance_text}</strong>
-                  </div>
-                  <div className="metric-box">
-                    <span className="m-label">🛋️ Comfort</span>
-                    <strong className="m-val">{'★'.repeat(Math.round(option.comfort_rating))}</strong>
-                  </div>
+
+                  <button
+                    type="button"
+                    style={{
+                      width: '100%',
+                      background: isSelected ? '#0284c7' : '#f1f5f9',
+                      color: isSelected ? '#ffffff' : '#0f172a',
+                      border: 'none',
+                      padding: '0.5rem',
+                      borderRadius: '8px',
+                      fontWeight: '700',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {isSelected ? 'Selected' : 'View Options'}
+                  </button>
                 </div>
-
-                {/* Key Features List */}
-                <ul className="transport-features-list">
-                  {option.features.map((feat, fIdx) => (
-                    <li key={fIdx}>
-                      <span className="feat-check">✓</span> {feat}
-                    </li>
-                  ))}
-                </ul>
-
-                {/* Pricing estimation note */}
-                <p className="transport-cost-breakdown">
-                  ℹ️ {option.cost_breakdown}
-                </p>
-
-                {/* Select Button */}
-                <button
-                  type="button"
-                  className={`btn transport-select-btn ${isSelected ? 'btn-success' : 'btn-outline'}`}
-                  onClick={() => handleSelectTransport(option)}
-                >
-                  {isSelected ? '✓ Transport Selected' : 'Select Transport'}
-                </button>
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Selected Transport Sticky / Footer Bar */}
-      {selectedTransport && (
-        <div className="selected-transport-banner">
-          <div className="selected-transport-info">
-            <span className="selected-icon">{selectedTransport.icon}</span>
-            <div>
-              <span className="selected-tag">Selected Transport</span>
-              <h4 className="selected-name">{selectedTransport.title}</h4>
-              <p className="selected-details">
-                Estimated Cost: <strong>{selectedTransport.cost_text}</strong> • Travel Time:{' '}
-                <strong>{selectedTransport.duration_text}</strong> • Distance:{' '}
-                <strong>{selectedTransport.distance_text}</strong>
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className="btn btn-primary btn-continue-planning"
-            onClick={handleContinue}
-          >
-            ✈️ Continue to Trip Planning ➜
-          </button>
-        </div>
-      )}
-
-      {/* Notice Banner */}
-      {showContinueNotice && (
-        <div className="place-modal-plan-notice" style={{ marginTop: '1rem' }}>
-          <span>✈️</span>
+      {/* Feature 6: 🔥 Travel Promos / Demo Offers Section */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+          border: '1.5px solid #fde68a',
+          borderRadius: '20px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '1rem' }}>
           <div>
-            <strong>Transport Choice Saved! ({selectedTransport?.title})</strong>
-            <p>
-              Your transport selection ({selectedTransport?.cost_text}, {selectedTransport?.duration_text}) is saved and will be automatically loaded into the full Trip Planner and Itinerary generator in the next phase!
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '1.4rem' }}>🔥</span>
+              <h4 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#92400e' }}>
+                Travel Promos & Discounts
+              </h4>
+              <span style={{ background: '#fef08a', color: '#854d0e', border: '1px solid #facc15', padding: '2px 8px', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '800' }}>
+                Demo Offer
+              </span>
+            </div>
+            <p style={{ margin: '0.2rem 0 0', color: '#b45309', fontSize: '0.85rem' }}>
+              Apply verified promotional concessions on your selected transport.
             </p>
           </div>
         </div>
-      )}
 
-      {/* Disclaimer */}
-      <p className="transport-disclaimer">
-        ⚠️ <strong>Note on Fares:</strong> All prices and durations shown are approximate estimates based on standard distance tariffs, fuel averages, and toll calculations. Real booking fares may vary with traffic, surge, and seasonal availability.
-      </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '0.85rem' }}>
+          {DEMO_PROMOS.map((promo) => {
+            const isApplied = appliedPromo?.id === promo.id;
+
+            return (
+              <div
+                key={promo.id}
+                style={{
+                  background: '#ffffff',
+                  border: isApplied ? '2px solid #ca8a04' : '1px solid #fcd34d',
+                  borderRadius: '14px',
+                  padding: '1rem',
+                  boxShadow: '0 2px 8px rgba(202, 138, 4, 0.1)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                    <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                      {promo.title}
+                    </span>
+                    <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', whiteSpace: 'nowrap' }}>
+                      {promo.discountLabel}
+                    </span>
+                  </div>
+
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '0.5rem' }}>
+                    {promo.description}
+                  </div>
+
+                  <div style={{ fontSize: '0.72rem', color: '#92400e', fontWeight: '700', marginBottom: '0.75rem' }}>
+                    🎯 {promo.transportLabel} • {promo.validity}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleApplyPromo(promo)}
+                  style={{
+                    background: isApplied ? '#16a34a' : '#0f172a',
+                    color: '#ffffff',
+                    border: 'none',
+                    padding: '0.45rem 0.8rem',
+                    borderRadius: '8px',
+                    fontWeight: '700',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {isApplied ? '✓ Promo Applied' : `Apply Deal (${promo.code})`}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Feature 7: Trip Summary Card */}
+      <div
+        style={{
+          background: '#ffffff',
+          borderRadius: '20px',
+          border: '2px solid #0284c7',
+          padding: '1.75rem',
+          boxShadow: '0 8px 24px rgba(2, 132, 199, 0.12)',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem' }}>
+          <div>
+            <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              ✨ TRIP SUMMARY OVERVIEW
+            </span>
+            <h4 style={{ margin: '0.2rem 0', fontSize: '1.3rem', fontWeight: '900', color: '#0f172a' }}>
+              {destination?.name || 'Selected Destination'} Journey
+            </h4>
+          </div>
+
+          <div style={{ textAlign: 'right' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>
+              Estimated Total (Transport)
+            </span>
+            <div style={{ fontSize: '1.8rem', fontWeight: '900', color: '#0284c7' }}>
+              ₹{finalTotal.toLocaleString()}
+            </div>
+            {discountValue > 0 && (
+              <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '800' }}>
+                🎉 You save ₹{discountValue.toLocaleString()} with {appliedPromo?.code}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Summary Grid Details */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', marginBottom: '1.5rem', fontSize: '0.85rem' }}>
+          <div>
+            <span style={{ color: '#64748b' }}>📍 Starting From:</span>
+            <div style={{ fontWeight: '800', color: '#0f172a' }}>{origin?.city || 'Current Location'}</div>
+          </div>
+
+          <div>
+            <span style={{ color: '#64748b' }}>🗺️ Destination:</span>
+            <div style={{ fontWeight: '800', color: '#0f172a' }}>{destination?.name || 'Destination'}</div>
+          </div>
+
+          <div>
+            <span style={{ color: '#64748b' }}>📏 Distance:</span>
+            <div style={{ fontWeight: '800', color: '#0284c7' }}>{distanceKm ? `${distanceKm} km` : 'Calculated Live'}</div>
+          </div>
+
+          <div>
+            <span style={{ color: '#64748b' }}>⏱️ Travel Time:</span>
+            <div style={{ fontWeight: '800', color: '#16a34a' }}>{currentOption?.duration || duration || '2-4 hrs'}</div>
+          </div>
+
+          <div>
+            <span style={{ color: '#64748b' }}>🚗 Transport Mode:</span>
+            <div style={{ fontWeight: '800', color: '#0f172a' }}>{currentOption?.icon} {selectedType.toUpperCase()}</div>
+          </div>
+
+          <div>
+            <span style={{ color: '#64748b' }}>🎁 Promo Code:</span>
+            <div style={{ fontWeight: '800', color: appliedPromo ? '#16a34a' : '#94a3b8' }}>
+              {appliedPromo ? appliedPromo.code : 'None applied'}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleContinuePlanning}
+          className="btn btn-primary full-width"
+          style={{
+            padding: '0.9rem',
+            borderRadius: '12px',
+            fontWeight: '900',
+            fontSize: '1rem',
+            boxShadow: '0 8px 20px rgba(2, 132, 199, 0.3)',
+            cursor: 'pointer',
+          }}
+        >
+          Continue Planning This Journey →
+        </button>
+      </div>
     </div>
   );
 }

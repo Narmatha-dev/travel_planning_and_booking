@@ -3,16 +3,16 @@ import locationService from '../services/locationService';
 import weatherService from '../services/weatherService';
 
 const TRAVEL_MODES = [
-  { key: 'driving', label: '🚗 Driving', googleKey: 'DRIVING' },
-  { key: 'transit', label: '🚌 Transit', googleKey: 'TRANSIT' },
-  { key: 'walking', label: '🚶 Walking', googleKey: 'WALKING' },
-  { key: 'bicycling', label: '🚲 Bicycling', googleKey: 'BICYCLING' },
+  { key: 'driving', label: '🚗 Car', googleKey: 'DRIVING' },
+  { key: 'transit', label: '🚌 Bus', googleKey: 'TRANSIT' },
+  { key: 'train', label: '🚆 Train', googleKey: 'TRANSIT' },
+  { key: 'flight', label: '✈️ Flight', googleKey: 'DRIVING' },
 ];
 
 export default function InteractiveMapSection({
   origin, // { latitude, longitude, city, label }
   destination, // { latitude, longitude, name, address, category }
-  title = 'Route & Live Navigation',
+  title = 'Route & Travel Information',
   onPlanTripClick,
 }) {
   const [travelMode, setTravelMode] = useState('driving');
@@ -21,11 +21,9 @@ export default function InteractiveMapSection({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
-  const [showPlanNotice, setShowPlanNotice] = useState(false);
 
   const mapContainerRef = useRef(null);
   const googleMapInstanceRef = useRef(null);
-  const directionsRendererRef = useRef(null);
 
   const oLat = origin?.latitude;
   const oLng = origin?.longitude;
@@ -56,12 +54,12 @@ export default function InteractiveMapSection({
             if (isMounted) setGoogleMapsLoaded(true);
           };
           script.onerror = () => {
-            console.warn('[Map] Google Maps JavaScript API load error. Using built-in vector router.');
+            console.warn('[Map] Google Maps JS API unavailable. Using vector map.');
           };
           document.head.appendChild(script);
         }
       } catch (err) {
-        console.warn('[Map] Map config check error:', err.message);
+        console.warn('[Map] Map config check:', err.message);
       }
     }
 
@@ -91,16 +89,29 @@ export default function InteractiveMapSection({
           originLng: oLng,
           destLat: dLat,
           destLng: dLng,
-          travelMode,
+          travelMode: travelMode === 'flight' || travelMode === 'train' ? 'transit' : travelMode,
         });
 
         if (isMounted) {
-          setRouteData(data);
+          let adjustedData = { ...data };
+          const distKm = parseFloat(data.distance_km || 300);
+
+          if (travelMode === 'flight') {
+            const flightHours = (distKm / 750) + 1.5; // flight cruise + boarding
+            adjustedData.duration_text = `${flightHours.toFixed(1)} hrs (Flight)`;
+            adjustedData.duration_minutes = Math.round(flightHours * 60);
+          } else if (travelMode === 'train') {
+            const trainHours = distKm / 65;
+            adjustedData.duration_text = `${Math.floor(trainHours)} hrs ${Math.round((trainHours % 1) * 60)} min (Express Rail)`;
+            adjustedData.duration_minutes = Math.round(trainHours * 60);
+          }
+
+          setRouteData(adjustedData);
         }
       } catch (err) {
         if (isMounted) {
           console.warn('[Map] Route calculation error:', err.message);
-          setError('Unable to calculate route right now. Please try again.');
+          setError('Unable to calculate route right now.');
         }
       } finally {
         if (isMounted) {
@@ -128,152 +139,86 @@ export default function InteractiveMapSection({
     };
   }, [oLat, oLng, dLat, dLng, travelMode]);
 
-  // 3. Render Google Maps if loaded
-  useEffect(() => {
-    if (!googleMapsLoaded || !window.google?.maps || !mapContainerRef.current || !oLat || !dLat) {
-      return;
-    }
+  // Dynamic coordinates for SVG rendering
+  let originX = 100;
+  let originY = 200;
+  let destX = 400;
+  let destY = 100;
+  let pathD = `M 100 200 Q 250 80 400 100`;
 
-    try {
-      const google = window.google;
-      const originLatLng = new google.maps.LatLng(oLat, oLng);
-      const destLatLng = new google.maps.LatLng(dLat, dLng);
+  if (oLat && oLng && dLat && dLng) {
+    const latSpan = Math.abs(dLat - oLat) || 1;
+    const lngSpan = Math.abs(dLng - oLng) || 1;
 
-      if (!googleMapInstanceRef.current) {
-        const map = new google.maps.Map(mapContainerRef.current, {
-          zoom: 12,
-          center: originLatLng,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: true,
-        });
-        googleMapInstanceRef.current = map;
+    originX = 80 + Math.min(340, Math.max(0, ((oLng - Math.min(oLng, dLng)) / lngSpan) * 340));
+    originY = 220 - Math.min(160, Math.max(0, ((oLat - Math.min(oLat, dLat)) / latSpan) * 160));
 
-        const directionsRenderer = new google.maps.DirectionsRenderer({
-          map,
-          suppressMarkers: false,
-          polylineOptions: {
-            strokeColor: '#0284c7',
-            strokeWeight: 5,
-            strokeOpacity: 0.85,
-          },
-        });
-        directionsRendererRef.current = directionsRenderer;
-      }
+    destX = 80 + Math.min(340, Math.max(0, ((dLng - Math.min(oLng, dLng)) / lngSpan) * 340));
+    destY = 220 - Math.min(160, Math.max(0, ((dLat - Math.min(oLat, dLat)) / latSpan) * 160));
 
-      // Query Google Directions Service on client if available
-      const directionsService = new google.maps.DirectionsService();
-      const activeMode = TRAVEL_MODES.find((m) => m.key === travelMode)?.googleKey || 'DRIVING';
-
-      directionsService.route(
-        {
-          origin: originLatLng,
-          destination: destLatLng,
-          travelMode: google.maps.TravelMode[activeMode],
-        },
-        (result, status) => {
-          if (status === google.maps.DirectionsStatus.OK && directionsRendererRef.current) {
-            directionsRendererRef.current.setDirections(result);
-          }
-        }
-      );
-    } catch (gMapErr) {
-      console.warn('[Map] Google Maps rendering warning:', gMapErr.message);
-    }
-  }, [googleMapsLoaded, oLat, oLng, dLat, dLng, travelMode]);
-
-  if (!oLat || !dLat) {
-    return (
-      <div className="map-section-wrapper">
-        <div className="map-empty-state">
-          <span style={{ fontSize: '1.5rem' }}>📍</span>
-          <p>Location coordinates are required to display the interactive route map.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const googleMapsAppUrl =
-    routeData?.google_maps_directions_url ||
-    `https://www.google.com/maps/dir/?api=1&origin=${oLat},${oLng}&destination=${dLat},${dLng}&travelmode=${travelMode}`;
-
-  const handlePlanClick = () => {
-    if (onPlanTripClick) {
-      onPlanTripClick();
-    } else {
-      setShowPlanNotice(true);
-      setTimeout(() => setShowPlanNotice(false), 4500);
-    }
-  };
-
-  // Compute SVG viewBox for the interactive vector map fallback
-  const minLat = Math.min(oLat, dLat);
-  const maxLat = Math.max(oLat, dLat);
-  const minLng = Math.min(oLng, dLng);
-  const maxLng = Math.max(oLng, dLng);
-  const latDiff = Math.max(maxLat - minLat, 0.05);
-  const lngDiff = Math.max(maxLng - minLng, 0.05);
-  const padLat = latDiff * 0.25;
-  const padLng = lngDiff * 0.25;
-
-  const toSvgX = (lng) => {
-    const min = minLng - padLng;
-    const max = maxLng + padLng;
-    return ((lng - min) / (max - min)) * 500;
-  };
-
-  const toSvgY = (lat) => {
-    const min = minLat - padLat;
-    const max = maxLat + padLat;
-    return 300 - ((lat - min) / (max - min)) * 300;
-  };
-
-  const originX = toSvgX(oLng);
-  const originY = toSvgY(oLat);
-  const destX = toSvgX(dLng);
-  const destY = toSvgY(dLat);
-
-  // Generate SVG polyline path string
-  let pathD = `M ${originX} ${originY}`;
-  if (routeData?.route_points && routeData.route_points.length > 2) {
-    // Sample up to 40 points for smooth rendering
-    const step = Math.max(1, Math.floor(routeData.route_points.length / 40));
-    for (let i = 0; i < routeData.route_points.length; i += step) {
-      const [ptLat, ptLng] = routeData.route_points[i];
-      pathD += ` L ${toSvgX(ptLng)} ${toSvgY(ptLat)}`;
-    }
-    pathD += ` L ${destX} ${destY}`;
-  } else {
-    // Smooth quadratic curve between origin and destination
-    const midX = (originX + destX) / 2 + (destY - originY) * 0.15;
-    const midY = (originY + destY) / 2 + (originX - destX) * 0.15;
+    const midX = (originX + destX) / 2;
+    const midY = Math.min(originY, destY) - 35;
     pathD = `M ${originX} ${originY} Q ${midX} ${midY} ${destX} ${destY}`;
   }
 
+  const googleMapsAppUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(
+    origin?.city || `${oLat},${oLng}`
+  )}&destination=${encodeURIComponent(
+    destination?.name || `${dLat},${dLng}`
+  )}&travelmode=${travelMode === 'flight' ? 'transit' : travelMode}`;
+
   return (
-    <div className="interactive-map-section">
-      <div className="map-card">
-        {/* Map Header */}
-        <div className="map-card-header">
-          <div>
-            <span className="eyebrow">Interactive Navigation</span>
-            <h3 className="map-card-title">{title}</h3>
-            <p className="map-card-subtitle">
-              From <strong style={{ color: '#0f172a' }}>{origin?.city || 'Your Location'}</strong> to{' '}
-              <strong style={{ color: '#0284c7' }}>{destination?.name || 'Selected Destination'}</strong>
-            </p>
-            {destWeather && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 10px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: '700', color: '#166534', marginTop: '0.35rem' }}>
-                <span>{destWeather.icon || '🌤️'}</span>
-                <span>{destWeather.temperature}°C {destWeather.condition}</span>
-                <span style={{ color: '#0284c7' }}>• 🌧️ {destWeather.rain_probability}% Rain</span>
-                <span style={{ color: '#15803d' }}>• {destWeather.outdoor_suitability}</span>
-              </div>
-            )}
+    <div className="interactive-map-section" style={{ borderRadius: '20px', overflow: 'hidden' }}>
+      <div className="map-card" style={{ background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0', padding: '1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.04)' }}>
+        {/* Visual Route Header (Feature 4 Requirement) */}
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+            border: '1.5px solid #bae6fd',
+            borderRadius: '16px',
+            padding: '1rem 1.25rem',
+            marginBottom: '1.25rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#0284c7' }}>
+              📍 {origin?.city || 'Current Location'}
+            </span>
+            <span style={{ color: '#64748b' }}>➔</span>
+            <span style={{ background: '#0284c7', color: '#ffffff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+              ROUTE
+            </span>
+            <span style={{ color: '#64748b' }}>➔</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#15803d' }}>
+              🗺️ {destination?.name || 'Destination'}
+            </span>
           </div>
 
-          {/* Travel Mode Selector */}
-          <div className="map-mode-selector">
+          {destWeather && (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#ffffff', border: '1px solid #bbf7d0', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: '700', color: '#166534' }}>
+              <span>{destWeather.icon || '🌤️'}</span>
+              <span>{destWeather.temperature}°C {destWeather.condition}</span>
+              <span style={{ color: '#0284c7' }}>• 🌧️ {destWeather.rain_probability}% Rain</span>
+            </div>
+          )}
+        </div>
+
+        {/* Map Controls Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '800', color: '#0f172a' }}>{title}</h3>
+            <p style={{ margin: '0.2rem 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+              Live distance and travel duration between origin and destination
+            </p>
+          </div>
+
+          {/* Transport Mode Switcher */}
+          <div style={{ display: 'flex', gap: '0.4rem', background: '#f1f5f9', padding: '4px', borderRadius: '12px' }}>
             {TRAVEL_MODES.map((mode) => (
               <button
                 key={mode.key}
@@ -281,6 +226,17 @@ export default function InteractiveMapSection({
                 className={`map-mode-btn ${travelMode === mode.key ? 'active' : ''}`}
                 onClick={() => setTravelMode(mode.key)}
                 disabled={loading}
+                style={{
+                  background: travelMode === mode.key ? '#0284c7' : 'transparent',
+                  color: travelMode === mode.key ? '#ffffff' : '#475569',
+                  border: 'none',
+                  padding: '0.45rem 0.9rem',
+                  borderRadius: '8px',
+                  fontSize: '0.82rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
               >
                 {mode.label}
               </button>
@@ -289,27 +245,21 @@ export default function InteractiveMapSection({
         </div>
 
         {/* Map Canvas / Visualizer Container */}
-        <div className="map-canvas-container">
-          {/* 1. Google Maps Canvas */}
+        <div className="map-canvas-container" style={{ position: 'relative', height: '280px', borderRadius: '16px', overflow: 'hidden', background: '#0f172a' }}>
           <div
             ref={mapContainerRef}
             className={`google-map-embed ${googleMapsLoaded ? 'active' : 'hidden'}`}
-            style={{ width: '100%', height: '320px', borderRadius: '16px' }}
+            style={{ width: '100%', height: '100%' }}
           />
 
-          {/* 2. Interactive SVG Map Visualizer (Active when Google Maps key is not set or loading) */}
           {!googleMapsLoaded && (
-            <div className="vector-map-viewport">
+            <div className="vector-map-viewport" style={{ width: '100%', height: '100%', position: 'relative' }}>
               <div className="vector-map-bg-grid" />
-              <svg
-                viewBox="0 0 500 300"
-                className="vector-map-svg"
-                preserveAspectRatio="xMidYMid meet"
-              >
+              <svg viewBox="0 0 500 280" className="vector-map-svg" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%' }}>
                 <defs>
                   <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#0284c7" />
-                    <stop offset="100%" stopColor="#0ea5e9" />
+                    <stop offset="100%" stopColor="#38bdf8" />
                   </linearGradient>
                   <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
                     <feDropShadow dx="0" dy="2" stdDeviation="4" floodColor="#0284c7" floodOpacity="0.4" />
@@ -317,13 +267,7 @@ export default function InteractiveMapSection({
                 </defs>
 
                 {/* Route Path */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke="#cbd5e1"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                />
+                <path d={pathD} fill="none" stroke="#334155" strokeWidth="8" strokeLinecap="round" />
                 <path
                   d={pathD}
                   fill="none"
@@ -334,108 +278,86 @@ export default function InteractiveMapSection({
                   className="animated-route-stroke"
                 />
 
-                {/* Origin Marker (User GPS) */}
+                {/* Origin Marker */}
                 <g transform={`translate(${originX}, ${originY})`} className="svg-marker origin-marker">
                   <circle r="16" fill="#0284c7" fillOpacity="0.25" className="marker-pulse" />
                   <circle r="9" fill="#0284c7" stroke="#ffffff" strokeWidth="2.5" />
-                  <text y="24" textAnchor="middle" fill="#0f172a" fontSize="11" fontWeight="700">
-                    📍 You
+                  <text y="24" textAnchor="middle" fill="#f8fafc" fontSize="11" fontWeight="700">
+                    📍 {origin?.city || 'Origin'}
                   </text>
                 </g>
 
-                {/* Destination Marker (Target Place) */}
+                {/* Destination Marker */}
                 <g transform={`translate(${destX}, ${destY})`} className="svg-marker dest-marker">
                   <circle r="18" fill="#ef4444" fillOpacity="0.2" className="marker-pulse" />
                   <circle r="10" fill="#ef4444" stroke="#ffffff" strokeWidth="2.5" />
-                  <text y="24" textAnchor="middle" fill="#0f172a" fontSize="11" fontWeight="700">
-                    📌 {destination?.name?.length > 15 ? destination.name.substring(0, 15) + '...' : destination?.name || 'Destination'}
+                  <text y="24" textAnchor="middle" fill="#f8fafc" fontSize="11" fontWeight="700">
+                    📌 {destination?.name || 'Destination'}
                   </text>
                 </g>
               </svg>
 
-              <div className="vector-map-overlay-badge">
-                <span>📍 Live Route Preview</span>
+              <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', color: '#38bdf8', padding: '4px 10px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '700' }}>
+                📍 Interactive Route Visualizer
               </div>
             </div>
           )}
 
-          {/* Loading Overlay */}
           {loading && (
-            <div className="map-loading-overlay">
-              <div className="location-pulse-indicator" />
-              <span>Calculating live route & distance...</span>
-            </div>
-          )}
-
-          {/* Error Overlay */}
-          {error && !loading && (
-            <div className="map-error-overlay">
-              <p>⚠️ {error}</p>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => setTravelMode(travelMode)}
-              >
-                Retry Route
-              </button>
+            <div className="map-loading-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', gap: '0.75rem' }}>
+              <span>Calculating live route telemetry...</span>
             </div>
           )}
         </div>
 
         {/* Route Metrics & Distance Bar */}
-        <div className="map-metrics-bar">
-          <div className="metric-item">
-            <span className="metric-label">📏 Road Distance</span>
-            <strong className="metric-value text-primary">
-              {routeData?.distance_text || (routeData?.distance_km ? `${routeData.distance_km} km` : 'Calculating...')}
-            </strong>
+        <div
+          style={{
+            marginTop: '1.25rem',
+            paddingTop: '1rem',
+            borderTop: '1px solid #e2e8f0',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1rem',
+          }}
+        >
+          <div style={{ display: 'flex', gap: '1.75rem', flexWrap: 'wrap' }}>
+            <div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>📏 Total Distance</span>
+              <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#0284c7' }}>
+                {routeData?.distance_text || (routeData?.distance_km ? `${routeData.distance_km} km` : 'Calculating...')}
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>⏱️ Est. Duration</span>
+              <div style={{ fontSize: '1.25rem', fontWeight: '900', color: '#16a34a' }}>
+                {routeData?.duration_text || 'Calculating...'}
+              </div>
+            </div>
+
+            <div>
+              <span style={{ fontSize: '0.75rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>🚦 Selected Mode</span>
+              <div style={{ fontSize: '1rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                {TRAVEL_MODES.find((m) => m.key === travelMode)?.label || travelMode}
+              </div>
+            </div>
           </div>
 
-          <div className="metric-item">
-            <span className="metric-label">⏱️ Estimated Time</span>
-            <strong className="metric-value text-success">
-              {routeData?.duration_text || 'Calculating...'}
-            </strong>
-          </div>
-
-          <div className="metric-item">
-            <span className="metric-label">🚦 Travel Mode</span>
-            <span className="metric-mode-tag">
-              {TRAVEL_MODES.find((m) => m.key === travelMode)?.label || travelMode}
-            </span>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="map-actions-group">
+          <div style={{ display: 'flex', gap: '0.6rem' }}>
             <a
               href={googleMapsAppUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn btn-outline btn-sm btn-nav-maps"
+              className="btn btn-outline btn-sm"
+              style={{ fontWeight: '700' }}
             >
               🗺️ Open in Google Maps ↗
             </a>
-
-            <button
-              type="button"
-              className="btn btn-primary btn-sm btn-plan-trip-map"
-              onClick={handlePlanClick}
-            >
-              ✈️ Plan This Trip
-            </button>
           </div>
         </div>
-
-        {/* Plan notice banner */}
-        {showPlanNotice && (
-          <div className="place-modal-plan-notice" style={{ margin: '1rem 1.25rem 0' }}>
-            <span>✈️</span>
-            <div>
-              <strong>Trip Planning Coming Soon!</strong>
-              <p>Itinerary planning, budgets, and transport booking for {destination?.name} will be active in future phases.</p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

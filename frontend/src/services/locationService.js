@@ -2,20 +2,67 @@ import api from './api';
 
 const locationService = {
   /**
+   * Check browser geolocation permission state ('granted' | 'denied' | 'prompt')
+   */
+  async getPermissionState() {
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      try {
+        const status = await navigator.permissions.query({ name: 'geolocation' });
+        return status.state; // 'granted' | 'denied' | 'prompt'
+      } catch (err) {
+        console.warn('[Location] Permissions query not supported:', err.message);
+        return 'prompt';
+      }
+    }
+    return 'prompt';
+  },
+
+  /**
    * Requests GPS coordinates from the browser Geolocation API
+   * Implements robust two-tier fallback: High Accuracy -> Standard Accuracy
    */
   getCurrentCoordinates() {
     return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
+      if (typeof navigator === 'undefined' || !navigator.geolocation) {
         const error = new Error('Geolocation is not supported by your browser.');
         error.code = 'NOT_SUPPORTED';
         return reject(error);
       }
 
-      const options = {
+      // Step 1: Attempt high accuracy first
+      const highAccuracyOptions = {
         enableHighAccuracy: true,
+        timeout: 6000,
+        maximumAge: 0,
+      };
+
+      const fallbackLowAccuracyOptions = {
+        enableHighAccuracy: false,
         timeout: 10000,
-        maximumAge: 60000, // 1 minute cache
+        maximumAge: 60000,
+      };
+
+      const mapGeoError = (geoError) => {
+        const error = new Error();
+        switch (geoError.code) {
+          case geoError.PERMISSION_DENIED:
+            error.code = 'PERMISSION_DENIED';
+            error.message =
+              'Location access is blocked. Please enable location permission in your browser settings.';
+            break;
+          case geoError.POSITION_UNAVAILABLE:
+            error.code = 'POSITION_UNAVAILABLE';
+            error.message = 'Location information is unavailable on this device.';
+            break;
+          case geoError.TIMEOUT:
+            error.code = 'TIMEOUT';
+            error.message = 'Location request timed out. Please try again.';
+            break;
+          default:
+            error.code = 'UNKNOWN_ERROR';
+            error.message = geoError.message || 'An unknown error occurred while retrieving location.';
+        }
+        return error;
       };
 
       navigator.geolocation.getCurrentPosition(
@@ -26,29 +73,29 @@ const locationService = {
             accuracy: position.coords.accuracy,
           });
         },
-        (geoError) => {
-          const error = new Error();
-          switch (geoError.code) {
-            case geoError.PERMISSION_DENIED:
-              error.code = 'PERMISSION_DENIED';
-              error.message =
-                'Location access is disabled. Please allow location permission to get personalized travel recommendations.';
-              break;
-            case geoError.POSITION_UNAVAILABLE:
-              error.code = 'POSITION_UNAVAILABLE';
-              error.message = 'Location information is unavailable on this device.';
-              break;
-            case geoError.TIMEOUT:
-              error.code = 'TIMEOUT';
-              error.message = 'Location request timed out. Please try again.';
-              break;
-            default:
-              error.code = 'UNKNOWN_ERROR';
-              error.message = geoError.message || 'An unknown error occurred while retrieving location.';
+        (highAccError) => {
+          // If user explicitly denied, do not retry
+          if (highAccError.code === highAccError.PERMISSION_DENIED) {
+            return reject(mapGeoError(highAccError));
           }
-          reject(error);
+
+          console.warn('[Location] High accuracy failed, attempting standard accuracy fallback...');
+          // Step 2: Fallback to standard accuracy
+          navigator.geolocation.getCurrentPosition(
+            (fallbackPosition) => {
+              resolve({
+                latitude: fallbackPosition.coords.latitude,
+                longitude: fallbackPosition.coords.longitude,
+                accuracy: fallbackPosition.coords.accuracy,
+              });
+            },
+            (fallbackError) => {
+              reject(mapGeoError(fallbackError));
+            },
+            fallbackLowAccuracyOptions
+          );
         },
-        options
+        highAccuracyOptions
       );
     });
   },
@@ -64,15 +111,31 @@ const locationService = {
   },
 
   /**
-   * High-level helper: Fetches GPS and reverse-geocodes in one step
+   * High-level helper: Fetches real browser GPS and reverse-geocodes in one seamless step
    */
   async detectCurrentLocation() {
     const coords = await this.getCurrentCoordinates();
-    const geocoded = await this.reverseGeocode(coords.latitude, coords.longitude);
+
+    let geocoded = null;
+    try {
+      geocoded = await this.reverseGeocode(coords.latitude, coords.longitude);
+    } catch (geoErr) {
+      console.warn('[Location] Reverse geocoding endpoint failed, using coordinates fallback:', geoErr.message);
+      geocoded = {
+        city: 'Detected Location',
+        state: '',
+        country: 'India',
+        formatted_address: `Lat: ${coords.latitude.toFixed(4)}, Lng: ${coords.longitude.toFixed(4)}`,
+      };
+    }
+
     return {
       ...geocoded,
+      latitude: coords.latitude,
+      longitude: coords.longitude,
       accuracy: coords.accuracy,
       detectedAt: new Date().toISOString(),
+      isManual: false,
     };
   },
 
