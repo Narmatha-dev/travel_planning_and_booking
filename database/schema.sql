@@ -333,5 +333,26 @@ CREATE TABLE `notifications` (
     REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- -----------------------------------------------------
+-- 11. Table: trusted_contacts
+-- Description: Emergency trusted contacts saved per user (Phase 25)
+-- -----------------------------------------------------
+DROP TABLE IF EXISTS `trusted_contacts`;
+CREATE TABLE `trusted_contacts` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT UNSIGNED NOT NULL,
+  `name` VARCHAR(120) NOT NULL,
+  `phone` VARCHAR(30) NOT NULL,
+  `relationship` VARCHAR(50) DEFAULT 'Family',
+  `email` VARCHAR(191) DEFAULT NULL,
+  `is_primary` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_trusted_contacts_user_id` (`user_id`),
+  CONSTRAINT `fk_trusted_contacts_user` FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Restore foreign key checks
 SET FOREIGN_KEY_CHECKS = @OLD_FOREIGN_KEY_CHECKS;

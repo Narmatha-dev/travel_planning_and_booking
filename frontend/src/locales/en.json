@@ -169,6 +169,37 @@
     "shareLocationTitle": "Share My Location Update",
     "findingNearby": "Searching verified nearby emergency services...",
     "noPlacesFoundTitle": "No nearby facilities found within the selected radius."
+  },
+  "weather": {
+    "weather": "Weather",
+    "title": "Destination Weather",
+    "currentWeather": "Current Weather",
+    "forecast": "Weather Forecast",
+    "multiDayForecast": "Multi-Day Forecast",
+    "temperature": "Temperature",
+    "feelsLike": "Feels Like",
+    "rain": "Rain",
+    "rainChance": "Rain Chance",
+    "humidity": "Humidity",
+    "wind": "Wind",
+    "outdoorSuitability": "Outdoor Suitability",
+    "good": "Good",
+    "moderate": "Moderate",
+    "poor": "Poor",
+    "smartSuggestion": "Smart Weather Suggestion",
+    "weatherAlert": "Weather Advisory",
+    "indoorAlternatives": "Indoor Alternatives",
+    "outdoorPlaces": "Recommended Outdoor Places",
+    "weatherAwareItinerary": "Weather-Aware Itinerary",
+    "preferOutdoor": "Prefer Outdoor Activities",
+    "preferIndoor": "Prefer Indoor Activities",
+    "currentLocationWeather": "Current Location Weather",
+    "loadingWeather": "Loading weather data...",
+    "weatherUnavailable": "Weather information is temporarily unavailable.",
+    "viewForecast": "View Forecast",
+    "hideForecast": "Hide Forecast",
+    "forecastNotAvailable": "Weather forecast not available yet for this future date.",
+    "liveSatelliteData": "Live meteorological data powered by Open-Meteo"
   }
 }
 

@@ -1,4 +1,5 @@
 const config = require('../config/environment');
+const weatherService = require('./weatherService');
 
 // In-memory multi-turn session history & conversational context store
 const sessionHistories = new Map();
@@ -467,11 +468,122 @@ const chatbotService = {
     const actionLinks = [];
 
     // ==========================================
-    // 4. MULTI-TURN CONTEXTUAL INTENT ROUTING (Phase 14 Enhanced)
+    // 4. MULTI-TURN CONTEXTUAL INTENT ROUTING (Phase 14 & 26 Enhanced)
     // ==========================================
 
-    // Intent P14-1: Suggest Places Near Me / GPS Location (Feature 3 & 4)
+    // Intent P26: Live Weather, Rain Forecast & Indoor/Outdoor Suggestions (Phase 26)
     if (
+      query.includes('weather') ||
+      query.includes('rain') ||
+      query.includes('climate') ||
+      query.includes('temperature') ||
+      query.includes('forecast') ||
+      query.includes('வானிலை') ||
+      query.includes('மழை') ||
+      query.includes('வெப்பநிலை') ||
+      query.includes('indoor places') ||
+      query.includes('outdoor places') ||
+      query.includes('will it rain') ||
+      query.includes('should i visit outdoor') ||
+      query.includes('suggest indoor') ||
+      query.includes('mazhai') ||
+      query.includes('kaanilai')
+    ) {
+      const targetDestName = matchedDest?.name || 'Ooty';
+      const coords = weatherService.resolveCoordinates(targetDestName) || { latitude: 11.41, longitude: 76.70, city: targetDestName };
+      
+      let weatherData = null;
+      let forecastData = null;
+      try {
+        const [curr, fc] = await Promise.all([
+          weatherService.getCurrentWeather(coords.latitude, coords.longitude, coords.city || targetDestName),
+          weatherService.getWeatherForecast(coords.latitude, coords.longitude, 5, coords.city || targetDestName),
+        ]);
+        weatherData = curr;
+        forecastData = fc;
+      } catch (wErr) {
+        console.warn('[Chatbot] Weather fetch error:', wErr.message);
+      }
+
+      const catalog = weatherService.getIndoorOutdoorCatalog(targetDestName);
+
+      if (weatherData && weatherData.weather_available && weatherData.current) {
+        const c = weatherData.current;
+        const rainChance = c.rain_probability !== undefined ? c.rain_probability : (c.is_rainy ? 80 : 15);
+        const willRain = c.is_rainy || rainChance >= 50;
+
+        if (lang === 'ta') {
+          reply = `### 🌤️ ${targetDestName} நேரலை வானிலை & பயண முன்னறிவிப்பு\n\n` +
+            `* **வெப்பநிலை:** **${c.temperature}°C** (உணரப்படுவது: ${c.apparent_temperature}°C)\n` +
+            `* **வானிலை நிலை:** ${c.icon} **${c.condition}**\n` +
+            `* **மழை வாய்ப்பு:** **${rainChance}%** ${willRain ? '(மழை பெய்ய வாய்ப்புள்ளது 🌧️)' : '(மழை வாய்ப்பு குறைவு ☀️)'}\n` +
+            `* **காற்று வேகம்:** ${c.wind_speed} கி.மீ/மணி | **ஈரப்பதம்:** ${c.humidity}%\n` +
+            `* **வெளிப்புற பயண தகுதி:** **${c.outdoor_suitability === 'Good' ? 'நன்று (Good)' : c.outdoor_suitability === 'Moderate' ? 'மிதமானது (Moderate)' : 'குறைவு (Poor)'}**\n\n` +
+            `💡 **வானிலை ஆலோசனை:** ${c.smart_suggestion}\n\n`;
+
+          if (willRain || query.includes('indoor') || query.includes('மழை')) {
+            reply += `🏛️ **பரிந்துரைக்கப்பட்ட உள்ளரங்கு சுற்றுலா இடங்கள் (Indoor Places):**\n` +
+              catalog.indoor.slice(0, 3).map((p) => `* **${p.name}:** ${p.reason}`).join('\n') + '\n\n';
+          }
+
+          if (forecastData?.days?.length > 0) {
+            reply += `📅 **அடுத்த 3 நாட்கள் முன்னறிவிப்பு:**\n` +
+              forecastData.days.slice(0, 3).map((d) => `* **${d.day_name} (${d.date}):** ${d.icon} ${d.temperature_max}°C / ${d.temperature_min}°C • மழை: ${d.rain_probability}%`).join('\n') + '\n\n';
+          }
+          reply += `*தகவல் ஆதாரம்: Open-Meteo உலகளாவிய நேரலை வானிலை சேவை (${new Date(c.timestamp).toLocaleTimeString()}).*`;
+        } else if (lang === 'thanglish') {
+          reply = `### 🌤️ ${targetDestName} Live Weather & Travel Forecast\n\n` +
+            `* **Temperature:** **${c.temperature}°C** (Feels like: ${c.apparent_temperature}°C)\n` +
+            `* **Condition:** ${c.icon} **${c.condition}**\n` +
+            `* **Rain Chance:** **${rainChance}%** ${willRain ? '(Mazhai peyya vaaipu irukku 🌧️)' : '(Pleasant dry weather ☀️)'}\n` +
+            `* **Wind:** ${c.wind_speed} km/h | **Humidity:** ${c.humidity}%\n` +
+            `* **Outdoor Suitability:** **${c.outdoor_suitability}**\n\n` +
+            `💡 **Travel Suggestion:** ${c.smart_suggestion}\n\n`;
+
+          if (willRain || query.includes('indoor')) {
+            reply += `🏛️ **Suggested Indoor Attractions if it rains:**\n` +
+              catalog.indoor.slice(0, 3).map((p) => `* **${p.name}:** ${p.reason}`).join('\n') + '\n\n';
+          }
+          reply += `*Live data updated at: ${new Date(c.timestamp).toLocaleTimeString()}.*`;
+        } else {
+          reply = `### 🌤️ Live Weather in ${targetDestName}\n\n` +
+            `* **Current Temperature:** **${c.temperature}°C** (Feels like: ${c.apparent_temperature}°C)\n` +
+            `* **Condition:** ${c.icon} **${c.condition}**\n` +
+            `* **Rain Probability:** **${rainChance}%** ${willRain ? '(Rain expected — carry an umbrella 🌧️)' : '(Low chance of rain ☀️)'}\n` +
+            `* **Wind Speed:** ${c.wind_speed} km/h | **Humidity:** ${c.humidity}%\n` +
+            `* **Outdoor Suitability:** **${c.outdoor_suitability}**\n\n` +
+            `💡 **Smart Weather Suggestion:** ${c.smart_suggestion}\n\n`;
+
+          if (willRain || query.includes('indoor') || query.includes('rain')) {
+            reply += `🏛️ **Recommended Indoor Alternatives:**\n` +
+              catalog.indoor.slice(0, 3).map((p) => `* **${p.name}:** ${p.reason}`).join('\n') + '\n\n';
+          } else {
+            reply += `🌿 **Top Outdoor Places for this Weather:**\n` +
+              catalog.outdoor.slice(0, 3).map((p) => `* **${p.name}:** ${p.reason}`).join('\n') + '\n\n';
+          }
+
+          if (forecastData?.days?.length > 0) {
+            reply += `📅 **Multi-Day Forecast:**\n` +
+              forecastData.days.slice(0, 4).map((d) => `* **${d.day_name} (${d.date}):** ${d.icon} ${d.temperature_max}°C / ${d.temperature_min}°C • Rain: ${d.rain_probability}% (${d.outdoor_suitability})`).join('\n') + '\n\n';
+          }
+
+          reply += `*Timestamp: Live satellite data fetched at ${new Date(c.timestamp).toLocaleTimeString()}.*`;
+        }
+
+        suggestions.push(`Plan a trip to ${targetDestName}`, `Suggest indoor places`, `Find budget stays in ${targetDestName}`, `Suggest transport`);
+        actionLinks.push({ label: `🚀 Plan Weather-Aware Trip to ${targetDestName}`, url: `/trip-planner?destination=${encodeURIComponent(targetDestName)}` });
+        actionLinks.push({ label: `📍 Explore ${targetDestName}`, url: `/destinations` });
+      } else {
+        reply = `### 🌤️ Weather in ${targetDestName}\n\n` +
+          `Live meteorological forecast data is temporarily unavailable for **${targetDestName}**. Existing trip planning, route mapping, and bookings continue to work normally.\n\n` +
+          `You can still view verified attractions and plan your itinerary seamlessly.`;
+        suggestions.push(`Plan a 3-day trip to ${targetDestName}`, `Find budget stays`, `Suggest transport`);
+        actionLinks.push({ label: `🚀 Plan Trip to ${targetDestName}`, url: `/trip-planner?destination=${encodeURIComponent(targetDestName)}` });
+      }
+    }
+
+    // Intent P14-1: Suggest Places Near Me / GPS Location (Feature 3 & 4)
+    else if (
       (query.includes('near me') ||
         query.includes('nearby') ||
         query.includes('places near') ||
@@ -1026,6 +1138,65 @@ const chatbotService = {
 
       suggestions.push('How to earn more points?', 'Plan a new trip', 'Explore destinations');
       actionLinks.push({ label: 'View My Rewards', url: '/rewards' });
+    }
+
+    // Intent H: Travel Safety & Emergency Assistance (Phase 25 - Feature 26)
+    else if (
+      query.includes('safety') ||
+      query.includes('emergency') ||
+      query.includes('hospital') ||
+      query.includes('police') ||
+      query.includes('pharmacy') ||
+      query.includes('doctor') ||
+      query.includes('ambulance') ||
+      query.includes('first aid') ||
+      query.includes('sos') ||
+      query.includes('medical') ||
+      query.includes('பாதுகாப்பு') ||
+      query.includes('அவசரம்') ||
+      query.includes('மருத்துவமனை') ||
+      query.includes('காவல்') ||
+      query.includes('மருந்தகம்') ||
+      query.includes('maruthuvamanai') ||
+      query.includes('kaaval') ||
+      query.includes('safety help')
+    ) {
+      if (lang === 'ta') {
+        reply = `### 🛡️ பயண பாதுகாப்பு மற்றும் அவசர உதவி மையம்\n\n` +
+          `டிராவலோராவின் பாதுகாப்பு பிரிவு மூலம் நீங்கள் உடனடியாக கண்டறியலாம்:\n\n` +
+          `* 🏥 **அருகிலுள்ள மருத்துவமனைகள்:** 24/7 அவசர சிகிச்சை பிரிவுகள் மற்றும் விரைவு வழிகள்.\n` +
+          `* 🚓 **காவல் நிலையங்கள்:** உள்ளூர் காவல் மற்றும் சுற்றுலா காவல் உதவி.\n` +
+          `* 💊 **மருந்தகங்கள்:** 24 மணி நேர மருந்தகங்கள் மற்றும் முதலுதவி பொருட்கள்.\n` +
+          `* 🚨 **அவசர எண்கள்:** 112 (தேசிய அவசர உதவி), 100 (காவல்), 108 (ஆம்புலன்ஸ்), 101 (தீயணைப்பு).\n` +
+          `* 👥 **நம்பகமான தொடர்புகள்:** உங்கள் குடும்பத்தினர் அல்லது நண்பர்களை சேமித்து வைக்கலாம்.\n\n` +
+          `*உங்கள் இருப்பிடத்தின் அடிப்படையில் அருகிலுள்ள வசதிகளைப் பார்க்க பாதுகாப்பு பக்கத்திற்கு செல்லவும்.*`;
+
+        suggestions.push('அருகிலுள்ள மருத்துவமனையை காட்டு', 'காவல் நிலையத்தை கண்டறி', 'அவசர எண்கள் என்ன?');
+      } else if (lang === 'thanglish') {
+        reply = `### 🛡️ Travel Safety & Emergency Assistant\n\n` +
+          `Unga safety and emergency needs-kku Travelora provides:\n\n` +
+          `* 🏥 **Nearby Hospitals:** Verified 24/7 ER, trauma centers & fastest route directions.\n` +
+          `* 🚓 **Police Stations:** Local precinct & tourist police assistance.\n` +
+          `* 💊 **Pharmacies:** Day & night chemists with essential supplies.\n` +
+          `* 🚨 **Emergency Contacts:** 112 (Universal), 100 (Police), 108 (Ambulance), 101 (Fire).\n` +
+          `* 👥 **Trusted Contacts:** Save emergency contacts & share location with explicit confirmation.\n\n` +
+          `*Detailed nearby places paakka Travel Safety page open pannunga!*`;
+
+        suggestions.push('Find nearest hospital', 'Police station list', 'Emergency numbers');
+      } else {
+        reply = `### 🛡️ Travel Safety & Emergency Assistant\n\n` +
+          `Travelora features a dedicated, privacy-focused Safety Assistant to help you travel with confidence:\n\n` +
+          `* 🏥 **Nearby Hospitals & ER:** Verified emergency trauma centers with fastest route directions.\n` +
+          `* 🚓 **Police Stations:** Local police departments and tourist assistance desks.\n` +
+          `* 💊 **Pharmacies:** 24/7 day & night chemists for emergency medical supplies.\n` +
+          `* 🚨 **Country Emergency Numbers:** Official emergency dispatch contacts (112 / 911 / 999).\n` +
+          `* 👥 **Trusted Contacts & Location Sharing:** Manage emergency contacts and share safe location updates with explicit user confirmation.\n\n` +
+          `*Open the Travel Safety Dashboard to locate facilities near your GPS position.*`;
+
+        suggestions.push('Find the nearest hospital', 'Find police station', 'Emergency numbers');
+      }
+
+      actionLinks.push({ label: 'Open Travel Safety 🛡️', url: '/safety' });
     }
 
     // Intent F: General Travel Destination & Weather Guide

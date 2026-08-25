@@ -33,6 +33,9 @@ const SCRIPTS = [
   { name: '29. Phase 18 Voice Travel Assistant (Speech Recognition & TTS)', file: 'testPhase18VoiceAssistant.js' },
   { name: '30. Phase 19 Smart Personalized Recommendation Engine', file: 'testPhase19Recommendations.js' },
   { name: '31. Phase 20 Machine Learning Recommendation System', file: 'testPhase20MlRecommendations.js' },
+  { name: '32. Phase 21 & 22 Advanced Travel Analytics & Predictive Forecasting', file: 'testPhase22PredictiveAnalytics.js' },
+  { name: '33. Phase 25 Travel Safety & Emergency Assistant', file: 'testPhase25Safety.js' },
+  { name: '34. Phase 26 Weather-Based Smart Travel Planner', file: 'testPhase26Weather.js' },
 ];
 
 function runAllTests() {

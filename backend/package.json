@@ -42,6 +42,7 @@
     "test:phase17": "node scripts/testPhase17Multilingual.js",
     "test:phase18": "node scripts/testPhase18VoiceAssistant.js",
     "test:phase19": "node scripts/testPhase19Recommendations.js",
+    "test:phase26": "node scripts/testPhase26Weather.js",
     "test:all": "node scripts/runAllTests.js",
     "test": "node scripts/runAllTests.js"
   },

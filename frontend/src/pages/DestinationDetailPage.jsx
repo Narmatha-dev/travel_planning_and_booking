@@ -6,6 +6,7 @@ import ReviewsSection from '../components/ReviewsSection';
 import InteractiveMapSection from '../components/InteractiveMapSection';
 import TransportOptionsSection from '../components/TransportOptionsSection';
 import HotelRecommendationsSection from '../components/HotelRecommendationsSection';
+import WeatherCard from '../components/WeatherCard';
 
 export default function DestinationDetailPage() {
   const { id } = useParams();
@@ -185,6 +186,13 @@ export default function DestinationDetailPage() {
             ))}
           </div>
         </div>
+
+        {/* Phase 26: Destination Live Weather & Forecast */}
+        <WeatherCard
+          destination={destination.city || destination.name}
+          allowCurrentLocation={false}
+          showForecastToggle={true}
+        />
 
         {/* Overview Stats Bar */}
         <div style={{

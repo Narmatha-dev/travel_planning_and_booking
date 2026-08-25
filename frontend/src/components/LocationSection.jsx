@@ -1,7 +1,31 @@
+import { useState, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
+import weatherService from '../services/weatherService';
 
 export default function LocationSection() {
-  const { currentLocation, locationStatus, locationError, detectLocation, isAuthenticated } = useAppContext();
+  const { currentLocation, locationStatus, locationError, detectLocation, isAuthenticated, t } = useAppContext();
+  const [localWeather, setLocalWeather] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (currentLocation?.latitude && currentLocation?.longitude) {
+      weatherService
+        .getCurrentWeather({
+          lat: currentLocation.latitude,
+          lng: currentLocation.longitude,
+          city: currentLocation.city || 'Your Location',
+        })
+        .then((data) => {
+          if (isMounted && data?.current) {
+            setLocalWeather(data.current);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [currentLocation]);
 
   // If user is not logged in, we do not require active location prompt
   if (!isAuthenticated && !currentLocation) {
@@ -52,6 +76,25 @@ export default function LocationSection() {
                     <span className="location-coords-tag">
                       {Math.abs(currentLocation.latitude).toFixed(2)}°{currentLocation.latitude >= 0 ? 'N' : 'S'},{' '}
                       {Math.abs(currentLocation.longitude).toFixed(2)}°{currentLocation.longitude >= 0 ? 'E' : 'W'}
+                    </span>
+                  )}
+                  {localWeather && (
+                    <span
+                      style={{
+                        background: '#eff6ff',
+                        color: '#0369a1',
+                        border: '1px solid #bae6fd',
+                        borderRadius: '6px',
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                      }}
+                      title={`Rain chance: ${localWeather.rain_probability}%, Suitability: ${localWeather.outdoor_suitability}`}
+                    >
+                      {localWeather.icon} {localWeather.temperature}°C {localWeather.condition}
                     </span>
                   )}
                 </div>

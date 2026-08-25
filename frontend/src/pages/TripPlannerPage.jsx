@@ -5,6 +5,7 @@ import destinationService from '../services/destinationService';
 import tripService from '../services/tripService';
 import AiItineraryView from '../components/AiItineraryView';
 import ItineraryTimeline from '../components/ItineraryTimeline';
+import WeatherCard from '../components/WeatherCard';
 
 const PREFERENCE_OPTIONS = [
   { id: 'nature', label: '🌿 Nature', sub: 'Parks, viewpoints & waterfalls' },
@@ -20,12 +21,12 @@ const PREFERENCE_OPTIONS = [
 export default function TripPlannerPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { isAuthenticated, selectedTransport, selectedHotel, currentLocation } = useAppContext();
+  const { isAuthenticated, selectedTransport, selectedHotel, currentLocation, t } = useAppContext();
 
   const [destinations, setDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
 
-  // Form State
+  // Form State (Phase 26 Weather controls integrated)
   const [formData, setFormData] = useState({
     destinationId: searchParams.get('destinationId') || '101',
     destinationName: searchParams.get('destinationName') || searchParams.get('destination') || 'Mahabalipuram',
@@ -35,6 +36,9 @@ export default function TripPlannerPage() {
     budget: searchParams.get('budget') ? Number(searchParams.get('budget')) : 10000,
     travelPreference: searchParams.get('preference') || 'nature',
     startDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    weatherAware: true,
+    preferOutdoor: false,
+    preferIndoor: false,
   });
 
   const [generatedItinerary, setGeneratedItinerary] = useState(null);
@@ -132,6 +136,9 @@ export default function TripPlannerPage() {
         selectedHotel: selectedHotel || null,
         currentLocation: currentLocation || null,
         startDate: formData.startDate,
+        weatherAware: formData.weatherAware,
+        preferOutdoor: formData.preferOutdoor,
+        preferIndoor: formData.preferIndoor,
       });
 
       setGeneratedItinerary(result);
@@ -301,6 +308,13 @@ export default function TripPlannerPage() {
           </div>
         )}
 
+        {/* Phase 26: Destination Live Weather & Multi-Day Forecast */}
+        <WeatherCard
+          destination={formData.destinationName}
+          allowCurrentLocation={true}
+          showForecastToggle={true}
+        />
+
         {/* Interactive Configuration Card */}
         <div
           style={{
@@ -378,18 +392,18 @@ export default function TripPlannerPage() {
                     3. Total Budget
                   </label>
                   {/* Currency Switcher */}
-                  <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '2px' }}>
+                  <div style={{ display: 'flex', gap: '0.25rem' }}>
                     <button
                       type="button"
                       onClick={() => handleCurrencySwitch('INR')}
                       style={{
-                        border: 'none',
-                        background: formData.currency === 'INR' ? '#ffffff' : 'transparent',
-                        color: formData.currency === 'INR' ? '#0f172a' : '#64748b',
-                        fontWeight: '700',
+                        padding: '2px 8px',
                         fontSize: '0.75rem',
-                        padding: '3px 8px',
+                        fontWeight: '700',
                         borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        background: formData.currency === 'INR' ? '#0284c7' : '#ffffff',
+                        color: formData.currency === 'INR' ? '#ffffff' : '#475569',
                         cursor: 'pointer',
                       }}
                     >
@@ -399,13 +413,13 @@ export default function TripPlannerPage() {
                       type="button"
                       onClick={() => handleCurrencySwitch('USD')}
                       style={{
-                        border: 'none',
-                        background: formData.currency === 'USD' ? '#ffffff' : 'transparent',
-                        color: formData.currency === 'USD' ? '#0f172a' : '#64748b',
-                        fontWeight: '700',
+                        padding: '2px 8px',
                         fontSize: '0.75rem',
-                        padding: '3px 8px',
+                        fontWeight: '700',
                         borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        background: formData.currency === 'USD' ? '#0284c7' : '#ffffff',
+                        color: formData.currency === 'USD' ? '#ffffff' : '#475569',
                         cursor: 'pointer',
                       }}
                     >
@@ -413,29 +427,25 @@ export default function TripPlannerPage() {
                     </button>
                   </div>
                 </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0284c7' }}>
-                    {formData.currency === 'INR' ? '₹' : '$'}
-                  </span>
-                  <input
-                    type="number"
-                    value={formData.budget}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, budget: Math.max(100, Number(e.target.value)) }))}
-                    style={{
-                      flex: 1,
-                      padding: '0.75rem',
-                      borderRadius: '10px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '1.1rem',
-                      fontWeight: '700',
-                    }}
-                  />
-                </div>
-
-                {/* Quick Presets */}
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {(formData.currency === 'INR' ? [8000, 15000, 25000, 50000] : [200, 500, 1200, 2500]).map((val) => (
+                <input
+                  type="number"
+                  min="50"
+                  step="50"
+                  value={formData.budget}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, budget: Number(e.target.value) }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    background: '#ffffff',
+                  }}
+                />
+                {/* Preset Fast Budget Chips */}
+                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                  {(formData.currency === 'INR' ? [6000, 10000, 15000, 25000] : [250, 500, 800, 1500]).map((val) => (
                     <button
                       key={val}
                       type="button"
@@ -504,7 +514,7 @@ export default function TripPlannerPage() {
             </div>
 
             {/* Row 3: Travel Preferences */}
-            <div style={{ marginBottom: '2.5rem' }}>
+            <div style={{ marginBottom: '2rem' }}>
               <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>
                 6. Travel Style & Preference
               </label>
@@ -529,6 +539,56 @@ export default function TripPlannerPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+
+            {/* Row 4: Weather-Aware Planning Controls (Phase 26 Feature 12) */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
+                border: '1.5px solid #7dd3fc',
+                borderRadius: '16px',
+                padding: '1.25rem 1.5rem',
+                marginBottom: '2.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
+                <span style={{ fontSize: '1.3rem' }}>🌦️</span>
+                <strong style={{ fontSize: '0.95rem', color: '#0369a1' }}>
+                  Weather-Aware Itinerary Intelligence (Phase 26)
+                </strong>
+              </div>
+              <p style={{ margin: '0 0 1rem 0', fontSize: '0.83rem', color: '#334155' }}>
+                Automatically adapt schedule based on live rainfall probability, wind conditions, and sunny slots.
+              </p>
+              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.weatherAware}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, weatherAware: e.target.checked }))}
+                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
+                  />
+                  Weather-Aware Itinerary (Recommended)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.preferOutdoor}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, preferOutdoor: e.target.checked, preferIndoor: e.target.checked ? false : prev.preferIndoor }))}
+                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
+                  />
+                  Prefer Outdoor Activities
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={formData.preferIndoor}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, preferIndoor: e.target.checked, preferOutdoor: e.target.checked ? false : prev.preferOutdoor }))}
+                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
+                  />
+                  Prefer Indoor Activities
+                </label>
               </div>
             </div>
 

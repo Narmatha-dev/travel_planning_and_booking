@@ -1,5 +1,6 @@
 const placesService = require('./placesService');
 const destinationModel = require('../models/destinationModel');
+const weatherService = require('./weatherService');
 const { generateItinerary } = require('../utils/itineraryGenerator');
 
 // Curated destination places knowledge base
@@ -83,6 +84,9 @@ const aiTripService = {
     selectedHotel = null,
     currentLocation = null,
     startDate = null,
+    weatherAware = true,
+    preferOutdoor = false,
+    preferIndoor = false,
   }) {
     const rawDest = destinationName || destination || destinationId;
     if (!rawDest) {
@@ -111,6 +115,26 @@ const aiTripService = {
     else if (destKey.includes('swiss') || destKey.includes('alps') || destKey.includes('switzerland')) normalizedKey = 'swiss';
     else if (destKey.includes('bali')) normalizedKey = 'bali';
     else if (destKey.includes('tokyo') || destKey.includes('japan')) normalizedKey = 'tokyo';
+
+    // Fetch Weather & Forecast for the destination (Phase 26)
+    let destinationWeather = null;
+    let forecastDaysList = [];
+    const resolvedCoords = weatherService.resolveCoordinates(rawDest);
+
+    if (resolvedCoords) {
+      try {
+        const [currW, fcW] = await Promise.all([
+          weatherService.getCurrentWeather(resolvedCoords.latitude, resolvedCoords.longitude, resolvedCoords.city),
+          weatherService.getWeatherForecast(resolvedCoords.latitude, resolvedCoords.longitude, daysCount + 2, resolvedCoords.city),
+        ]);
+        destinationWeather = currW?.current || null;
+        forecastDaysList = fcW?.days || [];
+      } catch (wErr) {
+        console.warn('[AiTripService] Weather fetch non-fatal error:', wErr.message);
+      }
+    }
+
+    const indoorOutdoorCatalog = weatherService.getIndoorOutdoorCatalog(normalizedKey);
 
     // 1. Check if built-in smart generator has custom day templates for major destinations
     let baseItineraryData = null;
@@ -157,16 +181,83 @@ const aiTripService = {
     // Include selected intercity transport cost from Phase 4 if provided
     const intercityTransportCost = selectedTransport?.estimated_cost ? parseFloat(selectedTransport.estimated_cost) : 0;
 
+    const baseTripStartDate = startDate ? new Date(startDate) : new Date();
+
     for (let dayNum = 1; dayNum <= daysCount; dayNum++) {
       let dayActivities = [];
       let dayPlacesList = [];
       let dayTheme = `Day ${dayNum} Exploration & Sightseeing`;
 
+      const targetDayDate = new Date(baseTripStartDate);
+      targetDayDate.setDate(targetDayDate.getDate() + (dayNum - 1));
+      const targetDateStr = targetDayDate.toISOString().split('T')[0];
+
+      // Match Weather Forecast for this Day (Phase 26)
+      const matchedForecastDay = forecastDaysList.find((f) => f.date === targetDateStr) || forecastDaysList[dayNum - 1] || null;
+      let dayWeather = null;
+
+      if (matchedForecastDay) {
+        dayWeather = {
+          weather_available: true,
+          date: targetDateStr,
+          day_name: matchedForecastDay.day_name,
+          temperature_max: matchedForecastDay.temperature_max,
+          temperature_min: matchedForecastDay.temperature_min,
+          temperature_unit: '°C',
+          condition: matchedForecastDay.condition,
+          icon: matchedForecastDay.icon,
+          rain_probability: matchedForecastDay.rain_probability,
+          wind_speed: matchedForecastDay.wind_speed,
+          outdoor_suitability: matchedForecastDay.outdoor_suitability,
+          outdoor_badge_color: matchedForecastDay.outdoor_badge_color,
+          smart_suggestion: matchedForecastDay.smart_suggestion,
+          is_rainy: matchedForecastDay.is_rainy,
+        };
+      } else {
+        dayWeather = {
+          weather_available: false,
+          date: targetDateStr,
+          message: 'Weather forecast not available yet for this future date.',
+        };
+      }
+
+      // Weather-aware indoor alternatives if rain is likely or user requested indoor preference
+      const isRainyDay = dayWeather?.is_rainy || (dayWeather?.rain_probability >= 50);
+      let dayIndoorAlternatives = [];
+      let weatherAdviceForDay = null;
+
+      if (isRainyDay && (weatherAware !== false || preferIndoor)) {
+        dayIndoorAlternatives = indoorOutdoorCatalog.indoor.slice(0, 3);
+        weatherAdviceForDay = `🌧️ Rain expected (${dayWeather.rain_probability}% chance). Recommended indoor alternatives included to keep your trip seamless.`;
+      } else if (dayWeather?.outdoor_suitability === 'Good' || preferOutdoor) {
+        weatherAdviceForDay = `☀️ Excellent outdoor weather conditions (${dayWeather.temperature_max}°C). Perfect for viewpoints and outdoor sightseeing.`;
+      } else if (dayWeather?.smart_suggestion) {
+        weatherAdviceForDay = dayWeather.smart_suggestion;
+      }
+
       if (scoredPlaces.length > 0) {
         // Build 3 activities (morning, afternoon, evening) from scored local places
-        const morningPlace = scoredPlaces[(dayNum * 3 - 3) % scoredPlaces.length];
-        const afternoonPlace = scoredPlaces[(dayNum * 3 - 2) % scoredPlaces.length];
-        const eveningPlace = scoredPlaces[(dayNum * 3 - 1) % scoredPlaces.length];
+        let morningPlace = scoredPlaces[(dayNum * 3 - 3) % scoredPlaces.length];
+        let afternoonPlace = scoredPlaces[(dayNum * 3 - 2) % scoredPlaces.length];
+        let eveningPlace = scoredPlaces[(dayNum * 3 - 1) % scoredPlaces.length];
+
+        // Weather-Aware swap: if high rain chance and weather awareness is ON, prefer sheltered/indoor activity for afternoon
+        if (isRainyDay && weatherAware !== false && indoorOutdoorCatalog.indoor.length > 0) {
+          const indoorSubstitute = indoorOutdoorCatalog.indoor[(dayNum - 1) % indoorOutdoorCatalog.indoor.length];
+          if (indoorSubstitute) {
+            afternoonPlace = {
+              name: indoorSubstitute.name,
+              category: indoorSubstitute.category,
+              duration: '2.5 hours',
+              reason: `${indoorSubstitute.reason} (Weather-aware indoor alternative due to forecast rain)`,
+              cost: 50,
+              lat: resolvedCoords?.latitude || 11.41,
+              lng: resolvedCoords?.longitude || 76.70,
+              time: '02:00 PM',
+              is_weather_adjusted: true,
+            };
+          }
+        }
 
         dayPlacesList = [morningPlace.name, afternoonPlace.name, eveningPlace.name];
         dayTheme = `${morningPlace.name}, ${afternoonPlace.name} & Evening Leisure`;
@@ -181,6 +272,7 @@ const aiTripService = {
             category: morningPlace.category,
             estimatedCost: morningPlace.cost,
             coordinates: { latitude: morningPlace.lat, longitude: morningPlace.lng },
+            is_weather_adjusted: Boolean(morningPlace.is_weather_adjusted),
           },
           {
             slot: 'afternoon',
@@ -191,6 +283,7 @@ const aiTripService = {
             category: afternoonPlace.category,
             estimatedCost: afternoonPlace.cost,
             coordinates: { latitude: afternoonPlace.lat, longitude: afternoonPlace.lng },
+            is_weather_adjusted: Boolean(afternoonPlace.is_weather_adjusted),
           },
           {
             slot: 'evening',
@@ -201,6 +294,7 @@ const aiTripService = {
             category: eveningPlace.category,
             estimatedCost: eveningPlace.cost,
             coordinates: { latitude: eveningPlace.lat, longitude: eveningPlace.lng },
+            is_weather_adjusted: Boolean(eveningPlace.is_weather_adjusted),
           },
         ];
       } else if (baseItineraryData?.days && baseItineraryData.days[dayNum - 1]) {
@@ -242,12 +336,16 @@ const aiTripService = {
         day: dayNum,
         title: `Day ${dayNum}: ${dayTheme}`,
         theme: dayTheme,
+        date: targetDateStr,
         places: dayPlacesList,
         activities: dayActivities,
         foodSuggestions: baseItineraryData?.days?.[dayNum - 1]?.foodSuggestions || foodMap,
         dailyCostBreakdown: dailyBreakdown,
         estimatedDailyCost: dailyBreakdown.totalDayCost,
-        aiTravelTip: `Pro-tip for Day ${dayNum}: Morning light is best for photography and cooler walking temperatures.`,
+        weather: dayWeather,
+        weatherAdvice: weatherAdviceForDay,
+        indoorAlternatives: dayIndoorAlternatives,
+        aiTravelTip: `Pro-tip for Day ${dayNum}: ${isRainyDay ? 'Keep an umbrella handy and enjoy indoor artisan workshops.' : 'Morning light is best for photography and cooler walking temperatures.'}`,
       });
     }
 
@@ -331,6 +429,16 @@ const aiTripService = {
       selectedTransport: selectedTransport || null,
       selectedHotel: selectedHotel || null,
       days,
+      weatherSummary: {
+        destination: rawDest,
+        weatherAwareEnabled: Boolean(weatherAware),
+        preferOutdoor: Boolean(preferOutdoor),
+        preferIndoor: Boolean(preferIndoor),
+        current: destinationWeather,
+        forecast: forecastDaysList,
+        indoorPlacesCatalog: indoorOutdoorCatalog.indoor,
+        outdoorPlacesCatalog: indoorOutdoorCatalog.outdoor,
+      },
       recommendations,
       budgetAdvice,
       aiWorkflow: {

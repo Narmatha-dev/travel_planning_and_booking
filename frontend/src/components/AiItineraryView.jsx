@@ -178,15 +178,107 @@ export default function AiItineraryView({
                 <div className="day-number-badge">DAY {dayItem.day}</div>
                 <div className="day-theme-box">
                   <h3 className="day-theme-title">{dayItem.theme || dayItem.title}</h3>
-                  <span className="day-places-tag">
-                    📍 {Array.isArray(dayItem.places) ? dayItem.places.join(' • ') : ''}
-                  </span>
+                  <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    <span className="day-places-tag">
+                      📍 {Array.isArray(dayItem.places) ? dayItem.places.join(' • ') : ''}
+                    </span>
+                    {dayItem.date && (
+                      <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600' }}>
+                        📅 {dayItem.date}
+                      </span>
+                    )}
+                  </div>
                 </div>
+
+                {/* Day Weather Badge (Phase 26) */}
+                {dayItem.weather?.weather_available && (
+                  <div
+                    style={{
+                      background: dayItem.weather.is_rainy ? '#eff6ff' : '#f0fdf4',
+                      border: `1.5px solid ${dayItem.weather.is_rainy ? '#bfdbfe' : '#bbf7d0'}`,
+                      borderRadius: '12px',
+                      padding: '0.4rem 0.75rem',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                    }}
+                    title={`Rain chance: ${dayItem.weather.rain_probability}%, Suitability: ${dayItem.weather.outdoor_suitability}`}
+                  >
+                    <span style={{ fontSize: '1.25rem' }}>{dayItem.weather.icon}</span>
+                    <div>
+                      <div style={{ fontSize: '0.82rem', fontWeight: '800', color: '#0f172a' }}>
+                        {dayItem.weather.temperature_max}°C <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 'normal' }}>/ {dayItem.weather.temperature_min}°C</span>
+                      </div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: '700', color: dayItem.weather.rain_probability > 50 ? '#0284c7' : '#16a34a' }}>
+                        🌧️ {dayItem.weather.rain_probability}% • {dayItem.weather.outdoor_suitability}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="day-cost-tag">
                   <span className="tag-sub">Day Total</span>
                   <strong>{sym}{dayItem.estimatedDailyCost?.toLocaleString() || dayItem.dailyCostBreakdown?.totalDayCost?.toLocaleString()}</strong>
                 </div>
               </div>
+
+              {/* Weather Advice Banner for this Day */}
+              {dayItem.weatherAdvice && (
+                <div
+                  style={{
+                    background: dayItem.weather?.is_rainy ? '#eff6ff' : '#f8fafc',
+                    border: `1px solid ${dayItem.weather?.is_rainy ? '#bfdbfe' : '#e2e8f0'}`,
+                    borderRadius: '12px',
+                    padding: '0.65rem 1rem',
+                    margin: '0.75rem 1.25rem 0 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.6rem',
+                    fontSize: '0.85rem',
+                    color: dayItem.weather?.is_rainy ? '#1e40af' : '#334155',
+                  }}
+                >
+                  <span>{dayItem.weather?.is_rainy ? '🌧️' : '💡'}</span>
+                  <span>{dayItem.weatherAdvice}</span>
+                </div>
+              )}
+
+              {/* Wet Weather Indoor Alternatives (if available) */}
+              {dayItem.indoorAlternatives && dayItem.indoorAlternatives.length > 0 && (
+                <div
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px dashed #93c5fd',
+                    borderRadius: '12px',
+                    padding: '0.75rem 1rem',
+                    margin: '0.75rem 1.25rem 0 1.25rem',
+                  }}
+                >
+                  <strong style={{ fontSize: '0.8rem', color: '#0369a1', textTransform: 'uppercase', display: 'block', marginBottom: '0.4rem' }}>
+                    🏛️ Weather-Aware Indoor Alternatives for this Day:
+                  </strong>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    {dayItem.indoorAlternatives.map((alt, altIdx) => (
+                      <span
+                        key={altIdx}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          fontSize: '0.78rem',
+                          fontWeight: '600',
+                          color: '#334155',
+                        }}
+                        title={alt.reason}
+                      >
+                        🏛️ {alt.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Time-Slotted Activities (Morning, Afternoon, Evening) */}
               <div className="ai-activities-timeline">

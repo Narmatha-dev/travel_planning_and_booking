@@ -52,5 +52,13 @@ router.delete('/reviews/:id', adminController.deleteReview);
 router.get('/ml/status', adminController.getMlStatus);
 router.post('/ml/train', adminController.trainMlModel);
 
+// 11. Advanced Travel Analytics & Safe CSV Export (Phase 21 - Feature 22)
+router.get('/analytics/export', adminController.exportAnalyticsCSV);
+
+// 12. Predictive Travel Demand & Forecasting (Phase 22 - Features 3 to 14)
+router.get('/forecast', adminController.getForecast);
+router.post('/forecast/train', adminController.trainForecastModel);
+
 module.exports = router;
+
 

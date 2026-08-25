@@ -3,6 +3,7 @@ import InteractiveMapSection from './InteractiveMapSection';
 import TransportOptionsSection from './TransportOptionsSection';
 import HotelRecommendationsSection from './HotelRecommendationsSection';
 import ReviewsSection from './ReviewsSection';
+import WeatherCard from './WeatherCard';
 
 export default function DestinationDetailModal({ place, userLocation, onClose }) {
   const [activeImage, setActiveImage] = useState(
@@ -146,6 +147,17 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
               <p>{place.description || 'A popular and scenic tourist attraction with memorable sights and rich travel experiences.'}</p>
             </div>
           </div>
+        </div>
+
+        {/* Phase 26: Weather & Forecast Card */}
+        <div style={{ padding: '0 1.5rem 1rem' }}>
+          <WeatherCard
+            destination={place.city || place.name}
+            coordinates={place.latitude && place.longitude ? { latitude: place.latitude, longitude: place.longitude } : null}
+            showForecastToggle={true}
+            allowCurrentLocation={false}
+            compact={true}
+          />
         </div>
 
         {/* Phase 3: Interactive Google Map & Road Route Section */}

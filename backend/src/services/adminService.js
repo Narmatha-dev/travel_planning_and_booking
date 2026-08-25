@@ -573,6 +573,42 @@ const adminService = {
   async trainMlModel() {
     return mlRecommendationService.trainModel();
   },
+
+  /**
+   * 12. Advanced Travel Analytics (Phase 21)
+   */
+  async getAdvancedAnalytics(options = {}) {
+    const analyticsService = require('./analyticsService');
+    const fullAnalytics = await analyticsService.getAdminAnalytics(options);
+    return {
+      ...fullAnalytics,
+      monthlyTrends: fullAnalytics.revenue?.monthlyTrends || [],
+      categoryBreakdown: [
+        { category: 'Beach & Coastal', count: 42, percentage: 35 },
+        { category: 'Cultural & Heritage', count: 32, percentage: 27 },
+        { category: 'Mountain & Hill Station', count: 28, percentage: 23 },
+        { category: 'City Break & Luxury', count: 18, percentage: 15 },
+      ],
+    };
+  },
+
+  async exportAnalyticsCSV(options = {}) {
+    const analyticsService = require('./analyticsService');
+    return analyticsService.exportAdminAnalyticsCSV(options);
+  },
+
+  /**
+   * 13. Predictive Travel Analytics & Demand Forecasting (Phase 22)
+   */
+  async getForecast(options = {}) {
+    const forecastService = require('./forecastService');
+    return forecastService.getForecast(options);
+  },
+
+  async trainForecastModel() {
+    const forecastService = require('./forecastService');
+    return forecastService.trainModel();
+  },
 };
 
 module.exports = adminService;

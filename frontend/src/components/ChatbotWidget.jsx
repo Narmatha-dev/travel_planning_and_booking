@@ -27,25 +27,25 @@ export default function ChatbotWidget() {
   const recognitionRef = useRef(null);
 
   const QUICK_PROMPTS = [
+    { label: `🌦️ ${language === 'ta' ? 'ஊட்டி வானிலை' : 'Weather in Ooty'}`, text: language === 'ta' ? 'ஊட்டி வானிலை எப்படி இருக்கிறது?' : 'What is the weather in Ooty?' },
     { label: `📍 ${t('chatbot.suggestPlaces', 'Suggest places near me')}`, text: t('chatbot.suggestPlaces', 'Suggest places near me') },
     { label: `🛡️ ${language === 'ta' ? 'பாதுகாப்பு & அவசர உதவி' : 'Emergency & Safety Help'}`, text: language === 'ta' ? 'அவசர உதவி மற்றும் மருத்துவமனை' : 'Find nearest hospital and emergency help' },
     { label: `✈️ ${t('chatbot.planTrip', 'Plan a 3-day trip')}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
     { label: `🏨 ${t('chatbot.budgetStays', 'Find budget stays')}`, text: t('chatbot.budgetStays', 'Find budget stays') },
-    { label: `🚗 ${t('chatbot.transport', 'Suggest transport')}`, text: t('chatbot.transport', 'Suggest transport') },
-    { label: `📅 ${t('chatbot.itinerary', 'Create itinerary')}`, text: t('chatbot.itinerary', 'Create itinerary') },
+    { label: `🏛️ ${language === 'ta' ? 'மழை நேர உள்ளரங்கு இடங்கள்' : 'Indoor Places on Rain'}`, text: language === 'ta' ? 'மழை பெய்தால் செல்லக்கூடிய உள்ளரங்கு இடங்கள்' : 'Suggest indoor places in case of rain' },
   ];
 
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content:
-        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you discover nearby destinations, find emergency safety services (hospitals, police, pharmacies), plan multi-day itineraries, recommend verified stays, and calculate trip budgets.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
+        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you check live weather forecasts, discover nearby destinations, find emergency safety services (hospitals, police, pharmacies), plan weather-aware multi-day itineraries, recommend verified stays, and calculate trip budgets.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
       suggestions: [
+        'What is the weather in Ooty?',
         'Suggest places near me',
+        'Suggest indoor places in case of rain',
         'Find nearest hospital',
-        'Emergency numbers',
         'Plan a 3-day trip',
-        'Find budget stays',
       ],
       language: 'en',
       timestamp: new Date().toISOString(),

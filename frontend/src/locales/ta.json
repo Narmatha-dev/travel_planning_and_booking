@@ -169,6 +169,37 @@
     "shareLocationTitle": "என் இருப்பிடத்தை பகிர்தல்",
     "findingNearby": "அருகிலுள்ள அவசர சேவைகளைத் தேடுகிறது...",
     "noPlacesFoundTitle": "தேர்ந்தெடுக்கப்பட்ட ஆரத்திற்குள் வசதிகள் எதுவும் கிடைக்கவில்லை."
+  },
+  "weather": {
+    "weather": "வானிலை",
+    "title": "இலக்கு வானிலை",
+    "currentWeather": "தற்போதைய வானிலை",
+    "forecast": "வானிலை முன்னறிவிப்பு",
+    "multiDayForecast": "பல நாள் முன்னறிவிப்பு",
+    "temperature": "வெப்பநிலை",
+    "feelsLike": "உணரப்படுவது",
+    "rain": "மழை",
+    "rainChance": "மழை வாய்ப்பு",
+    "humidity": "ஈரப்பதம்",
+    "wind": "காற்று",
+    "outdoorSuitability": "வெளிப்புற பயண தகுதி",
+    "good": "நன்று",
+    "moderate": "மிதமானது",
+    "poor": "குறைவு",
+    "smartSuggestion": "வானிலை ஸ்மார்ட் ஆலோசனை",
+    "weatherAlert": "வானிலை எச்சரிக்கை",
+    "indoorAlternatives": "உள்ளரங்கு மாற்று இடங்கள்",
+    "outdoorPlaces": "பரிந்துரைக்கப்பட்ட வெளிப்புற இடங்கள்",
+    "weatherAwareItinerary": "வானிலை-சார்ந்த பயணத் திட்டம்",
+    "preferOutdoor": "வெளிப்புற இடங்களுக்கு முன்னுரிமை",
+    "preferIndoor": "உள்ளரங்கு இடங்களுக்கு முன்னுரிமை",
+    "currentLocationWeather": "தற்போதைய இருப்பிட வானிலை",
+    "loadingWeather": "வானிலை விவரங்கள் பெறப்படுகின்றன...",
+    "weatherUnavailable": "வானிலை தகவல் தற்காலிகமாக கிடைக்கவில்லை.",
+    "viewForecast": "முன்னறிவிப்பை காண்க",
+    "hideForecast": "முன்னறிவிப்பை மறை",
+    "forecastNotAvailable": "இந்த எதிர்கால தேதிக்கான வானிலை முன்னறிவிப்பு இன்னும் கிடைக்கவில்லை.",
+    "liveSatelliteData": "Open-Meteo உலகளாவிய நேரலை வானிலை சேவை"
   }
 }
 

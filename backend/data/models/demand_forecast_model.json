@@ -1,0 +1,105 @@
+{
+  "modelType": "Linear Time-Series Trend with Holt-Winters Seasonality Index",
+  "modelVersion": "v1.4.0",
+  "trainedAt": "2026-08-25T04:15:31.648Z",
+  "trainingDataPoints": 12,
+  "regression": {
+    "slope": 14.944,
+    "intercept": 100.197
+  },
+  "evaluation": {
+    "mae": 21.5,
+    "rmse": 27.68,
+    "rSquared": 0.776,
+    "confidenceLevel": "High",
+    "status": "ready",
+    "message": "Model Evaluation: MAE=21.5, RMSE=27.68, R²=0.776 (77.6% variance explained)."
+  },
+  "historicalSeries": [
+    {
+      "period": "2025-09",
+      "monthName": "Sep 2025",
+      "bookingCount": 110,
+      "completedTrips": 95,
+      "revenueINR": 145000
+    },
+    {
+      "period": "2025-10",
+      "monthName": "Oct 2025",
+      "bookingCount": 135,
+      "completedTrips": 120,
+      "revenueINR": 178000
+    },
+    {
+      "period": "2025-11",
+      "monthName": "Nov 2025",
+      "bookingCount": 158,
+      "completedTrips": 140,
+      "revenueINR": 215000
+    },
+    {
+      "period": "2025-12",
+      "monthName": "Dec 2025",
+      "bookingCount": 220,
+      "completedTrips": 195,
+      "revenueINR": 320000
+    },
+    {
+      "period": "2026-01",
+      "monthName": "Jan 2026",
+      "bookingCount": 145,
+      "completedTrips": 130,
+      "revenueINR": 195000
+    },
+    {
+      "period": "2026-02",
+      "monthName": "Feb 2026",
+      "bookingCount": 160,
+      "completedTrips": 142,
+      "revenueINR": 218000
+    },
+    {
+      "period": "2026-03",
+      "monthName": "Mar 2026",
+      "bookingCount": 185,
+      "completedTrips": 165,
+      "revenueINR": 254000
+    },
+    {
+      "period": "2026-04",
+      "monthName": "Apr 2026",
+      "bookingCount": 175,
+      "completedTrips": 155,
+      "revenueINR": 238000
+    },
+    {
+      "period": "2026-05",
+      "monthName": "May 2026",
+      "bookingCount": 240,
+      "completedTrips": 210,
+      "revenueINR": 345000
+    },
+    {
+      "period": "2026-06",
+      "monthName": "Jun 2026",
+      "bookingCount": 265,
+      "completedTrips": 235,
+      "revenueINR": 390000
+    },
+    {
+      "period": "2026-07",
+      "monthName": "Jul 2026",
+      "bookingCount": 295,
+      "completedTrips": 260,
+      "revenueINR": 440000
+    },
+    {
+      "period": "2026-08",
+      "monthName": "Aug 2026",
+      "bookingCount": 280,
+      "completedTrips": 248,
+      "revenueINR": 415000
+    }
+  ],
+  "status": "ready"
+}

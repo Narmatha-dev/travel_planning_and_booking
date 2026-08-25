@@ -125,10 +125,17 @@ const adminController = {
     return successResponse(res, 'Review deleted successfully', result);
   }),
 
-  // 9. Analytics Data (Feature 3 & 4)
+  // 9. Analytics Data (Phase 21 & Feature 3 & 4)
   getAnalytics: asyncHandler(async (req, res) => {
-    const analytics = await adminService.getAnalyticsData();
+    const analytics = await adminService.getAdvancedAnalytics(req.query);
     return successResponse(res, 'Analytics data retrieved successfully', analytics);
+  }),
+
+  exportAnalyticsCSV: asyncHandler(async (req, res) => {
+    const csvData = await adminService.exportAnalyticsCSV(req.query);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=travelora-admin-analytics-${Date.now()}.csv`);
+    return res.status(200).send(csvData);
   }),
 
   // 10. ML Model Status & Metrics (Feature 18)
@@ -141,6 +148,17 @@ const adminController = {
   trainMlModel: asyncHandler(async (req, res) => {
     const trained = await adminService.trainMlModel();
     return successResponse(res, 'ML recommendation model trained and deployed successfully', trained);
+  }),
+
+  // 12. Predictive Travel Analytics & Demand Forecasting (Phase 22)
+  getForecast: asyncHandler(async (req, res) => {
+    const forecast = await adminService.getForecast(req.query);
+    return successResponse(res, 'Travel demand predictive forecast generated successfully', forecast);
+  }),
+
+  trainForecastModel: asyncHandler(async (req, res) => {
+    const trained = await adminService.trainForecastModel();
+    return successResponse(res, 'Predictive demand forecast model retrained successfully', trained);
   }),
 };
 

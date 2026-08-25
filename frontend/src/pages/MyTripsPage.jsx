@@ -10,6 +10,7 @@ import DigitalReceiptModal from '../components/DigitalReceiptModal';
 import TripReviewModal from '../components/TripReviewModal';
 import ShareTripModal from '../components/ShareTripModal';
 import TripSafetyCard from '../components/TripSafetyCard';
+import WeatherCard from '../components/WeatherCard';
 import { useAppContext } from '../context/AppContext';
 
 const tripStatusColors = {
@@ -886,6 +887,17 @@ export default function MyTripsPage() {
                   </div>
                 )}
               </div>
+
+              {/* Phase 26: Destination Weather for Upcoming Trip */}
+              {selectedBookingDetails.status !== 'completed' && selectedBookingDetails.status !== 'cancelled' && (
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <WeatherCard
+                    destination={selectedBookingDetails.destination_name}
+                    allowCurrentLocation={false}
+                    compact={true}
+                  />
+                </div>
+              )}
 
               {/* Trip Safety Card (Phase 25 - Feature 10) */}
               <TripSafetyCard trip={selectedBookingDetails} />

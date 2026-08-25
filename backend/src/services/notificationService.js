@@ -177,6 +177,27 @@ const notificationService = {
             preventDuplicate: true,
           });
         }
+
+        // 3. Phase 26: Weather Forecast Update for Upcoming Trips (1 to 3 Days out)
+        if (diffDays >= 1 && diffDays <= 3) {
+          try {
+            const weatherService = require('./weatherService');
+            const wData = await weatherService.getWeatherByDestination(destName);
+            if (wData && wData.weather_available && wData.current) {
+              const c = wData.current;
+              const wTitle = `🌦️ Weather Update: ${destName} (${c.condition}, ${c.temperature}°C)`;
+              const wMessage = `Live forecast for your trip to ${destName}: ${c.condition} (${c.temperature}°C, Rain chance: ${c.rain_probability}%). ${c.smart_suggestion}`;
+              await this.createSystemNotification({
+                userId,
+                title: wTitle,
+                message: wMessage,
+                type: 'weather_update',
+                linkUrl: '/my-trips?tab=upcoming',
+                preventDuplicate: true,
+              });
+            }
+          } catch {}
+        }
       }
     } catch {
       // Gracefully continue without throwing

@@ -112,4 +112,14 @@ INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `is_re
 (3, 4, 'Trip Countdown: Paris in 50 Days', 'Get ready for your Parisian elegance trip starting Oct 5th. Check your daily itinerary now.', 'trip_reminder', 0, '/my-trips'),
 (4, 5, 'Booking Action Required', 'Your reservation #BK-2026-003 is awaiting payment confirmation.', 'booking_update', 0, '/booking');
 
+-- -----------------------------------------------------
+-- 11. Seed: trusted_contacts
+-- -----------------------------------------------------
+TRUNCATE TABLE `trusted_contacts`;
+INSERT INTO `trusted_contacts` (`id`, `user_id`, `name`, `phone`, `relationship`, `email`, `is_primary`) VALUES
+(1, 3, 'Sarah Reed (Mother)', '+1-555-0188', 'Mother', 'sarah.reed.mom@example.com', 1),
+(2, 3, 'David Reed (Father)', '+1-555-0189', 'Father', 'david.reed.dad@example.com', 0),
+(3, 4, 'Mikhail Rostov (Brother)', '+44-20-7946-0955', 'Brother', 'mikhail.r@example.com', 1),
+(4, 5, 'Yuki Sato (Spouse)', '+81-3-5555-0188', 'Spouse', 'yuki.sato@example.com', 1);
+
 SET FOREIGN_KEY_CHECKS = 1;

@@ -18,6 +18,9 @@ const notificationRoutes = require('./notificationRoutes');
 const favoriteRoutes = require('./favoriteRoutes');
 const shareRoutes = require('./shareRoutes');
 const rewardRoutes = require('./rewardRoutes');
+const analyticsRoutes = require('./analyticsRoutes');
+const safetyRoutes = require('./safetyRoutes');
+const weatherRoutes = require('./weatherRoutes');
 
 const router = express.Router();
 
@@ -25,6 +28,8 @@ const router = express.Router();
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
 router.use('/location', locationRoutes);
+router.use('/weather', weatherRoutes);
+router.use('/safety', safetyRoutes);
 router.use('/transport', transportRoutes);
 router.use('/hotels', hotelRoutes);
 router.use('/destinations', destinationRoutes);
@@ -40,5 +45,6 @@ router.use('/reviews', reviewRoutes);
 router.use('/recommendations', recommendationRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/admin', adminRoutes);
+router.use('/analytics', analyticsRoutes);
 
 module.exports = router;

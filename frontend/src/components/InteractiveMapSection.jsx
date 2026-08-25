@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import locationService from '../services/locationService';
+import weatherService from '../services/weatherService';
 
 const TRAVEL_MODES = [
   { key: 'driving', label: '🚗 Driving', googleKey: 'DRIVING' },
@@ -16,6 +17,7 @@ export default function InteractiveMapSection({
 }) {
   const [travelMode, setTravelMode] = useState('driving');
   const [routeData, setRouteData] = useState(null);
+  const [destWeather, setDestWeather] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [googleMapsLoaded, setGoogleMapsLoaded] = useState(false);
@@ -105,6 +107,18 @@ export default function InteractiveMapSection({
           setLoading(false);
         }
       }
+
+      // Fetch live destination weather for map context
+      try {
+        const wData = await weatherService.getCurrentWeather({
+          lat: dLat,
+          lng: dLng,
+          city: destination?.name || 'Destination',
+        });
+        if (isMounted && wData?.current) {
+          setDestWeather(wData.current);
+        }
+      } catch {}
     }
 
     fetchRoute();
@@ -248,6 +262,14 @@ export default function InteractiveMapSection({
               From <strong style={{ color: '#0f172a' }}>{origin?.city || 'Your Location'}</strong> to{' '}
               <strong style={{ color: '#0284c7' }}>{destination?.name || 'Selected Destination'}</strong>
             </p>
+            {destWeather && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '2px 10px', borderRadius: '9999px', fontSize: '0.78rem', fontWeight: '700', color: '#166534', marginTop: '0.35rem' }}>
+                <span>{destWeather.icon || '🌤️'}</span>
+                <span>{destWeather.temperature}°C {destWeather.condition}</span>
+                <span style={{ color: '#0284c7' }}>• 🌧️ {destWeather.rain_probability}% Rain</span>
+                <span style={{ color: '#15803d' }}>• {destWeather.outdoor_suitability}</span>
+              </div>
+            )}
           </div>
 
           {/* Travel Mode Selector */}
