@@ -64,6 +64,40 @@ const destinationService = {
   },
 
   /**
+   * Get list of countries with destination counts and flags
+   */
+  async getCountries() {
+    const response = await api.get('/destinations/countries');
+    return response.data.data;
+  },
+
+  /**
+   * Get list of continents with destination counts
+   */
+  async getContinents() {
+    const response = await api.get('/destinations/continents');
+    return response.data.data;
+  },
+
+  /**
+   * Get lightweight worldwide markers for interactive map
+   */
+  async getMapMarkers() {
+    const response = await api.get('/destinations/map-data');
+    return response.data.data;
+  },
+
+  /**
+   * Lookup real photograph & licensing info from Wikimedia Commons
+   */
+  async lookupImage(query, country = '') {
+    const response = await api.get('/destinations/image-lookup', {
+      params: { q: query, country },
+    });
+    return response.data.data;
+  },
+
+  /**
    * Add destination to favorites (requires auth)
    */
   async addFavorite(destinationId) {

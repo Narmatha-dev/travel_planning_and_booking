@@ -305,7 +305,8 @@ export default function InteractiveMapSection({
 
           {loading && (
             <div className="map-loading-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', gap: '0.75rem' }}>
-              <span>Calculating live route telemetry...</span>
+              <div style={{ width: '20px', height: '20px', border: '2px solid #ffffff', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontWeight: '700', fontSize: '0.95rem' }}>Loading map...</span>
             </div>
           )}
         </div>

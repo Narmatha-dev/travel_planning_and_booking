@@ -322,9 +322,14 @@ export default function TransportOptionsSection({
               >
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                    <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
-                      {promo.title}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <span style={{ fontWeight: '800', fontSize: '0.9rem', color: '#0f172a' }}>
+                        {promo.title}
+                      </span>
+                      <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.65rem', fontWeight: '800', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                        Demo Offer
+                      </span>
+                    </div>
                     <span style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '900', whiteSpace: 'nowrap' }}>
                       {promo.discountLabel}
                     </span>

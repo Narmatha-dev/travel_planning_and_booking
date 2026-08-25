@@ -187,6 +187,38 @@ export default function DestinationDetailPage() {
           </div>
         </div>
 
+        {/* Legal Photograph Attribution Strip */}
+        {(destination.image_author || destination.attribution_text || destination.image_license) && (
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              color: '#64748b',
+              marginBottom: '1.5rem',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <span>
+              📷 {destination.attribution_text || `Photo by ${destination.image_author || 'Contributor'} (${destination.image_license || 'CC BY-SA'})`}
+            </span>
+            {destination.image_source_url && (
+              <a
+                href={destination.image_source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#0284c7', fontWeight: '700', textDecoration: 'none' }}
+              >
+                View Wikimedia License ↗
+              </a>
+            )}
+          </div>
+        )}
+
         {/* Phase 26: Destination Live Weather & Forecast */}
         <WeatherCard
           destination={destination.city || destination.name}

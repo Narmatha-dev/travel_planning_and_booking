@@ -146,6 +146,38 @@ export default function DestinationDetailModal({ place, userLocation, onClose })
               <h3>About this place</h3>
               <p>{place.description || 'A popular and scenic tourist attraction with memorable sights and rich travel experiences.'}</p>
             </div>
+
+            {/* Legal Photograph Attribution */}
+            {(place.image_author || place.attribution_text || place.image_license) && (
+              <div
+                style={{
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '8px 12px',
+                  fontSize: '0.78rem',
+                  color: '#475569',
+                  marginTop: '0.75rem',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>
+                  📷 {place.attribution_text || `Photo by ${place.image_author || 'Contributor'} (${place.image_license || 'CC BY-SA'})`}
+                </span>
+                {place.image_source_url && (
+                  <a
+                    href={place.image_source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#0284c7', fontWeight: '700', textDecoration: 'none', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}
+                  >
+                    View License ↗
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

@@ -6,7 +6,9 @@ import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
 import LocationSection from '../components/LocationSection';
 import NearbyPlacesSection from '../components/NearbyPlacesSection';
-import PersonalizedRecommendationsSection from '../components/PersonalizedRecommendationsSection';
+import GlobalPlaceSearch from '../components/GlobalPlaceSearch';
+import InteractiveMapSection from '../components/InteractiveMapSection';
+import TransportOptionsSection from '../components/TransportOptionsSection';
 import destinationService from '../services/destinationService';
 import packageService from '../services/packageService';
 import bookingService from '../services/bookingService';
@@ -14,12 +16,12 @@ import bookingService from '../services/bookingService';
 function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isAuthenticated } = useAppContext();
+  const { user, isAuthenticated, currentLocation } = useAppContext();
   const [welcomeBanner, setWelcomeBanner] = useState(location.state?.welcomeMessage || null);
   const [popularDestinations, setPopularDestinations] = useState([]);
   const [featuredPackages, setFeaturedPackages] = useState([]);
-  const [searchWhere, setSearchWhere] = useState('');
   const [userBookings, setUserBookings] = useState([]);
+  const [selectedPlace, setSelectedPlace] = useState(null);
 
   useEffect(() => {
     if (location.state?.welcomeMessage) {
@@ -235,35 +237,81 @@ function HomePage() {
         </div>
       </section>
 
-      <section className="search-section">
+      {/* Universal Worldwide Place Search (Requirement 1 & 15) */}
+      <section className="search-section" style={{ padding: '2rem 0 1rem' }}>
         <div className="container">
-          <form className="search-panel" onSubmit={handleSearchSubmit}>
-            <div className="search-field">
-              <label>Destination</label>
-              <input
-                type="text"
-                value={searchWhere}
-                onChange={(e) => setSearchWhere(e.target.value)}
-                placeholder="Where to? (e.g. Bali, Paris, Tokyo)"
-              />
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              border: '1.5px solid #e2e8f0',
+              padding: '1.75rem',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
+            }}
+          >
+            <div style={{ marginBottom: '1.25rem' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: '800', color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                🔍 DYNAMIC WORLDWIDE DESTINATION SEARCH
+              </span>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#0f172a', margin: '0.25rem 0 0' }}>
+                Search Any Tourist Destination in the World
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0.25rem 0 0' }}>
+                Enter any monument, city, beach, or landmark to view real photos, exact coordinates, interactive route, and transport options.
+              </p>
             </div>
-            <div className="search-field">
-              <label>Departure</label>
-              <input type="date" />
-            </div>
-            <div className="search-field">
-              <label>Travelers</label>
-              <select>
-                <option>1 Traveler</option>
-                <option>2 Travelers</option>
-                <option>3 Travelers</option>
-                <option>4+ Travelers</option>
-              </select>
-            </div>
-            <button type="submit" className="btn btn-primary">
-              Search
-            </button>
-          </form>
+
+            <GlobalPlaceSearch
+              onPlaceSelect={(place) => setSelectedPlace(place)}
+              onViewOnMap={(place) => {
+                setSelectedPlace(place);
+                const mapElem = document.getElementById('interactive-map-section');
+                if (mapElem) mapElem.scrollIntoView({ behavior: 'smooth' });
+              }}
+              onPlanTrip={(place) => {
+                navigate(`/trip-planner?destination=${encodeURIComponent(place.name)}&lat=${place.latitude}&lng=${place.longitude}`);
+              }}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Dynamic Map & Route for Selected or Default Destination (Feature 5, 9 & 10) */}
+      <section className="section" id="interactive-map-section" style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+        <div className="container">
+          <InteractiveMapSection
+            origin={currentLocation || { city: 'Chennai', latitude: 13.0827, longitude: 80.2707 }}
+            destination={
+              selectedPlace || {
+                name: 'Eiffel Tower',
+                city: 'Paris',
+                country: 'France',
+                latitude: 48.8584,
+                longitude: 2.2945,
+              }
+            }
+            title={selectedPlace ? `🗺️ Route to ${selectedPlace.name}` : '🗺️ Route & Distance Calculator'}
+          />
+
+          {/* Transport Options Section (Requirement 10 & 11) */}
+          <div style={{ marginTop: '1.5rem' }}>
+            <TransportOptionsSection
+              origin={currentLocation || { city: 'Chennai', latitude: 13.0827, longitude: 80.2707 }}
+              destination={
+                selectedPlace || {
+                  name: 'Eiffel Tower',
+                  city: 'Paris',
+                  country: 'France',
+                  latitude: 48.8584,
+                  longitude: 2.2945,
+                }
+              }
+              onContinueToTripPlanning={() => {
+                const target = selectedPlace || { name: 'Eiffel Tower', latitude: 48.8584, longitude: 2.2945 };
+                navigate(`/trip-planner?destination=${encodeURIComponent(target.name)}&lat=${target.latitude}&lng=${target.longitude}`);
+              }}
+            />
+          </div>
         </div>
       </section>
 
