@@ -650,6 +650,61 @@ const chatbotService = {
       actionLinks.push({ label: `🌤️ Check ${targetDestName} Weather`, url: `/trip-planner?destination=${encodeURIComponent(targetDestName)}` });
     }
 
+    // =========================================================================
+    // Phase 28: Intent P28 - Travel Document & Pre-Trip Checklist Manager (Feature 14 & 15)
+    // =========================================================================
+    else if (
+      query.includes('document') ||
+      query.includes('documents') ||
+      query.includes('preparation') ||
+      query.includes('readiness') ||
+      query.includes('what is still pending') ||
+      query.includes('is my trip ready') ||
+      query.includes('pre-trip') ||
+      query.includes('ஆவணங்கள்') ||
+      query.includes('சரிபார்ப்பு பட்டியல்') ||
+      query.includes('தயார்')
+    ) {
+      const checklistService = require('./packingService');
+      const realChecklistService = require('./checklistService');
+
+      let targetDestName = 'Mahabalipuram';
+      if (query.includes('ooty') || query.includes('ஊட்டி')) targetDestName = 'Ooty';
+      else if (query.includes('chennai') || query.includes('சென்னை')) targetDestName = 'Chennai';
+      else if (query.includes('kanyakumari') || query.includes('கன்னியாகுமரி')) targetDestName = 'Kanyakumari';
+      else if (query.includes('goa') || query.includes('கோவா')) targetDestName = 'Goa';
+      else if (query.includes('paris') || query.includes('பாரிஸ்')) targetDestName = 'Paris';
+      else if (query.includes('bali') || query.includes('பாலி')) targetDestName = 'Bali';
+
+      const chk = await realChecklistService.getTripChecklist(1, 3, { destinationName: targetDestName });
+
+      if (lang === 'ta') {
+        reply = `### 📋 ${targetDestName} பயண ஆவணங்கள் & தயாரிப்பு சரிபார்ப்பு பட்டியல்\n\n` +
+          `**பயண தயார்நிலை மதிப்பெண் (Trip Readiness): ${chk.readinessScore}%** (${chk.completedTasks}/${chk.totalTasks} தயார்)\n\n` +
+          `* 🪪 **அடையாள ஆவணங்கள்:** அரசு புகைப்பட அடையாள அட்டை (Physical & Digital)\n` +
+          `* 🎫 **போக்குவரத்து:** ${chk.integrations.transport.available ? '✅ உறுதி செய்யப்பட்டது (' + chk.integrations.transport.transportTitle + ')' : '⏳ முன்பதிவு ரசீது சரிபார்க்கவும்'}\n` +
+          `* 🏨 **தங்குமிடம்:** ${chk.integrations.hotel.available ? '✅ உறுதி செய்யப்பட்டது (' + chk.integrations.hotel.hotelName + ')' : '⏳ தங்குமிட வவுச்சர் சரிபார்க்கவும்'}\n` +
+          `* 🎒 **பேக்கிங் முன்னேற்றம்:** ${chk.integrations.packing.packed}/${chk.integrations.packing.total || 18} பொருட்கள் பேக் செய்யப்பட்டன\n` +
+          `* 🌦️ **வானிலை ஆய்வு:** ${chk.integrations.weather.checked ? '✅ நேரலை முன்னறிவிப்பு சரிபார்க்கப்பட்டது (' + chk.integrations.weather.temp + '°C)' : '⏳ சரிபார்க்கவும்'}\n` +
+          `* 🛡️ **பாதுகாப்பு & அவசர உதவி:** ${chk.integrations.safety.ready ? '✅ அவசர தொடர்புகள் சேர்க்கப்பட்டுள்ளன' : '⏳ சரிபார்க்கவும்'}\n\n` +
+          `💡 **ஆலோசனை:** மீதமுள்ள ${chk.pendingTasks} நிலுவைப் பணிகளை முடிக்க கீழேயுள்ள சரிபார்ப்பு பட்டியல் இணைப்பை அழுத்தவும்.`;
+      } else {
+        reply = `### 📋 Travel Document & Pre-Trip Preparation Checklist (${targetDestName})\n\n` +
+          `**Overall Trip Readiness Score: ${chk.readinessScore}%** (${chk.completedTasks} of ${chk.totalTasks} Ready)\n\n` +
+          `* 🪪 **Identification:** Government Photo ID / Passport (Physical & Digital copy)\n` +
+          `* 🎫 **Transport:** ${chk.integrations.transport.available ? '✅ Confirmed (' + chk.integrations.transport.transportTitle + ')' : '⏳ Voucher ready for check-in'}\n` +
+          `* 🏨 **Hotel Stay:** ${chk.integrations.hotel.available ? '✅ Confirmed (' + chk.integrations.hotel.hotelName + ')' : '⏳ Hotel voucher ready'}\n` +
+          `* 🎒 **Smart Packing:** ${chk.integrations.packing.packed}/${chk.integrations.packing.total || 18} items packed\n` +
+          `* 🌦️ **Weather Review:** ${chk.integrations.weather.checked ? '✅ Live forecast verified (' + chk.integrations.weather.temp + '°C, ' + chk.integrations.weather.condition + ')' : '⏳ Forecast review pending'}\n` +
+          `* 🛡️ **Safety & Emergency Contacts:** ${chk.integrations.safety.ready ? '✅ Verified trusted contacts configured' : '⏳ Emergency contacts ready'}\n\n` +
+          `💡 *You have ${chk.pendingTasks} pending preparation tasks. Tap below to manage and check off items.*`;
+      }
+
+      suggestions.push(`What should I pack for ${targetDestName}?`, `What is the weather in ${targetDestName}?`, `Review emergency contacts`, `Open packing checklist`);
+      actionLinks.push({ label: `📋 Open Travel Document & Preparation Checklist`, url: `/checklist?destination=${encodeURIComponent(targetDestName)}` });
+      actionLinks.push({ label: `🎒 Open Smart Packing Assistant`, url: `/packing?destination=${encodeURIComponent(targetDestName)}` });
+    }
+
     // Intent P14-1: Suggest Places Near Me / GPS Location (Feature 3 & 4)
     else if (
       (query.includes('near me') ||

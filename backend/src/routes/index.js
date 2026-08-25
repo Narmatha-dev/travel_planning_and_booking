@@ -22,6 +22,7 @@ const analyticsRoutes = require('./analyticsRoutes');
 const safetyRoutes = require('./safetyRoutes');
 const weatherRoutes = require('./weatherRoutes');
 const packingRoutes = require('./packingRoutes');
+const checklistRoutes = require('./checklistRoutes');
 
 const router = express.Router();
 
@@ -31,6 +32,7 @@ router.use('/auth', authRoutes);
 router.use('/location', locationRoutes);
 router.use('/weather', weatherRoutes);
 router.use('/packing', packingRoutes);
+router.use('/checklist', checklistRoutes);
 router.use('/safety', safetyRoutes);
 router.use('/transport', transportRoutes);
 router.use('/hotels', hotelRoutes);

@@ -212,6 +212,20 @@ const notificationService = {
             preventDuplicate: true,
           });
         }
+
+        // 5. Phase 28: Pre-Trip Document & Preparation Checklist Reminder (1 to 5 Days out)
+        if (diffDays >= 1 && diffDays <= 5) {
+          const chkTitle = `📋 Pre-Trip Checklist: Prepare for ${destName} (${diffDays} Days Left)`;
+          const chkMessage = `Your trip to ${destName} is coming up in ${diffDays} days! Review your travel documents, hotel/transport vouchers, and pre-trip readiness score.`;
+          await this.createSystemNotification({
+            userId,
+            title: chkTitle,
+            message: chkMessage,
+            type: 'checklist_reminder',
+            linkUrl: `/checklist?tripId=${booking.id}`,
+            preventDuplicate: true,
+          });
+        }
       }
     } catch {
       // Gracefully continue without throwing
