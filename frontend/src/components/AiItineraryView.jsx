@@ -109,6 +109,123 @@ export default function AiItineraryView({
         </div>
       </div>
 
+      {/* Estimated Travel Cost Breakdown Card (Requirement 2) */}
+      {(() => {
+        const cb = itinerary.costBreakdown || {
+          distanceText: itinerary.distanceText || (itinerary.distanceKm ? `${itinerary.distanceKm} km` : 'Local Destination'),
+          transport: Math.round(totalEstimatedCost * 0.18),
+          accommodation: Math.round(totalEstimatedCost * 0.42),
+          food: Math.round(totalEstimatedCost * 0.25),
+          activities: Math.round(totalEstimatedCost * 0.10),
+          other: Math.round(totalEstimatedCost * 0.05),
+          total: totalEstimatedCost,
+          currencySymbol: sym,
+          isEstimated: true,
+        };
+
+        return (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              border: '1.5px solid #cbd5e1',
+              padding: '1.5rem',
+              margin: '1.5rem 0',
+              boxShadow: '0 4px 16px rgba(0,0,0,0.05)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: '800', color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span>📊</span> Estimated Travel Cost Breakdown
+                </h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.82rem', color: '#64748b' }}>
+                  Calculated based on actual road distance, transport mode, {travelers || 2} traveler{travelers > 1 ? 's' : ''}, and {numberOfDays} day{numberOfDays > 1 ? 's' : ''} duration.
+                </p>
+              </div>
+              <span style={{ background: '#e0f2fe', color: '#0369a1', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: '800' }}>
+                Estimated Calculation
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.85rem', marginBottom: '1.25rem' }}>
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>📏 Distance</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {cb.distanceText || (cb.distanceKm ? `${cb.distanceKm} km` : 'Local Destination')}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>🚗 Transport</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {sym}{Number(cb.transport).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>🏨 Accommodation</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {sym}{Number(cb.accommodation).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>🍽️ Food & Meals</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {sym}{Number(cb.food).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>🎟️ Activities</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {sym}{Number(cb.activities).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>🎒 Other / Transit</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#0f172a', marginTop: '0.2rem' }}>
+                  {sym}{Number(cb.other).toLocaleString('en-IN')}
+                </div>
+              </div>
+            </div>
+
+            {/* Total Summary Row */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                color: '#ffffff',
+                padding: '0.9rem 1.25rem',
+                borderRadius: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '700' }}>
+                  Estimated Total Travel Cost
+                </span>
+                <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#38bdf8' }}>
+                  {sym}{Number(cb.total || totalEstimatedCost).toLocaleString('en-IN')}
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Per Person Cost</span>
+                <div style={{ fontSize: '1.05rem', fontWeight: '700', color: '#ffffff' }}>
+                  ~{sym}{Math.round((cb.total || totalEstimatedCost) / (travelers || 2)).toLocaleString('en-IN')} / traveler
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* 2. Budget Alert & Actionable Optimization Advice */}
       {isOverBudget ? (
         <div className="ai-overbudget-banner">

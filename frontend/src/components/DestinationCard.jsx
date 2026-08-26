@@ -66,6 +66,9 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
     'Travel';
 
   const hasDistance = destination.distance_km !== undefined && destination.distance_km !== null;
+  const formattedDistance = hasDistance
+    ? (destination.distance_label || (destination.distance_km < 1 ? `${Math.round(destination.distance_km * 1000)} m` : `${destination.distance_km} km`))
+    : null;
 
   return (
     <div
@@ -205,7 +208,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
         </div>
 
         {/* Distance Badge (When Location Granted) */}
-        {hasDistance && (
+        {hasDistance && formattedDistance && (
           <div
             style={{
               position: 'absolute',
@@ -224,7 +227,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
             }}
           >
-            <span>📍 {destination.distance_label || `${destination.distance_km} km`}</span>
+            <span>📍 {formattedDistance}</span>
             {destination.approx_flight_hours && <span>• ✈️ {destination.approx_flight_hours}</span>}
           </div>
         )}

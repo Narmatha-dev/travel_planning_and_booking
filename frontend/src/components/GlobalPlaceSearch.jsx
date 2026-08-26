@@ -20,6 +20,7 @@ export default function GlobalPlaceSearch({
   onPlaceSelect,
   onViewOnMap,
   onPlanTrip,
+  onSearchChange,
   initialQuery = '',
   compact = false,
 }) {
@@ -131,6 +132,9 @@ export default function GlobalPlaceSearch({
 
       if (placeData && onPlaceSelect) {
         onPlaceSelect(placeData);
+      }
+      if (onSearchChange) {
+        onSearchChange(q);
       }
     } catch (err) {
       console.warn('[GlobalPlaceSearch] Search error:', err.message);

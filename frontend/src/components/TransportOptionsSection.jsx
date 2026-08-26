@@ -70,58 +70,88 @@ export default function TransportOptionsSection({
   const dLat = destination?.latitude;
   const dLng = destination?.longitude;
 
-  // Calculate transport costs dynamically
+  // Calculate transport costs dynamically based on real road distance
   useEffect(() => {
     let isMounted = true;
-    const dist = parseFloat(distanceKm || 320);
 
-    // Dynamic multi-modal options calculation
-    const calculated = {
-      train: {
-        type: 'train',
-        title: 'Superfast Express Rail (Vande Bharat / Rajdhani)',
-        duration: `${Math.floor(dist / 65)} hrs ${Math.round((dist % 65) * 0.8)} min`,
-        price: Math.max(450, Math.round(dist * 1.8)),
-        price_display: `₹${Math.max(450, Math.round(dist * 1.8)).toLocaleString()}`,
-        available_routes: '2-4 Daily Scheduled Express Trains',
-        icon: '🚆',
-      },
-      bus: {
-        type: 'bus',
-        title: 'AC Multi-Axle Volvo Sleeper Coach',
-        duration: `${Math.floor(dist / 50)} hrs ${Math.round((dist % 50) * 1.2)} min`,
-        price: Math.max(350, Math.round(dist * 2.2)),
-        price_display: `₹${Math.max(350, Math.round(dist * 2.2)).toLocaleString()}`,
-        available_routes: '6+ Daily Departures (Evening & Night)',
-        icon: '🚌',
-      },
-      flight: {
-        type: 'flight',
-        title: 'Domestic Non-Stop Airline (Air India / IndiGo)',
-        duration: `${((dist / 750) + 1.2).toFixed(1)} hrs`,
-        price: Math.max(2800, Math.round(dist * 6.5)),
-        price_display: `₹${Math.max(2800, Math.round(dist * 6.5)).toLocaleString()}`,
-        available_routes: 'Daily Direct Flights Available',
-        icon: '✈️',
-      },
-      cab: {
-        type: 'cab',
-        title: 'Private AC Chauffeur Driven Sedan / SUV',
-        duration: `${Math.floor(dist / 60)} hrs ${Math.round((dist % 60) * 0.9)} min`,
-        price: Math.max(1200, Math.round(dist * 13.5)),
-        price_display: `₹${Math.max(1200, Math.round(dist * 13.5)).toLocaleString()}`,
-        available_routes: 'Instant Door-to-Door Private Pickup',
-        icon: '🚗',
-      },
-    };
+    async function computeTransport() {
+      let dist = parseFloat(distanceKm);
+      if (isNaN(dist) && oLat && oLng && dLat && dLng) {
+        try {
+          const route = await locationService.getRouteDirections({
+            originLat: oLat,
+            originLng: oLng,
+            destLat: dLat,
+            destLng: dLng,
+          });
+          dist = parseFloat(route?.distance_km || 320);
+        } catch {
+          dist = 320;
+        }
+      } else if (isNaN(dist)) {
+        dist = 320;
+      }
 
-    setTransportData(calculated);
-    setLoading(false);
+      if (!isMounted) return;
+
+      // Dynamic multi-modal options calculation based on actual distance
+      const calculated = {
+        train: {
+          type: 'train',
+          title: 'Superfast Express Rail (Vande Bharat / Rajdhani)',
+          duration: `${Math.floor(dist / 65)} hrs ${Math.round((dist % 65) * 0.8)} min`,
+          price: Math.max(450, Math.round(dist * 1.8)),
+          price_display: `₹${Math.max(450, Math.round(dist * 1.8)).toLocaleString('en-IN')}`,
+          available_routes: '2-4 Daily Scheduled Express Trains',
+          distance_km: dist,
+          distance_label: dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`,
+          icon: '🚆',
+        },
+        bus: {
+          type: 'bus',
+          title: 'AC Multi-Axle Volvo Sleeper Coach',
+          duration: `${Math.floor(dist / 50)} hrs ${Math.round((dist % 50) * 1.2)} min`,
+          price: Math.max(350, Math.round(dist * 2.2)),
+          price_display: `₹${Math.max(350, Math.round(dist * 2.2)).toLocaleString('en-IN')}`,
+          available_routes: '6+ Daily Departures (Evening & Night)',
+          distance_km: dist,
+          distance_label: dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`,
+          icon: '🚌',
+        },
+        flight: {
+          type: 'flight',
+          title: 'Domestic Non-Stop Airline (Air India / IndiGo)',
+          duration: `${((dist / 750) + 1.2).toFixed(1)} hrs`,
+          price: Math.max(2800, Math.round(dist * 6.5)),
+          price_display: `₹${Math.max(2800, Math.round(dist * 6.5)).toLocaleString('en-IN')}`,
+          available_routes: 'Daily Direct Flights Available',
+          distance_km: dist,
+          distance_label: dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`,
+          icon: '✈️',
+        },
+        cab: {
+          type: 'cab',
+          title: 'Private AC Chauffeur Driven Sedan / SUV',
+          duration: `${Math.floor(dist / 60)} hrs ${Math.round((dist % 60) * 0.9)} min`,
+          price: Math.max(1200, Math.round(dist * 13.5)),
+          price_display: `₹${Math.max(1200, Math.round(dist * 13.5)).toLocaleString('en-IN')}`,
+          available_routes: 'Instant Door-to-Door Private Pickup',
+          distance_km: dist,
+          distance_label: dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1)} km`,
+          icon: '🚗',
+        },
+      };
+
+      setTransportData(calculated);
+      setLoading(false);
+    }
+
+    computeTransport();
 
     return () => {
       isMounted = false;
     };
-  }, [distanceKm]);
+  }, [distanceKm, oLat, oLng, dLat, dLng]);
 
   const handleSelectOption = (typeKey) => {
     setSelectedType(typeKey);

@@ -138,9 +138,12 @@ export default function DestinationsPage() {
           {/* Worldwide Search Input */}
           <div style={{ maxWidth: '780px', margin: '0 auto' }}>
             <GlobalPlaceSearch
+              initialQuery={searchQuery}
+              onSearchChange={(term) => {
+                setSearchQuery(term);
+              }}
               onPlaceSelect={(place) => {
                 setSearchQuery(place.name);
-                fetchDestinations();
               }}
               onViewOnMap={(place) => {
                 setViewMode('map');
@@ -153,6 +156,30 @@ export default function DestinationsPage() {
               }}
             />
           </div>
+
+          {searchQuery && (
+            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.9rem', color: '#0369a1', fontWeight: '700', background: '#e0f2fe', padding: '4px 14px', borderRadius: '9999px' }}>
+                🔍 Search active: "{searchQuery}"
+              </span>
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #cbd5e1',
+                  color: '#64748b',
+                  padding: '3px 10px',
+                  borderRadius: '9999px',
+                  fontSize: '0.78rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕ Clear
+              </button>
+            </div>
+          )}
         </div>
 
         {/* ================================================================= */}
@@ -451,12 +478,14 @@ export default function DestinationsPage() {
                 </div>
               ) : destinations.length === 0 ? (
                 <div style={{ background: '#f8fafc', border: '1.5px dashed #cbd5e1', borderRadius: '16px', padding: '3.5rem 1.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🌍</div>
+                  <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🔍</div>
                   <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
-                    Destination information is currently unavailable
+                    {searchQuery ? `No destinations found for "${searchQuery}"` : 'No destinations found'}
                   </h3>
-                  <p style={{ color: '#64748b', maxWidth: '460px', margin: '0 auto 1.25rem auto', fontSize: '0.92rem' }}>
-                    We couldn't find any places matching your current search criteria. Try clearing your filters or searching another global city.
+                  <p style={{ color: '#64748b', maxWidth: '480px', margin: '0 auto 1.25rem auto', fontSize: '0.92rem' }}>
+                    {searchQuery
+                      ? `We couldn't find any destinations matching "${searchQuery}". Check the spelling, try searching by city, state, or country, or reset your filters.`
+                      : "We couldn't find any destinations matching your current filter criteria. Try adjusting or clearing your filters."}
                   </p>
                   <button type="button" onClick={handleResetFilters} className="btn btn-primary" style={{ padding: '0.65rem 1.5rem', fontWeight: '800' }}>
                     Reset All Filters

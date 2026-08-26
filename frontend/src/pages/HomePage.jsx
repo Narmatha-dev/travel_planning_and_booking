@@ -6,6 +6,7 @@ import DestinationCard from '../components/DestinationCard';
 import PackageCard from '../components/PackageCard';
 import LocationSection from '../components/LocationSection';
 import NearbyPlacesSection from '../components/NearbyPlacesSection';
+import PersonalizedRecommendationsSection from '../components/PersonalizedRecommendationsSection';
 import GlobalPlaceSearch from '../components/GlobalPlaceSearch';
 import InteractiveMapSection from '../components/InteractiveMapSection';
 import TransportOptionsSection from '../components/TransportOptionsSection';
@@ -79,15 +80,6 @@ function HomePage() {
   };
 
   const daysRemaining = nextUpcomingTrip ? calculateDaysRemaining(nextUpcomingTrip.travel_date) : null;
-
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    if (searchWhere.trim()) {
-      navigate(`/destinations?search=${encodeURIComponent(searchWhere.trim())}`);
-    } else {
-      navigate('/destinations');
-    }
-  };
 
   return (
     <>
