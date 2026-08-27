@@ -19,26 +19,26 @@ function Footer() {
           <ul>
             <li><Link to="/destinations">Destinations</Link></li>
             <li><Link to="/packages">Travel Packages</Link></li>
-            <li><Link to="/trip-planner">Trip Planner</Link></li>
-            <li><Link to="/booking">Bookings</Link></li>
+            <li><Link to="/trip-planner">AI Trip Planner</Link></li>
+            <li><Link to="/my-trips">My Bookings</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4>Company</h4>
+          <h4>Support & Safety</h4>
           <ul>
-            <li><Link to="/about">About Us</Link></li>
-            <li><Link to="/profile">Profile</Link></li>
-            <li><Link to="/login">Login</Link></li>
+            <li><Link to="/safety">Safety & SOS Hub</Link></li>
+            <li><Link to="/profile">Profile Settings</Link></li>
+            <li><Link to="/login">Account Access</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4>Contact</h4>
+          <h4>Contact & Help</h4>
           <ul>
             <li>hello@travelora.com</li>
-            <li>+1 (800) 555-0199</li>
-            <li>24/7 Support</li>
+            <li>+91 (800) 555-0199</li>
+            <li>24/7 Live AI Travel Support</li>
           </ul>
         </div>
       </div>

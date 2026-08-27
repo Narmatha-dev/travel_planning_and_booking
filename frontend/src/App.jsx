@@ -1,10 +1,10 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatbotWidget from './components/ChatbotWidget';
 import ProtectedRoute from './components/ProtectedRoute';
 import AdminRoute from './components/AdminRoute';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useAppContext } from './context/AppContext';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -14,7 +14,6 @@ import DestinationDetailPage from './pages/DestinationDetailPage';
 import PackagesPage from './pages/PackagesPage';
 import PackageDetailPage from './pages/PackageDetailPage';
 import TripPlannerPage from './pages/TripPlannerPage';
-import RecommendationsPage from './pages/RecommendationsPage';
 import SafetyPage from './pages/SafetyPage';
 import BookingPage from './pages/BookingPage';
 import MyTripsPage from './pages/MyTripsPage';
@@ -25,104 +24,117 @@ import SharedTripPage from './pages/SharedTripPage';
 import RewardsPage from './pages/RewardsPage';
 import UserAnalyticsPage from './pages/UserAnalyticsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
-import OfflineTripsPage from './pages/OfflineTripsPage';
-import AiCopilotPage from './pages/AiCopilotPage';
 import './App.css';
+
+function AppContent() {
+  const { isAuthenticated } = useAppContext();
+  const location = useLocation();
+
+  // Hide standard navbar & footer on the standalone 3D Gateway / Login Page
+  const isAuthGateway = location.pathname === '/login' || (!isAuthenticated && location.pathname === '/');
+
+  return (
+    <div className="app-shell">
+      {!isAuthGateway && <Navbar />}
+      <main className={isAuthGateway ? 'auth-main-full' : ''}>
+        <Routes>
+          {/* Public & Entry Routes */}
+          <Route path="/" element={isAuthenticated ? <HomePage /> : <LoginPage isGateway={true} />} />
+          <Route path="/home" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route path="/destinations" element={<DestinationsPage />} />
+          <Route path="/destinations/:id" element={<DestinationDetailPage />} />
+          <Route path="/packages" element={<PackagesPage />} />
+          <Route path="/packages/:id" element={<PackageDetailPage />} />
+          <Route path="/trip-planner" element={<TripPlannerPage />} />
+          <Route path="/safety" element={<SafetyPage />} />
+          <Route path="/shared-trip/:token" element={<SharedTripPage />} />
+
+          {/* Canonical clean redirects for redundant legacy routes */}
+          <Route path="/recommendations" element={<Navigate to="/destinations" replace />} />
+          <Route path="/copilot" element={<Navigate to="/trip-planner" replace />} />
+          <Route path="/offline-trips" element={<Navigate to="/my-trips" replace />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/booking"
+            element={
+              <ProtectedRoute>
+                <BookingPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/my-trips"
+            element={
+              <ProtectedRoute>
+                <MyTripsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <ProtectedRoute>
+                <NotificationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/favorites"
+            element={
+              <ProtectedRoute>
+                <FavoritesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/rewards"
+            element={
+              <ProtectedRoute>
+                <RewardsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/analytics"
+            element={
+              <ProtectedRoute>
+                <UserAnalyticsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+        </Routes>
+      </main>
+      {!isAuthGateway && <ChatbotWidget />}
+      {!isAuthGateway && <Footer />}
+    </div>
+  );
+}
 
 function App() {
   return (
     <AppProvider>
       <BrowserRouter>
-        <div className="app-shell">
-          <Navbar />
-          <main>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<HomePage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/auth/callback" element={<AuthCallbackPage />} />
-              <Route path="/destinations" element={<DestinationsPage />} />
-              <Route path="/destinations/:id" element={<DestinationDetailPage />} />
-              <Route path="/packages" element={<PackagesPage />} />
-              <Route path="/packages/:id" element={<PackageDetailPage />} />
-              <Route path="/trip-planner" element={<TripPlannerPage />} />
-              <Route path="/recommendations" element={<RecommendationsPage />} />
-              <Route path="/copilot" element={<AiCopilotPage />} />
-              <Route path="/safety" element={<SafetyPage />} />
-              <Route path="/offline-trips" element={<OfflineTripsPage />} />
-              <Route path="/shared-trip/:token" element={<SharedTripPage />} />
-
-              {/* Protected Routes */}
-              <Route
-                path="/booking"
-                element={
-                  <ProtectedRoute>
-                    <BookingPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/my-trips"
-                element={
-                  <ProtectedRoute>
-                    <MyTripsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/notifications"
-                element={
-                  <ProtectedRoute>
-                    <NotificationsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/favorites"
-                element={
-                  <ProtectedRoute>
-                    <FavoritesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rewards"
-                element={
-                  <ProtectedRoute>
-                    <RewardsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/analytics"
-                element={
-                  <ProtectedRoute>
-                    <UserAnalyticsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminDashboardPage />
-                  </AdminRoute>
-                }
-              />
-            </Routes>
-          </main>
-          <ChatbotWidget />
-          <Footer />
-        </div>
+        <AppContent />
       </BrowserRouter>
     </AppProvider>
   );

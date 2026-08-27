@@ -13,7 +13,7 @@ const QUICK_PROMPTS = [
 ];
 
 export default function ChatbotWidget() {
-  const { currentLocation, selectedTransport, selectedHotel, favorites, user, language, t } = useAppContext();
+  const { currentLocation, selectedTransport, selectedHotel, favorites, user, language, isOnline, t } = useAppContext();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -27,27 +27,29 @@ export default function ChatbotWidget() {
   const recognitionRef = useRef(null);
 
   const QUICK_PROMPTS = [
-    { label: `🌦️ ${language === 'ta' ? 'ஊட்டி வானிலை' : 'Weather in Ooty'}`, text: language === 'ta' ? 'ஊட்டி வானிலை எப்படி இருக்கிறது?' : 'What is the weather in Ooty?' },
-    { label: `📍 ${t('chatbot.suggestPlaces', 'Suggest places near me')}`, text: t('chatbot.suggestPlaces', 'Suggest places near me') },
-    { label: `🛡️ ${language === 'ta' ? 'பாதுகாப்பு & அவசர உதவி' : 'Emergency & Safety Help'}`, text: language === 'ta' ? 'அவசர உதவி மற்றும் மருத்துவமனை' : 'Find nearest hospital and emergency help' },
-    { label: `✈️ ${t('chatbot.planTrip', 'Plan a 3-day trip')}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
-    { label: `🏨 ${t('chatbot.budgetStays', 'Find budget stays')}`, text: t('chatbot.budgetStays', 'Find budget stays') },
-    { label: `🏛️ ${language === 'ta' ? 'மழை நேர உள்ளரங்கு இடங்கள்' : 'Indoor Places on Rain'}`, text: language === 'ta' ? 'மழை பெய்தால் செல்லக்கூடிய உள்ளரங்கு இடங்கள்' : 'Suggest indoor places in case of rain' },
+    { label: `🎫 ${language === 'ta' ? 'முன்பதிவு செய்வது எப்படி?' : 'How to book a trip?'}`, text: language === 'ta' ? 'முன்பதிவு செய்வது எப்படி?' : 'How do I book a trip?' },
+    { label: `⚡ ${language === 'ta' ? 'UPI கட்டண முறை' : 'UPI Payment Guide'}`, text: language === 'ta' ? 'UPI மூலம் பணம் செலுத்துவது எப்படி?' : 'How do I pay using UPI or Google Pay?' },
+    { label: `🔄 ${language === 'ta' ? 'ரத்து & பணம் திரும்ப' : 'Cancellation & Refund'}`, text: language === 'ta' ? 'பயணத்தை ரத்து செய்தால் பணம் திரும்ப வருமா?' : 'What is the cancellation and refund policy?' },
+    { label: `🌦️ ${language === 'ta' ? 'கோவா சிறந்த பருவம்' : 'Best time for Goa'}`, text: language === 'ta' ? 'கோவா செல்ல சிறந்த நேரம் எது?' : 'What is the best time to visit Goa?' },
+    { label: `✈️ ${language === 'ta' ? 'ஊட்டி 3 நாள் திட்டம்' : 'Plan 3-day Ooty trip'}`, text: language === 'ta' ? 'ஊட்டிக்கு 3 நாள் பயணத் திட்டம் போடு' : 'Plan a 3-day trip to Ooty' },
+    { label: `📦 ${language === 'ta' ? 'சுற்றுலா பேக்கேஜ்கள்' : 'Tour Packages'}`, text: language === 'ta' ? 'என்னென்ன சுற்றுலா பேக்கேஜ்கள் உள்ளன?' : 'What travel packages are available?' },
   ];
 
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
       content:
-        '👋 **Hello! I am your AI Travel Assistant.**\n\nI can help you check live weather forecasts, discover nearby destinations, find emergency safety services (hospitals, police, pharmacies), plan weather-aware multi-day itineraries, recommend verified stays, and calculate trip budgets.\n\nYou can also tap the 🎙️ **Microphone** to speak in English or தமிழ்.\n\nHow can I help your journey today?',
+        language === 'ta'
+          ? '👋 **வணக்கம்! நான் உங்கள் Travelora AI பயண உதவியாளர்.**\n\nசுற்றுலா இடங்கள், நாள் வாரியான AI பயணத் திட்டம், முன்பதிவு முறைகள், UPI கட்டணம், ரத்து செய்தல் மற்றும் சிறந்த தங்குமிடங்கள் குறித்த உங்கள் அனைத்து கேள்விகளுக்கும் நான் பதிலளிப்பேன்.\n\nகீழே உள்ள கேள்விகளை அழுத்தலாம் அல்லது நீங்கள் விரும்பியதைக் கேட்கலாம்!'
+          : '👋 **Hello! I am your Travelora AI Travel & Booking Assistant.**\n\nI can answer any question about destination guides, AI multi-day itineraries, booking steps, UPI payments, cancellations, tour packages, and hotels.\n\nTap any quick question below or ask anything in English, தமிழ் or Tanglish!',
       suggestions: [
-        'What is the weather in Ooty?',
-        'Suggest places near me',
-        'Suggest indoor places in case of rain',
-        'Find nearest hospital',
-        'Plan a 3-day trip',
+        'How do I book a trip?',
+        'How to pay with UPI or Google Pay?',
+        'What is the cancellation and refund policy?',
+        'What is the best time to visit Goa?',
+        'Plan a 3-day trip to Ooty',
       ],
-      language: 'en',
+      language: language || 'en',
       timestamp: new Date().toISOString(),
     },
   ]);
@@ -323,7 +325,7 @@ export default function ChatbotWidget() {
     } catch {}
   };
 
-  // Helper to format markdown in assistant responses
+  // Helper to format markdown and clickable links in assistant responses
   const renderFormattedContent = (content) => {
     if (!content) return null;
     const lines = content.split('\n');
@@ -339,7 +341,7 @@ export default function ChatbotWidget() {
       // Header 4
       if (line.startsWith('#### ')) {
         return (
-          <h5 key={idx} style={{ fontSize: '0.88rem', fontWeight: '700', color: '#0369a1', margin: '0.4rem 0 0.2rem 0' }}>
+          <h5 key={idx} style={{ fontSize: '0.88rem', fontWeight: '700', color: '#7c3aed', margin: '0.4rem 0 0.2rem 0' }}>
             {line.replace('#### ', '')}
           </h5>
         );
@@ -349,19 +351,39 @@ export default function ChatbotWidget() {
       const isBullet = line.startsWith('* ') || line.startsWith('- ');
       const cleanLine = isBullet ? line.substring(2) : line;
 
-      // Simple bold parsing **text**
-      const parts = cleanLine.split(/(\*\*.*?\*\*)/g);
-      const formattedParts = parts.map((part, pIdx) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return <strong key={pIdx}>{part.slice(2, -2)}</strong>;
-        }
-        return part;
-      });
+      // Parse markdown bold and links [text](url)
+      const parseInline = (text) => {
+        // Regex to split by bold **...** and markdown links [...](...)
+        const tokenRegex = /(\*\*.*?\*\*|\[.*?\]\(.*?\))/g;
+        const tokens = text.split(tokenRegex);
+        return tokens.map((tok, tIdx) => {
+          if (tok.startsWith('**') && tok.endsWith('**')) {
+            return <strong key={tIdx}>{tok.slice(2, -2)}</strong>;
+          }
+          if (tok.startsWith('[') && tok.includes('](') && tok.endsWith(')')) {
+            const linkText = tok.substring(1, tok.indexOf(']('));
+            const linkUrl = tok.substring(tok.indexOf('](') + 2, tok.length - 1);
+            return (
+              <Link
+                key={tIdx}
+                to={linkUrl}
+                onClick={() => setIsOpen(false)}
+                style={{ color: '#7c3aed', fontWeight: '700', textDecoration: 'underline' }}
+              >
+                {linkText}
+              </Link>
+            );
+          }
+          return tok;
+        });
+      };
+
+      const formattedParts = parseInline(cleanLine);
 
       if (isBullet) {
         return (
-          <div key={idx} style={{ display: 'flex', gap: '0.4rem', margin: '0.2rem 0', fontSize: '0.84rem', lineHeight: '1.45' }}>
-            <span style={{ color: '#0284c7' }}>•</span>
+          <div key={idx} style={{ display: 'flex', gap: '0.4rem', margin: '0.25rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
+            <span style={{ color: '#7c3aed' }}>•</span>
             <span style={{ flex: 1 }}>{formattedParts}</span>
           </div>
         );
@@ -372,7 +394,7 @@ export default function ChatbotWidget() {
       }
 
       return (
-        <p key={idx} style={{ margin: '0.25rem 0', fontSize: '0.84rem', lineHeight: '1.45' }}>
+        <p key={idx} style={{ margin: '0.25rem 0', fontSize: '0.85rem', lineHeight: '1.45' }}>
           {formattedParts}
         </p>
       );
@@ -390,19 +412,19 @@ export default function ChatbotWidget() {
             position: 'fixed',
             bottom: '24px',
             right: '24px',
-            background: 'linear-gradient(135deg, #0284c7, #0369a1)',
+            background: 'linear-gradient(135deg, #BE5985, #EC7FA9)',
             color: '#ffffff',
             border: 'none',
             borderRadius: '9999px',
-            padding: '0.75rem 1.25rem',
+            padding: '0.8rem 1.4rem',
             display: 'flex',
             alignItems: 'center',
             gap: '0.6rem',
-            boxShadow: '0 8px 24px rgba(2, 132, 199, 0.4)',
+            boxShadow: '0 8px 24px rgba(190, 89, 133, 0.4)',
             cursor: 'pointer',
             zIndex: 9990,
             fontWeight: '800',
-            fontSize: '0.9rem',
+            fontSize: '0.92rem',
             transition: 'transform 0.2s ease, box-shadow 0.2s ease',
           }}
           onMouseEnter={(e) => {
@@ -429,21 +451,21 @@ export default function ChatbotWidget() {
             height: '80vh',
             maxHeight: '580px',
             background: '#ffffff',
-            borderRadius: '20px',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.22)',
+            borderRadius: '24px',
+            boxShadow: '0 16px 40px rgba(45, 21, 32, 0.25)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
             zIndex: 9995,
-            border: '1px solid #e2e8f0',
+            border: '1.5px solid #F3D2E5',
             animation: 'fadeIn 0.2s ease',
           }}
         >
           {/* Header */}
           <div
             style={{
-              padding: '0.85rem 1.1rem',
-              background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+              padding: '0.9rem 1.15rem',
+              background: 'linear-gradient(135deg, #3D1C2A, #BE5985)',
               color: '#ffffff',
               display: 'flex',
               alignItems: 'center',
@@ -453,22 +475,23 @@ export default function ChatbotWidget() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <div
                 style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '36px',
+                  height: '36px',
                   borderRadius: '50%',
-                  background: '#0284c7',
+                  background: '#EC7FA9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '1.1rem',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                 }}
               >
                 🤖
               </div>
               <div>
-                <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: '800' }}>Travelora Assistant</h4>
-                <span style={{ fontSize: '0.72rem', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4ade80' }}></span>
+                <h4 style={{ margin: 0, fontSize: '0.92rem', fontWeight: '800', color: '#ffffff' }}>Travelora Assistant</h4>
+                <span style={{ fontSize: '0.72rem', color: '#FFEDFA', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#86efac' }}></span>
                   Context-Aware AI
                 </span>
               </div>
@@ -481,12 +504,13 @@ export default function ChatbotWidget() {
                 onClick={handleClearHistory}
                 title="Clear Chat History"
                 style={{
-                  background: 'rgba(255, 255, 255, 0.1)',
+                  background: 'rgba(255, 255, 255, 0.15)',
                   border: 'none',
-                  color: '#cbd5e1',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
+                  color: '#FFEDFA',
+                  borderRadius: '9999px',
+                  padding: '3px 10px',
                   fontSize: '0.75rem',
+                  fontWeight: '700',
                   cursor: 'pointer',
                 }}
               >
@@ -515,12 +539,12 @@ export default function ChatbotWidget() {
           {voiceNotice && (
             <div
               style={{
-                background: '#fff1f2',
-                color: '#be123c',
-                borderBottom: '1px solid #fecdd3',
+                background: '#FFEDFA',
+                color: '#BE5985',
+                borderBottom: '1px solid #FFB8E0',
                 padding: '0.45rem 0.85rem',
                 fontSize: '0.76rem',
-                fontWeight: '600',
+                fontWeight: '700',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -531,7 +555,7 @@ export default function ChatbotWidget() {
               <button
                 type="button"
                 onClick={() => setVoiceNotice(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#be123c', fontWeight: '800' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#BE5985', fontWeight: '800' }}
               >
                 ✕
               </button>
@@ -541,9 +565,9 @@ export default function ChatbotWidget() {
           {/* Quick Suggestion Prompts Carousel (Feature 3) */}
           <div
             style={{
-              padding: '0.45rem 0.6rem',
-              background: '#f8fafc',
-              borderBottom: '1px solid #e2e8f0',
+              padding: '0.5rem 0.65rem',
+              background: '#FFF5FB',
+              borderBottom: '1px solid #F3D2E5',
               display: 'flex',
               gap: '0.35rem',
               overflowX: 'auto',
@@ -557,12 +581,12 @@ export default function ChatbotWidget() {
                 onClick={() => handleSendMessage(qp.text)}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #cbd5e1',
+                  border: '1px solid #FFB8E0',
                   borderRadius: '9999px',
-                  padding: '3px 9px',
+                  padding: '3px 10px',
                   fontSize: '0.72rem',
-                  fontWeight: '600',
-                  color: '#0f172a',
+                  fontWeight: '700',
+                  color: '#BE5985',
                   cursor: 'pointer',
                   flexShrink: 0,
                 }}
@@ -578,7 +602,7 @@ export default function ChatbotWidget() {
               flex: 1,
               padding: '1rem',
               overflowY: 'auto',
-              background: '#f8fafc',
+              background: '#FFEDFA',
               display: 'flex',
               flexDirection: 'column',
               gap: '0.85rem',
@@ -597,14 +621,14 @@ export default function ChatbotWidget() {
                 >
                   <div
                     style={{
-                      background: isBot ? '#ffffff' : '#0284c7',
-                      color: isBot ? '#1e293b' : '#ffffff',
-                      border: isBot ? '1px solid #e2e8f0' : 'none',
-                      borderRadius: isBot ? '16px 16px 16px 4px' : '16px 16px 4px 16px',
-                      padding: '0.75rem 0.95rem',
+                      background: isBot ? '#ffffff' : 'linear-gradient(135deg, #EC7FA9, #BE5985)',
+                      color: isBot ? '#2D1520' : '#ffffff',
+                      border: isBot ? '1.5px solid #F3D2E5' : 'none',
+                      borderRadius: isBot ? '18px 18px 18px 4px' : '18px 18px 4px 18px',
+                      padding: '0.8rem 1rem',
                       maxWidth: '88%',
                       wordBreak: 'break-word',
-                      boxShadow: isBot ? '0 2px 8px rgba(0,0,0,0.03)' : '0 2px 8px rgba(2, 132, 199, 0.25)',
+                      boxShadow: isBot ? '0 4px 12px rgba(190, 89, 133, 0.06)' : '0 4px 12px rgba(190, 89, 133, 0.3)',
                     }}
                   >
                     {renderFormattedContent(msg.content)}
@@ -617,7 +641,7 @@ export default function ChatbotWidget() {
                           gap: '0.4rem',
                           flexWrap: 'wrap',
                           marginTop: '0.75rem',
-                          borderTop: '1px dashed #cbd5e1',
+                          borderTop: '1px dashed #F3D2E5',
                           paddingTop: '0.5rem',
                         }}
                       >
@@ -627,17 +651,18 @@ export default function ChatbotWidget() {
                             to={link.url}
                             onClick={() => setIsOpen(false)}
                             style={{
-                              background: '#f0f9ff',
-                              border: '1px solid #bae6fd',
-                              color: '#0369a1',
-                              padding: '4px 9px',
-                              borderRadius: '8px',
+                              background: '#FFEDFA',
+                              border: '1px solid #FFB8E0',
+                              color: '#BE5985',
+                              padding: '4px 10px',
+                              borderRadius: '9999px',
                               fontSize: '0.75rem',
-                              fontWeight: '700',
+                              fontWeight: '800',
                               textDecoration: 'none',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '3px',
+                              gap: '4px',
+                              transition: 'all 0.15s ease',
                             }}
                           >
                             {link.label}
@@ -648,18 +673,18 @@ export default function ChatbotWidget() {
 
                     {/* Text-To-Speech Listen Button (Feature 5 & 6) */}
                     {isBot && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.55rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.4rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginTop: '0.55rem', borderTop: '1px solid #F3D2E5', paddingTop: '0.4rem' }}>
                         <button
                           type="button"
                           onClick={() => speakMessage(msg.content, index, msg.language)}
                           style={{
-                            background: speakingIndex === index ? '#fef2f2' : '#f8fafc',
-                            color: speakingIndex === index ? '#ef4444' : '#0284c7',
-                            border: '1px solid ' + (speakingIndex === index ? '#fca5a5' : '#e2e8f0'),
-                            borderRadius: '6px',
-                            padding: '3px 8px',
+                            background: speakingIndex === index ? '#fef2f2' : '#FFF5FB',
+                            color: speakingIndex === index ? '#ef4444' : '#BE5985',
+                            border: '1px solid ' + (speakingIndex === index ? '#fca5a5' : '#FFB8E0'),
+                            borderRadius: '9999px',
+                            padding: '3px 9px',
                             fontSize: '0.72rem',
-                            fontWeight: '700',
+                            fontWeight: '800',
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -671,7 +696,7 @@ export default function ChatbotWidget() {
                           {speakingIndex === index ? `⏹ ${t('voice.stop', 'Stop')}` : `🔊 ${t('voice.listen', 'Listen')}`}
                         </button>
                         {speakingIndex === index && (
-                          <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <span style={{ fontSize: '0.7rem', color: '#ef4444', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }}></span>
                             {t('voice.speaking', 'Speaking...')}
                           </span>
@@ -690,13 +715,23 @@ export default function ChatbotWidget() {
                           onClick={() => handleSendMessage(sug)}
                           style={{
                             background: '#ffffff',
-                            border: '1px solid #cbd5e1',
+                            border: '1.5px solid #F3D2E5',
                             borderRadius: '9999px',
-                            padding: '3px 9px',
-                            fontSize: '0.72rem',
-                            color: '#0369a1',
-                            fontWeight: '600',
+                            padding: '4px 12px',
+                            fontSize: '0.74rem',
+                            color: '#BE5985',
+                            fontWeight: '700',
                             cursor: 'pointer',
+                            boxShadow: '0 2px 6px rgba(190, 89, 133, 0.06)',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#FFEDFA';
+                            e.currentTarget.style.borderColor = '#EC7FA9';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#ffffff';
+                            e.currentTarget.style.borderColor = '#F3D2E5';
                           }}
                         >
                           {sug}
@@ -716,16 +751,16 @@ export default function ChatbotWidget() {
                   alignItems: 'center',
                   gap: '0.45rem',
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1.5px solid #F3D2E5',
                   padding: '0.6rem 0.85rem',
-                  borderRadius: '16px 16px 16px 4px',
+                  borderRadius: '18px 18px 18px 4px',
                   width: 'fit-content',
                 }}
               >
-                <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: '600' }}>
+                <span style={{ fontSize: '0.8rem', color: '#BE5985', fontWeight: '700' }}>
                   🤖 {t('voice.processing', 'Thinking...')}
                 </span>
-                <span style={{ display: 'inline-flex', gap: '2px' }}>
+                <span style={{ display: 'inline-flex', gap: '2px', color: '#EC7FA9' }}>
                   <span style={{ animation: 'bounce 0.8s infinite 0.1s' }}>•</span>
                   <span style={{ animation: 'bounce 0.8s infinite 0.2s' }}>•</span>
                   <span style={{ animation: 'bounce 0.8s infinite 0.3s' }}>•</span>
@@ -740,31 +775,32 @@ export default function ChatbotWidget() {
           {isListening && (
             <div
               style={{
-                background: '#fef2f2',
-                borderTop: '1px solid #fecdd3',
+                background: '#FFEDFA',
+                borderTop: '1px solid #FFB8E0',
                 padding: '0.4rem 0.9rem',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                color: '#dc2626',
+                color: '#BE5985',
                 fontSize: '0.76rem',
-                fontWeight: '700',
+                fontWeight: '800',
               }}
             >
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#dc2626', animation: 'pulse 1s infinite' }}></span>
+                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#EC7FA9', animation: 'pulse 1s infinite' }}></span>
                 {t('voice.listening', 'Listening...')} ({language === 'ta' ? 'தமிழ்' : 'English'})
               </span>
               <button
                 type="button"
                 onClick={stopListening}
                 style={{
-                  background: '#dc2626',
+                  background: '#EC7FA9',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '4px',
-                  padding: '2px 6px',
+                  borderRadius: '9999px',
+                  padding: '2px 8px',
                   fontSize: '0.7rem',
+                  fontWeight: '700',
                   cursor: 'pointer',
                 }}
               >
@@ -782,7 +818,7 @@ export default function ChatbotWidget() {
             style={{
               padding: '0.75rem 0.9rem',
               background: '#ffffff',
-              borderTop: '1px solid #e2e8f0',
+              borderTop: '1.5px solid #F3D2E5',
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
@@ -793,9 +829,9 @@ export default function ChatbotWidget() {
               type="button"
               onClick={isListening ? stopListening : startListening}
               style={{
-                background: isListening ? '#dc2626' : '#f1f5f9',
-                color: isListening ? '#ffffff' : '#0284c7',
-                border: '1px solid ' + (isListening ? '#b91c1c' : '#cbd5e1'),
+                background: isListening ? '#EC7FA9' : '#FFEDFA',
+                color: isListening ? '#ffffff' : '#BE5985',
+                border: '1px solid ' + (isListening ? '#BE5985' : '#FFB8E0'),
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
@@ -824,16 +860,24 @@ export default function ChatbotWidget() {
                 flex: 1,
                 padding: '0.65rem 0.85rem',
                 borderRadius: '9999px',
-                border: '1px solid #cbd5e1',
+                border: '1.5px solid #F3D2E5',
                 fontSize: '0.84rem',
                 outline: 'none',
+                transition: 'border-color 0.2s ease',
+                color: '#2D1520',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#EC7FA9';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#F3D2E5';
               }}
             />
             <button
               type="submit"
               disabled={!inputMessage.trim() || loading}
               style={{
-                background: inputMessage.trim() && !loading ? '#0284c7' : '#94a3b8',
+                background: inputMessage.trim() && !loading ? '#EC7FA9' : '#F3D2E5',
                 color: '#ffffff',
                 border: 'none',
                 width: '36px',
@@ -845,6 +889,7 @@ export default function ChatbotWidget() {
                 cursor: inputMessage.trim() && !loading ? 'pointer' : 'default',
                 fontSize: '1rem',
                 flexShrink: 0,
+                transition: 'background 0.2s ease',
               }}
             >
               ➤

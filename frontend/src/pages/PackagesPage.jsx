@@ -93,10 +93,10 @@ export default function PackagesPage() {
         {/* Page Header */}
         <div className="section-heading" style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <span className="eyebrow">Curated Itineraries</span>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: '#0f172a', margin: '0.4rem 0 0.5rem 0' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: '900', color: '#BE5985', margin: '0.4rem 0 0.5rem 0' }}>
             Discover Travel Packages
           </h1>
-          <p style={{ color: '#64748b', maxWidth: '650px', margin: '0 auto', fontSize: '1.05rem' }}>
+          <p style={{ color: '#7A5366', maxWidth: '650px', margin: '0 auto', fontSize: '1.05rem' }}>
             All-inclusive trips with handpicked accommodations, expert local guides, organized activities, and transparent pricing.
           </p>
         </div>
@@ -105,17 +105,17 @@ export default function PackagesPage() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '16px',
+            borderRadius: '20px',
             padding: '1.5rem',
-            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
-            border: '1px solid #e2e8f0',
+            boxShadow: '0 8px 24px -4px rgba(190, 89, 133, 0.08)',
+            border: '1.5px solid #F3D2E5',
             marginBottom: '2.5rem',
           }}
         >
           {/* Search Form */}
           <form onSubmit={handleSearchSubmit} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <div style={{ flex: 1, position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '1.1rem' }}>
+              <span style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: '#7A5366', fontSize: '1.1rem' }}>
                 🔍
               </span>
               <input
@@ -126,10 +126,11 @@ export default function PackagesPage() {
                 style={{
                   width: '100%',
                   padding: '0.85rem 1rem 0.85rem 2.85rem',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
+                  borderRadius: '12px',
+                  border: '1.5px solid #F3D2E5',
                   fontSize: '0.95rem',
                   outline: 'none',
+                  color: '#2D1520',
                 }}
               />
             </div>
@@ -140,7 +141,7 @@ export default function PackagesPage() {
 
           {/* Quick Categories Bar */}
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.82rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', marginRight: '0.5rem' }}>
+            <span style={{ fontSize: '0.82rem', fontWeight: '800', color: '#BE5985', textTransform: 'uppercase', marginRight: '0.5rem' }}>
               Quick Tier:
             </span>
             {quickCategories.map((cat) => (
@@ -149,12 +150,12 @@ export default function PackagesPage() {
                 type="button"
                 onClick={() => handleCategoryTabClick(cat.id)}
                 style={{
-                  padding: '0.45rem 1rem',
+                  padding: '0.45rem 1.1rem',
                   borderRadius: '9999px',
-                  border: selectedType === cat.id ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                  background: selectedType === cat.id ? '#e0f2fe' : '#ffffff',
-                  color: selectedType === cat.id ? '#0369a1' : '#475569',
-                  fontWeight: selectedType === cat.id ? '700' : '500',
+                  border: selectedType === cat.id ? '1px solid #BE5985' : '1px solid #F3D2E5',
+                  background: selectedType === cat.id ? '#EC7FA9' : '#FFF5FB',
+                  color: selectedType === cat.id ? '#ffffff' : '#BE5985',
+                  fontWeight: '800',
                   fontSize: '0.85rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
@@ -189,20 +190,20 @@ export default function PackagesPage() {
           <div>
             {loading ? (
               <div style={{ textAlign: 'center', padding: '4rem 1rem' }}>
-                <div style={{ fontSize: '1.5rem', color: '#0284c7', marginBottom: '0.5rem' }}>✈️</div>
-                <div style={{ fontWeight: '600', color: '#334155' }}>Loading curated packages...</div>
+                <div style={{ fontSize: '1.5rem', color: '#BE5985', marginBottom: '0.5rem' }}>✈️</div>
+                <div style={{ fontWeight: '700', color: '#7A5366' }}>Loading curated packages...</div>
               </div>
             ) : error ? (
               <div
                 style={{
-                  background: '#fef2f2',
-                  border: '1px solid #fca5a5',
+                  background: '#fee2e2',
+                  border: '1px solid #fecdd3',
                   padding: '1.5rem',
-                  borderRadius: '12px',
+                  borderRadius: '16px',
                   textAlign: 'center',
                 }}
               >
-                <p style={{ color: '#b91c1c', margin: '0 0 1rem 0' }}>{error}</p>
+                <p style={{ color: '#991b1b', margin: '0 0 1rem 0', fontWeight: '700' }}>{error}</p>
                 <button onClick={fetchPackages} className="btn btn-primary">
                   Try Again
                 </button>
@@ -211,17 +212,17 @@ export default function PackagesPage() {
               <div
                 style={{
                   background: '#ffffff',
-                  border: '1px dashed #cbd5e1',
-                  borderRadius: '16px',
+                  border: '1.5px dashed #F3D2E5',
+                  borderRadius: '20px',
                   padding: '4rem 2rem',
                   textAlign: 'center',
                 }}
               >
                 <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📦</div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: '700', color: '#0f172a', margin: '0 0 0.5rem 0' }}>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: '900', color: '#BE5985', margin: '0 0 0.5rem 0' }}>
                   No packages matched your filters
                 </h3>
-                <p style={{ color: '#64748b', maxWidth: '450px', margin: '0 auto 1.5rem auto', fontSize: '0.95rem' }}>
+                <p style={{ color: '#7A5366', maxWidth: '450px', margin: '0 auto 1.5rem auto', fontSize: '0.95rem' }}>
                   Try adjusting your price range, tier, difficulty level, or search keyword to see more options.
                 </p>
                 <button onClick={handleResetFilters} className="btn btn-primary">

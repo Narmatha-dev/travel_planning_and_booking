@@ -4,7 +4,6 @@ import { useAppContext } from '../context/AppContext';
 import destinationService from '../services/destinationService';
 import tripService from '../services/tripService';
 import AiItineraryView from '../components/AiItineraryView';
-import ItineraryTimeline from '../components/ItineraryTimeline';
 import WeatherCard from '../components/WeatherCard';
 
 const PREFERENCE_OPTIONS = [
@@ -26,16 +25,17 @@ export default function TripPlannerPage() {
   const [destinations, setDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
 
-  // Form State (Phase 26 Weather controls integrated)
+  // Form State
   const [formData, setFormData] = useState({
-    destinationId: searchParams.get('destinationId') || '101',
-    destinationName: searchParams.get('destinationName') || searchParams.get('destination') || 'Mahabalipuram',
+    destinationId: searchParams.get('destinationId') || '1',
+    destinationName: searchParams.get('destinationName') || searchParams.get('destination') || 'Taj Mahal & Royal Agra',
     numberOfDays: searchParams.get('duration') ? Number(searchParams.get('duration')) : 3,
     travelers: searchParams.get('travelers') ? Number(searchParams.get('travelers')) : 2,
     currency: 'INR',
-    budget: searchParams.get('budget') ? Number(searchParams.get('budget')) : 10000,
+    budget: searchParams.get('budget') ? Number(searchParams.get('budget')) : 12000,
     travelPreference: searchParams.get('preference') || 'nature',
     startDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    interests: ['nature', 'sightseeing', 'dining'],
     weatherAware: true,
     preferOutdoor: false,
     preferIndoor: false,
@@ -47,26 +47,56 @@ export default function TripPlannerPage() {
   const [error, setError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Load active destinations
+  // Load destinations from API
   useEffect(() => {
     async function loadDestinations() {
+      setLoadingDestinations(true);
       try {
         const list = await destinationService.getDestinations();
-        setDestinations(list || []);
-        
-        const paramDestId = searchParams.get('destinationId');
-        if (paramDestId && list) {
-          const matched = list.find((d) => String(d.id) === String(paramDestId));
-          if (matched) {
-            setFormData((prev) => ({
-              ...prev,
-              destinationId: matched.id,
-              destinationName: matched.name,
-            }));
+        if (list && list.length > 0) {
+          setDestinations(list);
+          const paramDestId = searchParams.get('destinationId');
+          const paramDestName = searchParams.get('destinationName') || searchParams.get('destination');
+
+          if (paramDestId) {
+            const matched = list.find((d) => String(d.id) === String(paramDestId));
+            if (matched) {
+              setFormData((prev) => ({
+                ...prev,
+                destinationId: String(matched.id),
+                destinationName: matched.name,
+              }));
+              triggerPlanGeneration(matched.id, matched.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
+              return;
+            }
+          } else if (paramDestName) {
+            const matched = list.find((d) => d.name.toLowerCase().includes(paramDestName.toLowerCase()));
+            if (matched) {
+              setFormData((prev) => ({
+                ...prev,
+                destinationId: String(matched.id),
+                destinationName: matched.name,
+              }));
+              triggerPlanGeneration(matched.id, matched.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
+              return;
+            }
           }
+
+          // Default to first destination
+          const first = list[0];
+          setFormData((prev) => ({
+            ...prev,
+            destinationId: String(first.id),
+            destinationName: first.name,
+          }));
+          triggerPlanGeneration(first.id, first.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
+        } else {
+          // Fallback trigger with current form data
+          triggerPlanGeneration(formData.destinationId, formData.destinationName, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
         }
       } catch (err) {
         console.warn('Failed to load destinations:', err.message);
+        triggerPlanGeneration(formData.destinationId, formData.destinationName, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
       } finally {
         setLoadingDestinations(false);
       }
@@ -74,10 +104,35 @@ export default function TripPlannerPage() {
     loadDestinations();
   }, [searchParams]);
 
-  // Generate initial itinerary on load
-  useEffect(() => {
-    handleGenerateItinerary();
-  }, []);
+  const triggerPlanGeneration = async (destId, destName, days, pref, budgetVal, currVal) => {
+    setIsGenerating(true);
+    setError('');
+    try {
+      const result = await tripService.generateAiItinerary({
+        destination: destName || 'Taj Mahal & Royal Agra',
+        destinationId: destId || 1,
+        destinationName: destName || 'Taj Mahal & Royal Agra',
+        numberOfDays: days || 3,
+        travelers: formData.travelers || 2,
+        budget: budgetVal || 12000,
+        currency: currVal || 'INR',
+        travelPreference: pref || 'nature',
+        selectedTransport: selectedTransport || null,
+        selectedHotel: selectedHotel || null,
+        currentLocation: currentLocation || null,
+        startDate: formData.startDate,
+        weatherAware: formData.weatherAware,
+        preferOutdoor: formData.preferOutdoor,
+        preferIndoor: formData.preferIndoor,
+      });
+      setGeneratedItinerary(result);
+    } catch (err) {
+      console.warn('AI Itinerary generation warning:', err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to generate smart itinerary');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleCurrencySwitch = (newCurr) => {
     if (newCurr === formData.currency) return;
@@ -96,15 +151,11 @@ export default function TripPlannerPage() {
     }
   };
 
-  const handleInterestToggle = (interestId) => {
-    setFormData((prev) => {
-      const exists = prev.interests.includes(interestId);
-      const updated = exists
-        ? prev.interests.filter((i) => i !== interestId)
-        : [...prev.interests, interestId];
-      return { ...prev, interests: updated.length > 0 ? updated : ['beach'] };
-    });
-  };
+  const [isManualDestMode, setIsManualDestMode] = useState(false);
+
+  const POPULAR_DEST_CHIPS = [
+    'Ooty', 'Goa', 'Kodaikanal', 'Kerala', 'Manali', 'Paris', 'Swiss Alps', 'Bali', 'Dubai', 'London', 'Tokyo', 'Taj Mahal & Agra'
+  ];
 
   const handleDestinationChange = (e) => {
     const destId = e.target.value;
@@ -113,6 +164,24 @@ export default function TripPlannerPage() {
       ...prev,
       destinationId: destId,
       destinationName: destObj ? destObj.name : 'Custom Destination',
+    }));
+  };
+
+  const handleManualDestinationChange = (e) => {
+    const customName = e.target.value;
+    setFormData((prev) => ({
+      ...prev,
+      destinationId: 'custom',
+      destinationName: customName,
+    }));
+  };
+
+  const handleSelectChip = (name) => {
+    const matched = destinations.find((d) => d.name.toLowerCase().includes(name.toLowerCase()));
+    setFormData((prev) => ({
+      ...prev,
+      destinationId: matched ? String(matched.id) : 'custom',
+      destinationName: name,
     }));
   };
 
@@ -164,14 +233,14 @@ export default function TripPlannerPage() {
       end.setDate(start.getDate() + (formData.numberOfDays - 1));
 
       await tripService.createTrip({
-        destinationId: formData.destinationId || 1,
+        destinationId: parseInt(formData.destinationId, 10) || 1,
         title: `${formData.destinationName} (${formData.numberOfDays} Days AI Plan)`,
         tripType: formData.travelPreference,
         startDate: formData.startDate,
         endDate: end.toISOString().split('T')[0],
         totalBudget: formData.budget,
         travelers: formData.travelers,
-        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}. Selected Stay: ${selectedHotel?.name || 'Standard accommodation'} (${selectedHotel?.price_display || 'Standard tariff'}).`,
+        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}. Selected Stay: ${selectedHotel?.name || 'Standard accommodation'}.`,
         itineraryItems: generatedItinerary?.itineraryItems || [],
       });
 
@@ -211,34 +280,34 @@ export default function TripPlannerPage() {
         {/* Header Hero Banner */}
         <div
           style={{
-            background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0369a1 100%)',
+            background: 'linear-gradient(135deg, #BE5985 0%, #EC7FA9 50%, #FFB8E0 100%)',
             borderRadius: '24px',
             padding: '3rem 2.5rem',
             color: '#ffffff',
             marginBottom: '2.5rem',
-            boxShadow: '0 10px 30px rgba(15, 23, 42, 0.15)',
+            boxShadow: '0 12px 30px rgba(190, 89, 133, 0.25)',
           }}
         >
           <div style={{ maxWidth: '780px' }}>
-            <span style={{ background: 'rgba(255,255,255,0.15)', color: '#38bdf8', padding: '4px 12px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              ✨ Phase 6 • AI-Powered Travel Intelligence
+            <span style={{ background: '#ffffff', color: '#BE5985', padding: '4px 14px', borderRadius: '9999px', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+              ✨ AI-Powered Trip Planner
             </span>
-            <h1 style={{ fontSize: '2.4rem', fontWeight: '900', margin: '0.75rem 0 0.5rem 0', lineHeight: 1.2 }}>
-              AI Trip Planner & Smart Recommendations
+            <h1 style={{ fontSize: '2.4rem', fontWeight: '900', color: '#ffffff', margin: '0.85rem 0 0.5rem 0', lineHeight: 1.2 }}>
+              Smart Travel Planner & Custom Itineraries
             </h1>
-            <p style={{ color: '#cbd5e1', fontSize: '1.05rem', lineHeight: '1.6', margin: 0 }}>
+            <p style={{ color: '#FFEDFA', fontSize: '1.05rem', lineHeight: '1.6', margin: 0, fontWeight: '500' }}>
               Generate an intelligent day-wise itinerary with time-slotted visits, authentic culinary suggestions, geographic route clustering, and budget optimization.
             </p>
           </div>
         </div>
 
-        {/* Selected Transport Reminder Tag from Phase 4 */}
+        {/* Selected Transport Reminder Tag */}
         {selectedTransport && (
           <div
             style={{
-              background: '#f0fdf4',
-              border: '1.5px solid #86efac',
-              borderRadius: '14px',
+              background: '#ffffff',
+              border: '1.5px solid #F3D2E5',
+              borderRadius: '16px',
               padding: '1rem 1.25rem',
               marginBottom: '2rem',
               display: 'flex',
@@ -246,18 +315,19 @@ export default function TripPlannerPage() {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '0.75rem',
+              boxShadow: '0 4px 14px rgba(190, 89, 133, 0.06)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.75rem' }}>{selectedTransport.icon || '🚆'}</span>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#16a34a' }}>
-                  Confirmed Transport (Phase 4)
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: '#BE5985' }}>
+                  Confirmed Transport
                 </span>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#14532d' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#BE5985' }}>
                   {selectedTransport.title} • {selectedTransport.cost_text || `₹${selectedTransport.estimated_cost}`}
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#166534' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#7A5366' }}>
                   Estimated Travel Time: {selectedTransport.duration_text} ({selectedTransport.distance_text})
                 </p>
               </div>
@@ -268,13 +338,13 @@ export default function TripPlannerPage() {
           </div>
         )}
 
-        {/* Selected Hotel Reminder Tag from Phase 7 */}
+        {/* Selected Hotel Reminder Tag */}
         {selectedHotel && (
           <div
             style={{
-              background: '#f0f9ff',
-              border: '1.5px solid #7dd3fc',
-              borderRadius: '14px',
+              background: '#ffffff',
+              border: '1.5px solid #F3D2E5',
+              borderRadius: '16px',
               padding: '1rem 1.25rem',
               marginBottom: '2rem',
               display: 'flex',
@@ -282,18 +352,19 @@ export default function TripPlannerPage() {
               justifyContent: 'space-between',
               flexWrap: 'wrap',
               gap: '0.75rem',
+              boxShadow: '0 4px 14px rgba(190, 89, 133, 0.06)',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <span style={{ fontSize: '1.75rem' }}>🏨</span>
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: '700', textTransform: 'uppercase', color: '#0284c7' }}>
-                  Confirmed Stay (Phase 7)
+                <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', color: '#BE5985' }}>
+                  Confirmed Stay
                 </span>
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#0369a1' }}>
+                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '800', color: '#BE5985' }}>
                   {selectedHotel.name} • {selectedHotel.price_display || `₹${selectedHotel.approx_price_per_night}/night`}
                 </h4>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: '#075985' }}>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#7A5366' }}>
                   📍 {selectedHotel.distance_label || 'Near destination'} • {selectedHotel.type_label || 'Hotel'}
                 </p>
               </div>
@@ -301,14 +372,14 @@ export default function TripPlannerPage() {
             <Link
               to={`/destinations/${formData.destinationId || 1}`}
               className="btn btn-outline btn-sm"
-              style={{ background: 'white', color: '#0284c7', borderColor: '#7dd3fc' }}
+              style={{ background: 'white', color: '#BE5985', borderColor: '#F3D2E5' }}
             >
               Change Stay
             </Link>
           </div>
         )}
 
-        {/* Phase 26: Destination Live Weather & Multi-Day Forecast */}
+        {/* Live Weather Forecast Strip */}
         <WeatherCard
           destination={formData.destinationName}
           allowCurrentLocation={true}
@@ -319,10 +390,10 @@ export default function TripPlannerPage() {
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '20px',
-            border: '1px solid #e2e8f0',
+            borderRadius: '24px',
+            border: '1.5px solid #F3D2E5',
             padding: '2.5rem',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            boxShadow: '0 12px 30px -5px rgba(190, 89, 133, 0.1)',
             marginBottom: '2.5rem',
           }}
         >
@@ -330,41 +401,117 @@ export default function TripPlannerPage() {
             {/* Row 1: Destination & Duration */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
-                  1. Target Destination
-                </label>
-                <select
-                  value={formData.destinationId}
-                  onChange={handleDestinationChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.85rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '1rem',
-                    fontWeight: '600',
-                    background: '#ffffff',
-                  }}
-                >
-                  <option value="101">Mahabalipuram Shore Temples (Tamil Nadu)</option>
-                  <option value="102">Ooty Nilgiri Hill Station (Tamil Nadu)</option>
-                  <option value="103">Chennai Coastal & Heritage (Tamil Nadu)</option>
-                  <option value="104">Kanyakumari Cape Comorin (Tamil Nadu)</option>
-                  <option value="105">Goa Coastal Haven (India)</option>
-                  <option value="106">Kerala Backwaters & Munnar (India)</option>
-                  <option value="4">Parisian Elegance & Romance (France)</option>
-                  <option value="3">Swiss Alpine Wonders (Switzerland)</option>
-                  <option value="1">Bali Paradise Island (Indonesia)</option>
-                  <option value="2">Tokyo & Kyoto Highlights (Japan)</option>
-                </select>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#BE5985', margin: 0 }}>
+                    1. Target Destination
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsManualDestMode(!isManualDestMode)}
+                    style={{
+                      background: isManualDestMode ? '#FFB8E0' : '#FFEDFA',
+                      color: '#BE5985',
+                      border: '1px solid #FFB8E0',
+                      borderRadius: '9999px',
+                      padding: '4px 12px',
+                      fontSize: '0.78rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {isManualDestMode ? '📋 Select from List' : '✍️ Type / Edit Manually'}
+                  </button>
+                </div>
+
+                {isManualDestMode ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={formData.destinationName}
+                      onChange={handleManualDestinationChange}
+                      placeholder="Type any custom destination (e.g. Kodaikanal, Dubai, London)..."
+                      style={{
+                        width: '100%',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '12px',
+                        border: '1.5px solid #EC7FA9',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        background: '#ffffff',
+                        outline: 'none',
+                        boxShadow: '0 0 0 3px rgba(236, 127, 169, 0.2)',
+                      }}
+                    />
+                    {/* Quick City Presets */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.6rem' }}>
+                      {POPULAR_DEST_CHIPS.map((chip, cIdx) => (
+                        <button
+                          key={cIdx}
+                          type="button"
+                          onClick={() => handleSelectChip(chip)}
+                          style={{
+                            background: formData.destinationName.toLowerCase().includes(chip.toLowerCase()) ? '#EC7FA9' : '#FFEDFA',
+                            color: formData.destinationName.toLowerCase().includes(chip.toLowerCase()) ? '#ffffff' : '#BE5985',
+                            border: '1px solid ' + (formData.destinationName.toLowerCase().includes(chip.toLowerCase()) ? '#BE5985' : '#FFB8E0'),
+                            borderRadius: '9999px',
+                            padding: '3px 10px',
+                            fontSize: '0.74rem',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <select
+                    value={formData.destinationId}
+                    onChange={handleDestinationChange}
+                    style={{
+                      width: '100%',
+                      padding: '0.85rem 1rem',
+                      borderRadius: '12px',
+                      border: '1.5px solid #F3D2E5',
+                      fontSize: '1rem',
+                      fontWeight: '600',
+                      background: '#ffffff',
+                      color: '#2D1520',
+                      outline: 'none',
+                    }}
+                  >
+                    {destinations && destinations.length > 0 ? (
+                      destinations.map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name} {d.country ? `(${d.country})` : ''}
+                        </option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="1">Taj Mahal & Royal Agra (India)</option>
+                        <option value="2">Ooty Nilgiri Hill Station (India)</option>
+                        <option value="3">Swiss Alpine Wonders (Switzerland)</option>
+                        <option value="4">Parisian Elegance & Romance (France)</option>
+                        <option value="5">Bali Paradise Island (Indonesia)</option>
+                        <option value="6">Tokyo & Kyoto Highlights (Japan)</option>
+                      </>
+                    )}
+                  </select>
+                )}
               </div>
 
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
+                  <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#BE5985' }}>
                     2. Trip Duration
                   </label>
-                  <span style={{ fontSize: '1.1rem', fontWeight: '800', color: '#0284c7' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#BE5985' }}>
                     {formData.numberOfDays} {formData.numberOfDays === 1 ? 'Day' : 'Days'}
                   </span>
                 </div>
@@ -374,9 +521,9 @@ export default function TripPlannerPage() {
                   max="14"
                   value={formData.numberOfDays}
                   onChange={(e) => setFormData((prev) => ({ ...prev, numberOfDays: Number(e.target.value) }))}
-                  style={{ width: '100%', height: '8px', accentColor: '#0284c7', cursor: 'pointer', marginTop: '0.75rem' }}
+                  style={{ width: '100%', height: '8px', accentColor: '#EC7FA9', cursor: 'pointer', marginTop: '0.75rem' }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', marginTop: '0.4rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#7A5366', marginTop: '0.4rem', fontWeight: '600' }}>
                   <span>Quick Getaway (1-3)</span>
                   <span>1 Week (7)</span>
                   <span>Grand Tour (14)</span>
@@ -388,8 +535,8 @@ export default function TripPlannerPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                  <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#0f172a' }}>
-                    3. Total Budget
+                  <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#BE5985' }}>
+                    3. Target Budget
                   </label>
                   {/* Currency Switcher */}
                   <div style={{ display: 'flex', gap: '0.25rem' }}>
@@ -397,13 +544,13 @@ export default function TripPlannerPage() {
                       type="button"
                       onClick={() => handleCurrencySwitch('INR')}
                       style={{
-                        padding: '2px 8px',
+                        padding: '3px 9px',
                         fontSize: '0.75rem',
-                        fontWeight: '700',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: formData.currency === 'INR' ? '#0284c7' : '#ffffff',
-                        color: formData.currency === 'INR' ? '#ffffff' : '#475569',
+                        fontWeight: '800',
+                        borderRadius: '9999px',
+                        border: '1px solid ' + (formData.currency === 'INR' ? '#BE5985' : '#F3D2E5'),
+                        background: formData.currency === 'INR' ? '#EC7FA9' : '#FFF5FB',
+                        color: formData.currency === 'INR' ? '#ffffff' : '#BE5985',
                         cursor: 'pointer',
                       }}
                     >
@@ -413,13 +560,13 @@ export default function TripPlannerPage() {
                       type="button"
                       onClick={() => handleCurrencySwitch('USD')}
                       style={{
-                        padding: '2px 8px',
+                        padding: '3px 9px',
                         fontSize: '0.75rem',
-                        fontWeight: '700',
-                        borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: formData.currency === 'USD' ? '#0284c7' : '#ffffff',
-                        color: formData.currency === 'USD' ? '#ffffff' : '#475569',
+                        fontWeight: '800',
+                        borderRadius: '9999px',
+                        border: '1px solid ' + (formData.currency === 'USD' ? '#BE5985' : '#F3D2E5'),
+                        background: formData.currency === 'USD' ? '#EC7FA9' : '#FFF5FB',
+                        color: formData.currency === 'USD' ? '#ffffff' : '#BE5985',
                         cursor: 'pointer',
                       }}
                     >
@@ -436,39 +583,18 @@ export default function TripPlannerPage() {
                   style={{
                     width: '100%',
                     padding: '0.85rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    border: '1.5px solid #F3D2E5',
                     fontSize: '1rem',
                     fontWeight: '600',
                     background: '#ffffff',
+                    color: '#2D1520',
                   }}
                 />
-                {/* Preset Fast Budget Chips */}
-                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                  {(formData.currency === 'INR' ? [6000, 10000, 15000, 25000] : [250, 500, 800, 1500]).map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setFormData((prev) => ({ ...prev, budget: val }))}
-                      style={{
-                        border: '1px solid #e2e8f0',
-                        background: formData.budget === val ? '#0284c7' : '#f8fafc',
-                        color: formData.budget === val ? '#ffffff' : '#475569',
-                        padding: '2px 8px',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {formData.currency === 'INR' ? `₹${val.toLocaleString()}` : `$${val.toLocaleString()}`}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.5rem' }}>
                   4. Number of Travelers
                 </label>
                 <select
@@ -477,11 +603,12 @@ export default function TripPlannerPage() {
                   style={{
                     width: '100%',
                     padding: '0.85rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    border: '1.5px solid #F3D2E5',
                     fontSize: '1rem',
                     fontWeight: '600',
                     background: '#ffffff',
+                    color: '#2D1520',
                   }}
                 >
                   <option value="1">1 Solo Traveler</option>
@@ -493,7 +620,7 @@ export default function TripPlannerPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.5rem' }}>
                   5. Departure Start Date
                 </label>
                 <input
@@ -503,11 +630,12 @@ export default function TripPlannerPage() {
                   style={{
                     width: '100%',
                     padding: '0.85rem 1rem',
-                    borderRadius: '10px',
-                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    border: '1.5px solid #F3D2E5',
                     fontSize: '1rem',
                     fontWeight: '600',
                     background: '#ffffff',
+                    color: '#2D1520',
                   }}
                 />
               </div>
@@ -515,85 +643,46 @@ export default function TripPlannerPage() {
 
             {/* Row 3: Travel Preferences */}
             <div style={{ marginBottom: '2rem' }}>
-              <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.75rem' }}>
-                6. Travel Style & Preference
+              <label style={{ display: 'block', fontSize: '0.95rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.75rem' }}>
+                6. Travel Style & Vibe
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem' }}>
-                {PREFERENCE_OPTIONS.map((pref) => {
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                {[
+                  { id: 'nature', label: '🌿 Nature' },
+                  { id: 'historical', label: '🏛️ Heritage' },
+                  { id: 'adventure', label: '🧗 Adventure' },
+                  { id: 'beach', label: '🏖️ Beach' },
+                  { id: 'family', label: '👨‍👩‍👧 Family' },
+                  { id: 'relaxed', label: '🧘 Relaxed' },
+                ].map((pref) => {
                   const isSelected = formData.travelPreference === pref.id;
                   return (
-                    <div
+                    <button
                       key={pref.id}
+                      type="button"
                       onClick={() => setFormData((prev) => ({ ...prev, travelPreference: pref.id }))}
                       style={{
-                        border: isSelected ? '2px solid #0284c7' : '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        padding: '1rem',
+                        border: isSelected ? '2px solid #EC7FA9' : '1px solid #F3D2E5',
+                        borderRadius: '14px',
+                        padding: '0.85rem 1rem',
                         cursor: 'pointer',
-                        background: isSelected ? '#f0f9ff' : '#ffffff',
+                        background: isSelected ? '#FFEDFA' : '#ffffff',
+                        fontWeight: '800',
+                        fontSize: '0.95rem',
+                        color: isSelected ? '#BE5985' : '#2D1520',
+                        boxShadow: isSelected ? '0 4px 12px rgba(236, 127, 169, 0.25)' : 'none',
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <div style={{ fontWeight: '800', fontSize: '0.95rem', color: '#0f172a' }}>{pref.label}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }}>{pref.sub}</div>
-                    </div>
+                      {pref.label}
+                    </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* Row 4: Weather-Aware Planning Controls (Phase 26 Feature 12) */}
-            <div
-              style={{
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)',
-                border: '1.5px solid #7dd3fc',
-                borderRadius: '16px',
-                padding: '1.25rem 1.5rem',
-                marginBottom: '2.5rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '1.3rem' }}>🌦️</span>
-                <strong style={{ fontSize: '0.95rem', color: '#0369a1' }}>
-                  Weather-Aware Itinerary Intelligence (Phase 26)
-                </strong>
-              </div>
-              <p style={{ margin: '0 0 1rem 0', fontSize: '0.83rem', color: '#334155' }}>
-                Automatically adapt schedule based on live rainfall probability, wind conditions, and sunny slots.
-              </p>
-              <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '700', color: '#0f172a', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.weatherAware}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, weatherAware: e.target.checked }))}
-                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
-                  />
-                  Weather-Aware Itinerary (Recommended)
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.preferOutdoor}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, preferOutdoor: e.target.checked, preferIndoor: e.target.checked ? false : prev.preferIndoor }))}
-                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
-                  />
-                  Prefer Outdoor Activities
-                </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.88rem', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
-                  <input
-                    type="checkbox"
-                    checked={formData.preferIndoor}
-                    onChange={(e) => setFormData((prev) => ({ ...prev, preferIndoor: e.target.checked, preferOutdoor: e.target.checked ? false : prev.preferOutdoor }))}
-                    style={{ width: '18px', height: '18px', accentColor: '#0284c7' }}
-                  />
-                  Prefer Indoor Activities
-                </label>
-              </div>
-            </div>
-
             {/* Submit Action */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F3D2E5', paddingTop: '1.5rem' }}>
               <button
                 type="submit"
                 disabled={isGenerating}
@@ -624,7 +713,7 @@ export default function TripPlannerPage() {
           </div>
         )}
 
-        {/* AI Itinerary View Component (Phase 6 & 8) */}
+        {/* AI Itinerary View Component */}
         <AiItineraryView
           itinerary={generatedItinerary}
           isGenerating={isGenerating}

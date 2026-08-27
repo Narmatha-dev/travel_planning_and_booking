@@ -78,15 +78,15 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        borderRadius: '16px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 4px 18px rgba(0,0,0,0.06)',
+        borderRadius: '20px',
+        border: '1.5px solid #F3D2E5',
+        boxShadow: '0 8px 20px -4px rgba(190, 89, 133, 0.08)',
         transition: 'transform 0.25s ease, box-shadow 0.25s ease',
         background: '#ffffff',
       }}
     >
       {/* Image Container */}
-      <div style={{ position: 'relative', height: '230px', width: '100%', overflow: 'hidden', background: '#0f172a' }}>
+      <div style={{ position: 'relative', height: '230px', width: '100%', overflow: 'hidden', background: '#3D1C2A' }}>
         <img
           src={imgSrc}
           alt={destination.name}
@@ -110,7 +110,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
             position: 'absolute',
             top: '12px',
             left: '12px',
-            background: 'rgba(15, 23, 42, 0.82)',
+            background: 'rgba(45, 21, 32, 0.85)',
             backdropFilter: 'blur(8px)',
             color: '#ffffff',
             padding: '4px 12px',
@@ -131,7 +131,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               position: 'absolute',
               top: '40px',
               left: '12px',
-              background: 'rgba(2, 132, 199, 0.9)',
+              background: 'rgba(190, 89, 133, 0.92)',
               backdropFilter: 'blur(6px)',
               color: '#ffffff',
               padding: '2px 8px',
@@ -185,7 +185,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
             position: 'absolute',
             bottom: '12px',
             right: '12px',
-            background: 'rgba(15, 23, 42, 0.85)',
+            background: 'rgba(45, 21, 32, 0.85)',
             backdropFilter: 'blur(8px)',
             padding: '3px 10px',
             borderRadius: '8px',
@@ -201,7 +201,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
           <span>⭐</span>
           <span style={{ color: '#ffffff' }}>{parseFloat(destination.rating || 4.9).toFixed(1)}</span>
           {destination.user_ratings_total && (
-            <span style={{ color: '#94a3b8', fontSize: '0.7rem', fontWeight: '500' }}>
+            <span style={{ color: '#FFB8E0', fontSize: '0.7rem', fontWeight: '500' }}>
               ({(destination.user_ratings_total / 1000).toFixed(0)}k)
             </span>
           )}
@@ -214,7 +214,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               position: 'absolute',
               bottom: '12px',
               left: '12px',
-              background: 'rgba(16, 185, 129, 0.92)',
+              background: 'rgba(190, 89, 133, 0.92)',
               backdropFilter: 'blur(6px)',
               padding: '3px 10px',
               borderRadius: '8px',
@@ -237,18 +237,18 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
       <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flexGrow: 1 }}>
         {/* City & Country */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-          <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+          <span style={{ fontSize: '0.82rem', color: '#7A5366', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.03em' }}>
             📍 {destination.city}, {destination.country}
           </span>
           {destination.best_time_to_visit && (
-            <span style={{ fontSize: '0.72rem', color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: '4px', fontWeight: '600' }}>
+            <span style={{ fontSize: '0.72rem', color: '#BE5985', background: '#FFEDFA', border: '1px solid #FFB8E0', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>
               ☀️ {destination.best_time_to_visit}
             </span>
           )}
         </div>
 
         {/* Destination Name */}
-        <h3 style={{ fontSize: '1.25rem', fontWeight: '800', color: '#0f172a', marginBottom: '0.5rem', lineHeight: '1.3' }}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: '900', color: '#BE5985', marginBottom: '0.5rem', lineHeight: '1.3' }}>
           {destination.name}
         </h3>
 
@@ -256,7 +256,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
         <p
           style={{
             fontSize: '0.875rem',
-            color: '#475569',
+            color: '#7A5366',
             lineHeight: '1.5',
             marginBottom: '0.75rem',
             display: '-webkit-box',
@@ -272,12 +272,12 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
         {/* Image Attribution Strip */}
         <div
           style={{
-            background: '#f8fafc',
-            border: '1px solid #f1f5f9',
+            background: '#FFF5FB',
+            border: '1px solid #F3D2E5',
             borderRadius: '6px',
             padding: '4px 8px',
             fontSize: '0.68rem',
-            color: '#64748b',
+            color: '#7A5366',
             marginBottom: '1rem',
             display: 'flex',
             justifyContent: 'space-between',
@@ -292,7 +292,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               href={destination.image_source_url}
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: '#0284c7', textDecoration: 'none', fontWeight: '700', fontSize: '0.65rem' }}
+              style={{ color: '#BE5985', textDecoration: 'none', fontWeight: '700', fontSize: '0.65rem' }}
               title="View original Wikimedia Commons file page"
             >
               Source ↗
@@ -303,7 +303,7 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
         {/* Action Buttons Footer */}
         <div
           style={{
-            borderTop: '1px solid #f1f5f9',
+            borderTop: '1px solid #F3D2E5',
             paddingTop: '0.9rem',
             display: 'flex',
             gap: '0.5rem',
@@ -318,10 +318,10 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               flex: 1,
               padding: '0.55rem 0.5rem',
               fontSize: '0.82rem',
-              fontWeight: '700',
+              fontWeight: '800',
               textAlign: 'center',
               textDecoration: 'none',
-              borderRadius: '8px',
+              borderRadius: '9999px',
             }}
           >
             Explore ➜
@@ -338,13 +338,13 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
               }
             }}
             style={{
-              background: '#f1f5f9',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
+              background: '#FFF5FB',
+              border: '1.5px solid #F3D2E5',
+              color: '#BE5985',
               padding: '0.55rem 0.75rem',
               fontSize: '0.82rem',
               fontWeight: '700',
-              borderRadius: '8px',
+              borderRadius: '9999px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -359,15 +359,15 @@ export default function DestinationCard({ destination, onFavoriteToggle, onViewM
           <Link
             to={`/trip-planner?destination=${encodeURIComponent(destination.name)}&city=${encodeURIComponent(destination.city)}&country=${encodeURIComponent(destination.country)}`}
             style={{
-              background: '#047857',
+              background: '#BE5985',
               color: '#ffffff',
-              border: 'none',
+              border: '1px solid #BE5985',
               padding: '0.55rem 0.75rem',
               fontSize: '0.82rem',
-              fontWeight: '700',
+              fontWeight: '800',
               textAlign: 'center',
               textDecoration: 'none',
-              borderRadius: '8px',
+              borderRadius: '9999px',
               display: 'flex',
               alignItems: 'center',
               gap: '3px',

@@ -117,7 +117,7 @@ export default function MyTripsPage() {
     setLoadingBookings(true);
     setBookingError('');
     try {
-      const data = await bookingService.getUserBookings(3);
+      const data = await bookingService.getUserBookings(user?.id || 3);
       setBookings(data || []);
     } catch (err) {
       setBookingError(err.response?.data?.message || err.message || 'Failed to load bookings history');
@@ -130,7 +130,7 @@ export default function MyTripsPage() {
     setLoadingPayments(true);
     setPaymentError('');
     try {
-      const data = await paymentService.getPaymentHistory(3);
+      const data = await paymentService.getPaymentHistory(user?.id || 3);
       setPayments(data || []);
     } catch (err) {
       setPaymentError(err.response?.data?.message || err.message || 'Failed to load payment history');
@@ -143,7 +143,7 @@ export default function MyTripsPage() {
     loadUserTrips();
     loadUserBookings();
     loadUserPayments();
-  }, []);
+  }, [user]);
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -186,19 +186,30 @@ export default function MyTripsPage() {
   // Feature 9: Cancel Booking
   const handleConfirmCancelBooking = async () => {
     if (!cancelModalBooking) return;
-    setCancellingBookingId(cancelModalBooking.id);
+    const targetBooking = cancelModalBooking;
+    setCancellingBookingId(targetBooking.id);
 
     try {
-      await bookingService.cancelBooking(cancelModalBooking.id, cancelReason);
+      await bookingService.cancelBooking(targetBooking.id, cancelReason);
       setBookings((prev) =>
-        prev.map((b) => (b.id === cancelModalBooking.id ? { ...b, status: 'cancelled', payment_status: 'refunded' } : b))
+        prev.map((b) => (b.id === targetBooking.id ? { ...b, status: 'cancelled', payment_status: 'refunded' } : b))
       );
       loadUserPayments();
-      setCancelSuccessMsg(`Trip reservation #${cancelModalBooking.booking_reference} has been cancelled successfully.`);
+      setCancelSuccessMsg(`Trip reservation #${targetBooking.booking_reference} has been cancelled successfully. Full refund initiated.`);
       setCancelModalBooking(null);
-      setTimeout(() => setCancelSuccessMsg(''), 5000);
+      setTimeout(() => setCancelSuccessMsg(''), 6000);
     } catch (err) {
-      alert('Cancellation error: ' + (err.response?.data?.message || err.message));
+      const errMsg = err.response?.data?.message || err.message || '';
+      if (errMsg.toLowerCase().includes('already cancelled')) {
+        setBookings((prev) =>
+          prev.map((b) => (b.id === targetBooking.id ? { ...b, status: 'cancelled', payment_status: 'refunded' } : b))
+        );
+        setCancelSuccessMsg(`Trip reservation #${targetBooking.booking_reference} is already cancelled.`);
+        setCancelModalBooking(null);
+        setTimeout(() => setCancelSuccessMsg(''), 6000);
+      } else {
+        alert('Cancellation error: ' + errMsg);
+      }
     } finally {
       setCancellingBookingId(null);
     }
@@ -224,10 +235,10 @@ export default function MyTripsPage() {
         key={booking.id}
         style={{
           background: '#ffffff',
-          borderRadius: '18px',
-          border: '1px solid #e2e8f0',
+          borderRadius: '20px',
+          border: '1.5px solid #F3D2E5',
           padding: '1.75rem',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+          boxShadow: '0 8px 24px -4px rgba(190, 89, 133, 0.08)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -244,9 +255,9 @@ export default function MyTripsPage() {
               style={{
                 width: '100px',
                 height: '100px',
-                borderRadius: '14px',
+                borderRadius: '16px',
                 objectFit: 'cover',
-                border: '1px solid #e2e8f0',
+                border: '1px solid #F3D2E5',
               }}
             />
           )}
@@ -281,19 +292,19 @@ export default function MyTripsPage() {
                 💳 Payment: {booking.payment_status === 'completed' || booking.status === 'confirmed' ? 'Paid' : booking.status === 'cancelled' ? 'Refunded' : 'Pending'}
               </span>
 
-              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0284c7' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#BE5985' }}>
                 #{booking.booking_reference}
               </span>
-              <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>
+              <span style={{ fontSize: '0.78rem', color: '#7A5366' }}>
                 ({isCustom ? 'AI Custom Trip' : 'Curated Package'})
               </span>
             </div>
 
-            <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.35rem 0' }}>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: '#BE5985', margin: '0 0 0.35rem 0' }}>
               {booking.destination_name || 'Selected Destination'}
             </h3>
 
-            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#475569', marginBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#7A5366', marginBottom: '0.5rem' }}>
               <span>📅 {booking.travel_date} {booking.return_date ? `➔ ${booking.return_date}` : ''}</span>
               <span>👥 {booking.num_travelers} Traveler(s)</span>
             </div>
@@ -301,12 +312,12 @@ export default function MyTripsPage() {
             {/* Transport & Stay Highlights */}
             <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
               {booking.selected_transport && (
-                <span style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700' }}>
+                <span style={{ background: '#FFF5FB', color: '#BE5985', border: '1px solid #F3D2E5', padding: '2px 8px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700' }}>
                   {booking.selected_transport.icon || '🚆'} {booking.selected_transport.title}
                 </span>
               )}
               {booking.selected_hotel && (
-                <span style={{ background: '#f0f9ff', color: '#075985', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: '700' }}>
+                <span style={{ background: '#FFF5FB', color: '#BE5985', border: '1px solid #F3D2E5', padding: '2px 8px', borderRadius: '8px', fontSize: '0.78rem', fontWeight: '700' }}>
                   🏨 {booking.selected_hotel.name}
                 </span>
               )}
@@ -317,22 +328,34 @@ export default function MyTripsPage() {
         {/* Pricing & Actions */}
         <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', gap: '0.6rem', minWidth: '180px' }}>
           <div>
-            <span style={{ fontSize: '0.75rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</span>
-            <div style={{ fontSize: '1.4rem', fontWeight: '900', color: '#0f172a' }}>
+            <span style={{ fontSize: '0.75rem', color: '#7A5366', textTransform: 'uppercase', fontWeight: '700' }}>Total Amount</span>
+            <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#BE5985' }}>
               ₹{parseFloat(booking.final_amount || 0).toLocaleString()}
             </div>
           </div>
 
           <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            {/* Complete Payment Button for Pending Bookings */}
+            {booking.status === 'pending' && booking.payment_status !== 'completed' && (
+              <Link
+                to={`/booking?customTrip=${booking.booking_type === 'custom_trip'}&packageId=${booking.package_id || ''}&destinationId=${booking.destination_id || ''}&date=${booking.travel_date || ''}&travelers=${booking.num_travelers || 2}`}
+                className="btn btn-primary btn-sm"
+                style={{
+                  fontWeight: '900',
+                  padding: '0.5rem 0.95rem',
+                }}
+                title="Complete payment for this pending reservation"
+              >
+                💳 Pay Now
+              </Link>
+            )}
+
             {/* Feature 1: Rate Completed / Confirmed Trip (Phase 11) */}
             {booking.status !== 'cancelled' && (
               <button
                 onClick={() => setReviewModalBooking(booking)}
-                className="btn btn-sm"
+                className="btn btn-secondary btn-sm"
                 style={{
-                  background: '#fef3c7',
-                  color: '#92400e',
-                  border: '1px solid #fcd34d',
                   fontWeight: '800',
                   padding: '0.5rem 0.85rem',
                 }}
@@ -347,8 +370,8 @@ export default function MyTripsPage() {
                 setReceiptModalBookingRef(booking.booking_reference);
                 setShowReceiptModal(true);
               }}
-              className="btn btn-outline btn-sm"
-              style={{ fontWeight: '800', padding: '0.5rem 0.85rem', color: '#0284c7', borderColor: '#7dd3fc' }}
+              className="btn btn-secondary btn-sm"
+              style={{ fontWeight: '800', padding: '0.5rem 0.85rem' }}
               title="View / Print Digital Receipt"
             >
               🧾 Receipt
@@ -359,11 +382,8 @@ export default function MyTripsPage() {
               <button
                 onClick={() => handleSaveForOffline(booking)}
                 disabled={savingOfflineId === booking.id}
-                className="btn btn-sm"
+                className="btn btn-secondary btn-sm"
                 style={{
-                  background: savedOfflineIds.has(booking.id) ? '#dcfce7' : '#f0fdf4',
-                  color: savedOfflineIds.has(booking.id) ? '#166534' : '#15803d',
-                  border: `1px solid ${savedOfflineIds.has(booking.id) ? '#86efac' : '#bbf7d0'}`,
                   fontWeight: '800',
                   padding: '0.5rem 0.85rem',
                 }}
@@ -379,7 +399,7 @@ export default function MyTripsPage() {
 
             <button
               onClick={() => handleViewBookingDetails(booking)}
-              className="btn btn-outline btn-sm"
+              className="btn btn-secondary btn-sm"
               style={{ fontWeight: '700', padding: '0.5rem 0.95rem' }}
             >
               🔍 Details
@@ -389,7 +409,7 @@ export default function MyTripsPage() {
               <button
                 onClick={() => setCancelModalBooking(booking)}
                 className="btn btn-sm"
-                style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: '700', padding: '0.5rem 0.85rem' }}
+                style={{ background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', fontWeight: '800', padding: '0.5rem 0.85rem', borderRadius: '10px' }}
               >
                 ✕ Cancel Trip
               </button>
@@ -406,11 +426,11 @@ export default function MyTripsPage() {
         {/* Header Title & Actions */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
           <div>
-            <span className="eyebrow">Phase 8 • Traveler Dashboard</span>
-            <h1 style={{ fontSize: '2.25rem', fontWeight: '900', color: '#0f172a', margin: '0.4rem 0 0.2rem 0' }}>
+            <span className="eyebrow">Traveler Hub</span>
+            <h1 style={{ fontSize: '2.3rem', fontWeight: '900', color: '#BE5985', margin: '0.4rem 0 0.2rem 0' }}>
               My Trips & Bookings Hub
             </h1>
-            <p style={{ color: '#64748b', margin: 0 }}>
+            <p style={{ color: '#7A5366', margin: 0 }}>
               Track confirmed reservations, review day-by-day itineraries, manage cancellations, and view payment receipts.
             </p>
           </div>
@@ -429,7 +449,7 @@ export default function MyTripsPage() {
 
         {/* Cancel Success Alert Banner */}
         {cancelSuccessMsg && (
-          <div style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '1rem 1.25rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ background: '#f0fdf4', color: '#15803d', border: '1.5px solid #86efac', padding: '1rem 1.25rem', borderRadius: '16px', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.25rem' }}>✅</span>
             <strong>{cancelSuccessMsg}</strong>
           </div>
@@ -443,43 +463,43 @@ export default function MyTripsPage() {
             gap: '1rem',
             background: '#ffffff',
             padding: '1.25rem',
-            borderRadius: '16px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            borderRadius: '20px',
+            border: '1.5px solid #F3D2E5',
+            boxShadow: '0 8px 24px -4px rgba(190, 89, 133, 0.08)',
             marginBottom: '2rem',
           }}
         >
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>🚀 Upcoming Trips</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#0284c7', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#7A5366', textTransform: 'uppercase', fontWeight: '800' }}>🚀 Upcoming Trips</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#BE5985', marginTop: '0.2rem' }}>
               {upcomingBookings.length}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>📜 Completed Trips</div>
+            <div style={{ fontSize: '0.75rem', color: '#7A5366', textTransform: 'uppercase', fontWeight: '800' }}>📜 Completed Trips</div>
             <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#16a34a', marginTop: '0.2rem' }}>
               {completedBookings.length}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>❌ Cancelled Trips</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#e11d48', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#7A5366', textTransform: 'uppercase', fontWeight: '800' }}>❌ Cancelled Trips</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#b91c1c', marginTop: '0.2rem' }}>
               {cancelledBookings.length}
             </div>
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: '700' }}>💡 Draft Itineraries</div>
-            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#0f172a', marginTop: '0.2rem' }}>
+            <div style={{ fontSize: '0.75rem', color: '#7A5366', textTransform: 'uppercase', fontWeight: '800' }}>💡 Draft Itineraries</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900', color: '#2D1520', marginTop: '0.2rem' }}>
               {trips.length}
             </div>
           </div>
         </div>
 
         {/* Feature 7: Categorized Tabs Navigation */}
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e2e8f0', marginBottom: '2rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #F3D2E5', marginBottom: '2rem', flexWrap: 'wrap' }}>
           <button
             onClick={() => handleTabChange('upcoming')}
             style={{
@@ -487,10 +507,10 @@ export default function MyTripsPage() {
               border: 'none',
               background: 'transparent',
               fontSize: '0.95rem',
-              fontWeight: '800',
+              fontWeight: '900',
               cursor: 'pointer',
-              color: activeTab === 'upcoming' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'upcoming' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'upcoming' ? '#BE5985' : '#7A5366',
+              borderBottom: activeTab === 'upcoming' ? '3px solid #EC7FA9' : '3px solid transparent',
               marginBottom: '-2px',
             }}
           >
@@ -504,10 +524,10 @@ export default function MyTripsPage() {
               border: 'none',
               background: 'transparent',
               fontSize: '0.95rem',
-              fontWeight: '800',
+              fontWeight: '900',
               cursor: 'pointer',
-              color: activeTab === 'completed' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'completed' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'completed' ? '#BE5985' : '#7A5366',
+              borderBottom: activeTab === 'completed' ? '3px solid #EC7FA9' : '3px solid transparent',
               marginBottom: '-2px',
             }}
           >
@@ -521,10 +541,10 @@ export default function MyTripsPage() {
               border: 'none',
               background: 'transparent',
               fontSize: '0.95rem',
-              fontWeight: '800',
+              fontWeight: '900',
               cursor: 'pointer',
-              color: activeTab === 'cancelled' ? '#0284c7' : '#64748b',
-              borderBottom: activeTab === 'cancelled' ? '3px solid #0284c7' : '3px solid transparent',
+              color: activeTab === 'cancelled' ? '#BE5985' : '#7A5366',
+              borderBottom: activeTab === 'cancelled' ? '3px solid #EC7FA9' : '3px solid transparent',
               marginBottom: '-2px',
             }}
           >
@@ -1101,6 +1121,205 @@ export default function MyTripsPage() {
             trip={sharingTrip}
             onClose={() => setSharingTrip(null)}
           />
+        )}
+
+        {/* ==================================================== */}
+        {/* CANCELLATION & 100% REFUND MODAL                     */}
+        {/* ==================================================== */}
+        {cancelModalBooking && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(45, 21, 32, 0.65)',
+              backdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: '1rem',
+            }}
+            onClick={() => setCancelModalBooking(null)}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: '24px',
+                border: '1.5px solid #F3D2E5',
+                padding: '2rem',
+                maxWidth: '520px',
+                width: '100%',
+                boxShadow: '0 20px 50px rgba(45, 21, 32, 0.25)',
+                position: 'relative',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setCancelModalBooking(null)}
+                style={{
+                  position: 'absolute',
+                  top: '1.25rem',
+                  right: '1.25rem',
+                  background: '#FFF5FB',
+                  border: '1px solid #F3D2E5',
+                  borderRadius: '50%',
+                  width: '34px',
+                  height: '34px',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  color: '#7A5366',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '14px',
+                    background: '#FFEDFA',
+                    border: '1px solid #FFB8E0',
+                    color: '#BE5985',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '1.4rem',
+                  }}
+                >
+                  ⚠️
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.3rem', fontWeight: '900', color: '#BE5985', margin: 0 }}>
+                    Cancel Trip & Refund
+                  </h3>
+                  <span style={{ fontSize: '0.82rem', color: '#7A5366', fontWeight: '600' }}>
+                    Booking Ref: #{cancelModalBooking.booking_reference}
+                  </span>
+                </div>
+              </div>
+
+              {/* Trip Summary Card */}
+              <div
+                style={{
+                  background: '#FFF5FB',
+                  border: '1.5px solid #F3D2E5',
+                  borderRadius: '16px',
+                  padding: '1.1rem 1.25rem',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#7A5366' }}>Destination:</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#2D1520' }}>
+                    {cancelModalBooking.destination_name || 'Selected Destination'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#7A5366' }}>Travel Date:</span>
+                  <span style={{ fontSize: '0.88rem', fontWeight: '800', color: '#2D1520' }}>
+                    {cancelModalBooking.travel_date}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#7A5366' }}>Total Paid:</span>
+                  <span style={{ fontSize: '1.05rem', fontWeight: '900', color: '#BE5985' }}>
+                    ₹{parseFloat(cancelModalBooking.final_amount || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* 100% Refund Policy Banner */}
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1.5px solid #86efac',
+                  borderRadius: '16px',
+                  padding: '0.9rem 1.1rem',
+                  marginBottom: '1.25rem',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.65rem',
+                }}
+              >
+                <span style={{ fontSize: '1.2rem', marginTop: '1px' }}>🛡️</span>
+                <div style={{ fontSize: '0.82rem', color: '#166534', lineHeight: '1.45' }}>
+                  <strong>100% Full Refund Guarantee:</strong> A full refund of{' '}
+                  <strong>₹{parseFloat(cancelModalBooking.final_amount || 0).toLocaleString()}</strong> will be automatically credited to your original payment method within 3–5 business days.
+                </div>
+              </div>
+
+              {/* Cancellation Reason Selector */}
+              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.4rem' }}>
+                Reason for cancellation:
+              </label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  borderRadius: '12px',
+                  border: '1.5px solid #F3D2E5',
+                  fontSize: '0.9rem',
+                  marginBottom: '1.5rem',
+                  background: '#ffffff',
+                  color: '#2D1520',
+                  outline: 'none',
+                  fontWeight: '600',
+                }}
+              >
+                <option value="Schedule change / change of plans">Schedule change / change of plans</option>
+                <option value="Found alternative vacation destination">Found alternative vacation destination</option>
+                <option value="Personal / Medical emergency">Personal / Medical emergency</option>
+                <option value="Adverse weather conditions">Adverse weather conditions</option>
+                <option value="Travel dates no longer suitable">Travel dates no longer suitable</option>
+                <option value="Other reason">Other reason</option>
+              </select>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  onClick={() => setCancelModalBooking(null)}
+                  disabled={cancellingBookingId === cancelModalBooking.id}
+                  className="btn btn-secondary btn-sm"
+                  style={{ padding: '0.65rem 1.25rem', fontWeight: '800' }}
+                >
+                  Keep My Trip
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmCancelBooking}
+                  disabled={cancellingBookingId === cancelModalBooking.id}
+                  style={{
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '0.65rem 1.35rem',
+                    fontWeight: '900',
+                    fontSize: '0.88rem',
+                    cursor: cancellingBookingId === cancelModalBooking.id ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    boxShadow: '0 3px 10px rgba(220, 38, 38, 0.3)',
+                  }}
+                >
+                  {cancellingBookingId === cancelModalBooking.id ? '⏳ Cancelling...' : 'Confirm Cancellation'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </section>
