@@ -2,10 +2,14 @@ import axios from 'axios';
 
 /**
  * Normalizes the API Base URL from Vite environment variable (VITE_API_URL).
- * Handles both "https://app.onrender.com" and "https://app.onrender.com/api".
+ * Defaults to live Render backend in production and localhost:5000 in development.
  */
 export function getApiBaseUrl() {
-  const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const isProduction = import.meta.env.PROD;
+  const defaultUrl = isProduction
+    ? 'https://travel-planning-and-booking-backend.onrender.com'
+    : 'http://localhost:5000';
+  const rawUrl = import.meta.env.VITE_API_URL || defaultUrl;
   const cleanUrl = rawUrl.replace(/\/+$/, '');
   return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
 }
