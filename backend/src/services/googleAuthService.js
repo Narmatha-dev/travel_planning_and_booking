@@ -51,7 +51,7 @@ const googleAuthService = {
   /**
    * Generates the Google OAuth 2.0 Consent URL
    */
-  getGoogleAuthUrl(customState = null) {
+  getGoogleAuthUrl(customState = null, reqRedirectUri = null) {
     if (!config.google.clientId) {
       const error = new Error('Google OAuth Client ID is not configured in backend/.env');
       error.statusCode = 500;
@@ -62,9 +62,11 @@ const googleAuthService = {
       ? Buffer.from(JSON.stringify(customState)).toString('base64url')
       : Buffer.from(JSON.stringify({ timestamp: Date.now() })).toString('base64url');
 
+    const callbackUri = reqRedirectUri || config.google.callbackUrl || 'http://localhost:5000/api/auth/google/callback';
+
     const params = new URLSearchParams({
       client_id: config.google.clientId,
-      redirect_uri: config.google.callbackUrl,
+      redirect_uri: callbackUri,
       response_type: 'code',
       scope: 'openid email profile',
       access_type: 'offline',
@@ -91,18 +93,20 @@ const googleAuthService = {
   /**
    * Exchange OAuth 2.0 authorization code for tokens
    */
-  async exchangeCodeForTokens(code) {
+  async exchangeCodeForTokens(code, reqRedirectUri = null) {
     if (!config.google.clientId || !config.google.clientSecret) {
       const error = new Error('Google OAuth Client ID or Secret is not configured in backend/.env');
       error.statusCode = 500;
       throw error;
     }
 
+    const callbackUri = reqRedirectUri || config.google.callbackUrl || 'http://localhost:5000/api/auth/google/callback';
+
     const postData = new URLSearchParams({
       code,
       client_id: config.google.clientId,
       client_secret: config.google.clientSecret,
-      redirect_uri: config.google.callbackUrl,
+      redirect_uri: callbackUri,
       grant_type: 'authorization_code',
     }).toString();
 

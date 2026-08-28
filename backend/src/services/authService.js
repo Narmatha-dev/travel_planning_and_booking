@@ -291,7 +291,7 @@ const authService = {
   /**
    * Process Google OAuth callback code
    */
-  async googleAuthCallback({ code, state }) {
+  async googleAuthCallback({ code, state, callbackUri }) {
     if (!code) {
       const error = new Error('Authorization code was not provided by Google');
       error.statusCode = 400;
@@ -299,7 +299,7 @@ const authService = {
     }
 
     // 1. Exchange code for OAuth tokens
-    const tokens = await googleAuthService.exchangeCodeForTokens(code);
+    const tokens = await googleAuthService.exchangeCodeForTokens(code, callbackUri);
 
     // 2. Fetch verified user profile
     const googleProfile = await googleAuthService.getUserInfo(tokens.access_token);

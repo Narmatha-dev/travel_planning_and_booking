@@ -49,25 +49,31 @@ const authController = {
       return res.redirect(`${config.clientUrl}/login?error=${encodeURIComponent(errorMsg)}`);
     }
 
-    // Capture dynamic client origin (handles port 5173 or 5174 smoothly)
+    // Capture dynamic client origin (handles Vercel domain or localhost smoothly)
     let clientOrigin = config.clientUrl;
     const referer = req.headers.referer || req.headers.origin;
     if (referer) {
       try {
         const refUrl = new URL(referer);
-        if (refUrl.hostname === 'localhost' || refUrl.hostname === '127.0.0.1') {
-          clientOrigin = `${refUrl.protocol}//${refUrl.host}`;
-        }
+        clientOrigin = `${refUrl.protocol}//${refUrl.host}`;
       } catch {}
     }
+
+    const host = req.get('host') || 'localhost:5000';
+    const isHttps = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' || !host.includes('localhost');
+    const protocol = isHttps ? 'https' : 'http';
+    const computedCallback = process.env.GOOGLE_CALLBACK_URL && !process.env.GOOGLE_CALLBACK_URL.includes('localhost')
+      ? process.env.GOOGLE_CALLBACK_URL
+      : `${protocol}://${host}/api/auth/google/callback`;
 
     const state = {
       redirect: redirect || '/',
       clientOrigin,
+      callbackUri: computedCallback,
       timestamp: Date.now(),
     };
 
-    const authUrl = googleAuthService.getGoogleAuthUrl(state);
+    const authUrl = googleAuthService.getGoogleAuthUrl(state, computedCallback);
 
     if (format === 'json' || req.query.json === 'true') {
       return successResponse(res, 'Google OAuth authorization URL generated', { url: authUrl });
@@ -84,6 +90,7 @@ const authController = {
     const { code, state, error, error_description } = req.query;
     const parsedState = googleAuthService.parseState(state);
     const targetOrigin = parsedState?.clientOrigin || config.clientUrl;
+    const callbackUri = parsedState?.callbackUri || config.google.callbackUrl;
 
     // Handle Google cancellation / refusal
     if (error) {
@@ -97,7 +104,7 @@ const authController = {
     }
 
     try {
-      const result = await authService.googleAuthCallback({ code, state });
+      const result = await authService.googleAuthCallback({ code, state, callbackUri });
 
       const redirectDestination = result.redirectDestination || '/';
       const redirectUrl = new URL(`${targetOrigin}/auth/callback`);
