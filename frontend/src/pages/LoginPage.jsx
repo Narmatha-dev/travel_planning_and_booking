@@ -4,7 +4,7 @@ import { useAppContext } from '../context/AppContext';
 import authService from '../services/authService';
 
 function LoginPage({ isGateway = false }) {
-  const { login, authError, setAuthError, language, setLanguage, t } = useAppContext();
+  const { user, isAuthenticated, loading, login, authError, setAuthError, language, setLanguage, t } = useAppContext();
   const navigate = useNavigate();
   const location = useLocation();
   const cardRef = useRef(null);
@@ -92,9 +92,14 @@ function LoginPage({ isGateway = false }) {
     window.location.href = googleAuthUrl;
   };
 
-  const handleGuestExplore = () => {
-    navigate('/home');
-  };
+  // If already authenticated, redirect to Home or saved target
+  useEffect(() => {
+    if (isAuthenticated && !loading) {
+      const defaultRedirect = user?.role === 'admin' ? '/admin' : '/home';
+      const targetDestination = location.state?.from?.pathname || redirectParam || defaultRedirect;
+      navigate(targetDestination, { replace: true });
+    }
+  }, [isAuthenticated, loading, user, navigate, location, redirectParam]);
 
   return (
     <div className="auth-3d-scene">
@@ -108,7 +113,7 @@ function LoginPage({ isGateway = false }) {
       <div className="auth-3d-floating-asset asset-compass" title="Smart Navigation">🧭</div>
       <div className="auth-3d-floating-asset asset-balloon" title="Curated Packages">🎈</div>
 
-      {/* Top Floating Controls (Language & Direct Home Link) */}
+      {/* Top Floating Controls (Language) */}
       <div
         style={{
           position: 'absolute',
@@ -136,30 +141,6 @@ function LoginPage({ isGateway = false }) {
             தமிழ்
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={handleGuestExplore}
-          style={{
-            background: 'rgba(255, 255, 255, 0.9)',
-            backdropFilter: 'blur(12px)',
-            border: '1.5px solid rgba(255, 255, 255, 0.8)',
-            padding: '0.45rem 1rem',
-            borderRadius: '9999px',
-            fontWeight: '700',
-            fontSize: '0.85rem',
-            color: '#0f172a',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          <span>{language === 'ta' ? 'முகப்புக்குச் செல்' : 'Explore Home'}</span>
-          <span>➔</span>
-        </button>
       </div>
 
       {/* 3D App Name & Branding Header */}
@@ -184,9 +165,66 @@ function LoginPage({ isGateway = false }) {
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
         >
+          {/* Portal Selector Toggle: Choose Traveler vs Admin */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              background: '#f1f5f9',
+              padding: '4px',
+              borderRadius: '16px',
+              marginBottom: '1.5rem',
+              border: '1px solid #e2e8f0',
+            }}
+          >
+            <button
+              type="button"
+              style={{
+                padding: '0.65rem 0.5rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: '#ffffff',
+                color: '#BE5985',
+                fontWeight: '800',
+                fontSize: '0.92rem',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>✈️</span>
+              <span>Traveler Portal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/login')}
+              style={{
+                padding: '0.65rem 0.5rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'transparent',
+                color: '#64748b',
+                fontWeight: '700',
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.2s',
+              }}
+            >
+              <span>🛡️</span>
+              <span>Admin Portal</span>
+            </button>
+          </div>
+
           <div style={{ textAlign: 'center', marginBottom: '1.25rem' }}>
             <h2 style={{ fontSize: '1.65rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.35rem' }}>
-              {language === 'ta' ? 'மீண்டும் வருக!' : 'Welcome Back'}
+              {language === 'ta' ? 'பயணி உள்நுழைவு' : 'Traveler Sign In'}
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
               {language === 'ta'
@@ -195,28 +233,60 @@ function LoginPage({ isGateway = false }) {
             </p>
           </div>
 
-          {(localError || authError) && (
-            <div
-              className="alert alert-error"
-              style={{
-                background: '#fee2e2',
-                color: '#991b1b',
-                padding: '0.75rem 1rem',
-                borderRadius: '12px',
-                marginBottom: '1.25rem',
-                fontSize: '0.88rem',
-                border: '1px solid #f87171',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <span>⚠️</span>
-              <span>{localError || authError}</span>
+          {/* If already authenticated, show friendly session card with option to switch or continue */}
+          {isAuthenticated ? (
+            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>👋</div>
+              <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem' }}>
+                You are currently signed in
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '0.92rem', marginBottom: '1.75rem' }}>
+                Signed in as <strong>{user?.email || 'Traveler'}</strong> ({user?.role === 'admin' ? 'Administrator' : 'Traveler'})
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/home')}
+                  className="btn btn-primary full-width"
+                  style={{
+                    padding: '0.85rem',
+                    borderRadius: '12px',
+                    fontWeight: '800',
+                    fontSize: '0.96rem',
+                    background: '#EC7FA9',
+                    border: '1px solid #BE5985',
+                    color: '#ffffff',
+                    boxShadow: '0 4px 14px rgba(236, 127, 169, 0.35)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ➔ Continue to {user?.role === 'admin' ? 'Admin Dashboard' : 'Home'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    authService.logout();
+                    window.location.reload();
+                  }}
+                  className="btn full-width"
+                  style={{
+                    padding: '0.75rem',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '0.88rem',
+                    background: '#ffffff',
+                    color: '#BE5985',
+                    border: '1.5px solid #cbd5e1',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🚪 Sign in with a different account
+                </button>
+              </div>
             </div>
-          )}
-
-          <form className="auth-form" onSubmit={handleSubmit} style={{ marginTop: '0.5rem' }}>
+          ) : (
+            <>
+              <form className="auth-form" onSubmit={handleSubmit} style={{ marginTop: '0.5rem' }}>
             <label style={{ fontSize: '0.88rem', fontWeight: '700', color: '#1e293b' }}>
               {language === 'ta' ? 'மின்னஞ்சல் முகவரி' : 'Email Address'}
               <input
@@ -224,9 +294,9 @@ function LoginPage({ isGateway = false }) {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="alex.reed@example.com"
+                placeholder={language === 'ta' ? 'உங்கள் மின்னஞ்சலை உள்ளிடவும்' : 'Enter your email address'}
+                autoComplete="off"
                 required
-                autoFocus
                 style={{
                   background: '#ffffff',
                   border: '1.5px solid #cbd5e1',
@@ -247,7 +317,8 @@ function LoginPage({ isGateway = false }) {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="••••••••••••"
+                  placeholder={language === 'ta' ? 'கடவுச்சொல்லை உள்ளிடவும்' : 'Enter your password'}
+                  autoComplete="current-password"
                   required
                   style={{
                     width: '100%',
@@ -359,6 +430,8 @@ function LoginPage({ isGateway = false }) {
               {language === 'ta' ? 'புதிய கணக்கை உருவாக்கவும்' : 'Create an account'}
             </Link>
           </p>
+            </>
+          )}
         </div>
       </div>
     </div>

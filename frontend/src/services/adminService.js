@@ -71,6 +71,11 @@ const adminService = {
     return response.data.data;
   },
 
+  async updatePackageStatus(id, isAvailable) {
+    const response = await api.patch(`/admin/packages/${id}/status`, { isAvailable });
+    return response.data.data;
+  },
+
   async deletePackage(id) {
     const response = await api.delete(`/admin/packages/${id}`);
     return response.data.data;

@@ -118,38 +118,16 @@ function RegisterPage() {
             />
           </label>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <label>
-              Phone Number (Optional)
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                placeholder="+1-555-0199"
-              />
-            </label>
-
-            <label>
-              I am joining as:
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                style={{
-                  width: '100%',
-                  padding: '0.65rem',
-                  borderRadius: '6px',
-                  border: '1px solid #cbd5e1',
-                  background: '#fff',
-                  fontSize: '0.95rem'
-                }}
-              >
-                <option value="traveler">✈️ Traveler</option>
-                <option value="agent">💼 Travel Agent</option>
-              </select>
-            </label>
-          </div>
+          <label>
+            Phone Number (Optional)
+            <input
+              type="tel"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleChange}
+              placeholder="+1-555-0199"
+            />
+          </label>
 
           <label>
             Password (min 6 characters) *

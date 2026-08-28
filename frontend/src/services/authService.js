@@ -28,6 +28,19 @@ const authService = {
   },
 
   /**
+   * Dedicated Admin Login
+   */
+  async adminLogin(credentials) {
+    const response = await api.post('/auth/admin/login', credentials);
+    const data = response.data.data;
+    if (data && data.token) {
+      localStorage.setItem('travel_auth_token', data.token);
+      localStorage.setItem('travel_auth_user', JSON.stringify(data.user));
+    }
+    return data;
+  },
+
+  /**
    * Get Google OAuth redirect URL
    */
   getGoogleAuthUrl(redirectPath = '/') {

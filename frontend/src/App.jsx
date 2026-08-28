@@ -24,40 +24,123 @@ import SharedTripPage from './pages/SharedTripPage';
 import RewardsPage from './pages/RewardsPage';
 import UserAnalyticsPage from './pages/UserAnalyticsPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import AdminLoginPage from './pages/AdminLoginPage';
+import AiAgentPage from './pages/AiAgentPage';
 import './App.css';
 
 function AppContent() {
   const { isAuthenticated } = useAppContext();
   const location = useLocation();
 
-  // Hide standard navbar & footer on the standalone 3D Gateway / Login Page
-  const isAuthGateway = location.pathname === '/login' || (!isAuthenticated && location.pathname === '/');
+  // Hide standard public navbar & footer on Login, Register, Auth Callback, and Dedicated Admin Portal
+  const isAdminWorkspace = location.pathname.startsWith('/admin');
+  const isAuthGateway =
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/auth/callback' ||
+    (!isAuthenticated && (location.pathname === '/' || location.pathname === '/home')) ||
+    isAdminWorkspace;
 
   return (
     <div className="app-shell">
       {!isAuthGateway && <Navbar />}
       <main className={isAuthGateway ? 'auth-main-full' : ''}>
         <Routes>
-          {/* Public & Entry Routes */}
-          <Route path="/" element={isAuthenticated ? <HomePage /> : <LoginPage isGateway={true} />} />
-          <Route path="/home" element={<HomePage />} />
+          {/* Public Authentication Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route path="/destinations" element={<DestinationsPage />} />
-          <Route path="/destinations/:id" element={<DestinationDetailPage />} />
-          <Route path="/packages" element={<PackagesPage />} />
-          <Route path="/packages/:id" element={<PackageDetailPage />} />
-          <Route path="/trip-planner" element={<TripPlannerPage />} />
-          <Route path="/safety" element={<SafetyPage />} />
-          <Route path="/shared-trip/:token" element={<SharedTripPage />} />
+
+          {/* Protected Home Route */}
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Core User Feature Routes */}
+          <Route
+            path="/destinations"
+            element={
+              <ProtectedRoute>
+                <DestinationsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/destinations/:id"
+            element={
+              <ProtectedRoute>
+                <DestinationDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/packages"
+            element={
+              <ProtectedRoute>
+                <PackagesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/packages/:id"
+            element={
+              <ProtectedRoute>
+                <PackageDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/trip-planner"
+            element={
+              <ProtectedRoute>
+                <TripPlannerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/ai-agent"
+            element={
+              <ProtectedRoute>
+                <AiAgentPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/safety"
+            element={
+              <ProtectedRoute>
+                <SafetyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/shared-trip/:token"
+            element={
+              <ProtectedRoute>
+                <SharedTripPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Canonical clean redirects for redundant legacy routes */}
           <Route path="/recommendations" element={<Navigate to="/destinations" replace />} />
           <Route path="/copilot" element={<Navigate to="/trip-planner" replace />} />
           <Route path="/offline-trips" element={<Navigate to="/my-trips" replace />} />
 
-          {/* Protected Routes */}
+          {/* Protected Account & Booking Routes */}
           <Route
             path="/booking"
             element={
@@ -114,6 +197,9 @@ function AppContent() {
               </ProtectedRoute>
             }
           />
+
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route
             path="/admin"
             element={
@@ -122,6 +208,17 @@ function AppContent() {
               </AdminRoute>
             }
           />
+          <Route
+            path="/admin/*"
+            element={
+              <AdminRoute>
+                <AdminDashboardPage />
+              </AdminRoute>
+            }
+          />
+
+          {/* Catch-all fallback */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </main>
       {!isAuthGateway && <ChatbotWidget />}

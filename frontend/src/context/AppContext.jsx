@@ -20,6 +20,65 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState(null);
 
+  // Validate and restore authenticated session on mount / refresh
+  useEffect(() => {
+    let isMounted = true;
+
+    const initializeAuth = async () => {
+      const storedToken = authService.getToken();
+      const storedUser = authService.getCurrentUser();
+
+      if (storedToken) {
+        try {
+          // Verify token authenticity with backend
+          const profile = await authService.getProfile();
+          if (isMounted) {
+            if (profile) {
+              setUser(profile);
+              setToken(storedToken);
+            } else if (storedUser) {
+              setUser(storedUser);
+              setToken(storedToken);
+            }
+          }
+        } catch (err) {
+          if (isMounted) {
+            // Token expired or invalid: clear session
+            console.warn('Session verification failed, logging out:', err?.message);
+            authService.logout();
+            setUser(null);
+            setToken(null);
+          }
+        }
+      } else {
+        if (isMounted) {
+          setUser(null);
+          setToken(null);
+        }
+      }
+
+      if (isMounted) {
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
+
+    // Listen to token expiration events from Axios interceptor
+    const handleAuthExpired = () => {
+      if (isMounted) {
+        setUser(null);
+        setToken(null);
+      }
+    };
+    window.addEventListener('travel_auth_expired', handleAuthExpired);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('travel_auth_expired', handleAuthExpired);
+    };
+  }, []);
+
   // Network & Offline Status (Phase 29)
   const [isOnline, setIsOnline] = useState(() => (typeof window !== 'undefined' ? window.navigator.onLine : true));
   const [syncStatus, setSyncStatus] = useState('synced');
@@ -477,6 +536,23 @@ export function AppProvider({ children }) {
   };
 
   /**
+   * Dedicated Admin Login handler
+   */
+  const adminLogin = async (email, password) => {
+    setAuthError(null);
+    try {
+      const data = await authService.adminLogin({ email, password });
+      setUser(data.user);
+      setToken(data.token);
+      return { success: true, user: data.user };
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Administrator authentication failed';
+      setAuthError(message);
+      return { success: false, message };
+    }
+  };
+
+  /**
    * Register handler
    */
   const register = async (userData) => {
@@ -562,6 +638,7 @@ export function AppProvider({ children }) {
     authError,
     setAuthError,
     login,
+    adminLogin,
     register,
     handleOAuthSuccess,
     loginWithGoogleToken,

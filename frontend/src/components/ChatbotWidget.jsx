@@ -277,23 +277,24 @@ export default function ChatbotWidget() {
 
     try {
       const response = await chatbotService.sendMessage(text, 'travelora_user_session', contextPayload);
-      if (response.language) {
+      if (response && response.language) {
         setCurrentLang(response.language);
       }
+      const replyContent = response?.reply || response?.response || response?.message || (typeof response === 'string' ? response : '');
       const botMsg = {
         role: 'assistant',
-        content: response.reply,
-        suggestions: response.suggestions || [],
-        actionLinks: response.actionLinks || [],
-        language: response.language || 'en',
-        timestamp: response.timestamp || new Date().toISOString(),
+        content: replyContent || '### 🌍 Travel Assistant\n\nHow can I help you plan your next getaway?',
+        suggestions: response?.suggestions || ['Plan a 3-day trip to Ooty', 'Best places in Goa', 'Budget travel tips'],
+        actionLinks: response?.actionLinks || [],
+        language: response?.language || 'en',
+        timestamp: response?.timestamp || new Date().toISOString(),
       };
       setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
       const errorMsg = {
         role: 'assistant',
         content: '⚠️ **Travel Assistant is temporarily unavailable.** Please try asking again in a moment.',
-        suggestions: ['Suggest places near me', 'Plan a 3-day trip', 'Find budget stays'],
+        suggestions: ['Plan a 3-day trip to Ooty', 'Top places in Goa', 'How do I book a trip?'],
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMsg]);

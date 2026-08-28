@@ -74,6 +74,20 @@ function HomePage() {
 
   const daysRemaining = nextUpcomingTrip ? calculateDaysRemaining(nextUpcomingTrip.travel_date) : null;
 
+  const [plannerDestination, setPlannerDestination] = useState('Bali Paradise Island');
+  const [plannerStartDate, setPlannerStartDate] = useState(
+    new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]
+  );
+  const [plannerDays, setPlannerDays] = useState(3);
+  const [plannerTravelers, setPlannerTravelers] = useState(2);
+
+  const handleHeroPlanTrip = (e) => {
+    if (e) e.preventDefault();
+    navigate(
+      `/trip-planner?destination=${encodeURIComponent(plannerDestination)}&startDate=${plannerStartDate}&days=${plannerDays}&travelers=${plannerTravelers}`
+    );
+  };
+
   return (
     <>
       {welcomeBanner && (
@@ -143,14 +157,171 @@ function HomePage() {
               )}
             </p>
 
-            <div className="hero-actions">
-              <Link to="/destinations" className="btn btn-hero-primary">
-                <span>🌍 Explore Trips</span>
-                <span style={{ fontSize: '1.1rem' }}>➔</span>
-              </Link>
-              <Link to="/trip-planner" className="btn btn-hero-outline">
-                <span>🗺️ Plan AI Trip</span>
-              </Link>
+            {/* Interactive Quick Trip Planner Card on Hero */}
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1.5px solid #F3D2E5',
+                borderRadius: '20px',
+                padding: '1.5rem',
+                boxShadow: '0 12px 32px -4px rgba(190, 89, 133, 0.12)',
+                marginBottom: '1.5rem',
+              }}
+            >
+              <div style={{ fontSize: '0.8rem', fontWeight: '800', color: '#BE5985', textTransform: 'uppercase', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span>🤖</span> AI Instant Trip Planner
+              </div>
+
+              <form onSubmit={handleHeroPlanTrip}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.85rem', marginBottom: '1rem' }}>
+                  {/* 1. Destination Input / Select */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.3rem' }}>
+                      📍 Destination
+                    </label>
+                    <input
+                      type="text"
+                      value={plannerDestination}
+                      onChange={(e) => setPlannerDestination(e.target.value)}
+                      placeholder="e.g. Bali, Ooty, Paris..."
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        border: '1.5px solid #F3D2E5',
+                        fontSize: '0.9rem',
+                        fontWeight: '700',
+                        color: '#2D1520',
+                        background: '#FFF5FB',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* 2. Start Date Picker */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.3rem' }}>
+                      📅 Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={plannerStartDate}
+                      onChange={(e) => setPlannerStartDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        border: '1.5px solid #F3D2E5',
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        color: '#2D1520',
+                        background: '#FFF5FB',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  {/* 3. Duration / Days */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.3rem' }}>
+                      ⏳ Duration
+                    </label>
+                    <select
+                      value={plannerDays}
+                      onChange={(e) => setPlannerDays(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        border: '1.5px solid #F3D2E5',
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        color: '#2D1520',
+                        background: '#FFF5FB',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="1">1 Day</option>
+                      <option value="2">2 Days</option>
+                      <option value="3">3 Days (Weekend)</option>
+                      <option value="4">4 Days</option>
+                      <option value="5">5 Days</option>
+                      <option value="7">7 Days (1 Week)</option>
+                      <option value="10">10 Days</option>
+                      <option value="14">14 Days</option>
+                    </select>
+                  </div>
+
+                  {/* 4. Travelers / Members */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: '800', color: '#BE5985', marginBottom: '0.3rem' }}>
+                      👥 Members
+                    </label>
+                    <select
+                      value={plannerTravelers}
+                      onChange={(e) => setPlannerTravelers(Number(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.85rem',
+                        borderRadius: '10px',
+                        border: '1.5px solid #F3D2E5',
+                        fontSize: '0.88rem',
+                        fontWeight: '700',
+                        color: '#2D1520',
+                        background: '#FFF5FB',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="1">1 Solo</option>
+                      <option value="2">2 Travelers</option>
+                      <option value="3">3 Members</option>
+                      <option value="4">4 Family</option>
+                      <option value="5">5+ Group</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Popular Quick-Select Destination Chips */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '1.25rem' }}>
+                  <span style={{ fontSize: '0.72rem', color: '#7A5366', fontWeight: '700' }}>Quick Picks:</span>
+                  {['Bali', 'Ooty', 'Paris', 'Swiss Alps', 'Goa', 'Tokyo', 'Manali'].map((dest) => (
+                    <button
+                      key={dest}
+                      type="button"
+                      onClick={() => setPlannerDestination(dest)}
+                      style={{
+                        background: plannerDestination.toLowerCase().includes(dest.toLowerCase()) ? '#EC7FA9' : '#FFF5FB',
+                        color: plannerDestination.toLowerCase().includes(dest.toLowerCase()) ? '#ffffff' : '#BE5985',
+                        border: '1px solid ' + (plannerDestination.toLowerCase().includes(dest.toLowerCase()) ? '#BE5985' : '#F3D2E5'),
+                        borderRadius: '999px',
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {dest}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  style={{
+                    width: '100%',
+                    padding: '0.8rem',
+                    fontSize: '0.95rem',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                  }}
+                >
+                  <span>🚀 Plan AI Trip for {plannerDestination} ➔</span>
+                </button>
+              </form>
             </div>
 
             <div className="stat-row">

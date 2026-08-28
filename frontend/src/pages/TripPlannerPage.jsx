@@ -25,16 +25,25 @@ export default function TripPlannerPage() {
   const [destinations, setDestinations] = useState([]);
   const [loadingDestinations, setLoadingDestinations] = useState(true);
 
-  // Form State
+  // Extract all query params passed from Home page or Destination cards (if any)
+  const paramDestName = searchParams.get('destinationName') || searchParams.get('destination') || searchParams.get('place') || '';
+  const paramDestId = searchParams.get('destinationId') || '';
+  const paramDays = Number(searchParams.get('days') || searchParams.get('duration') || searchParams.get('numberOfDays') || 0);
+  const paramTravelers = Number(searchParams.get('travelers') || searchParams.get('members') || 0);
+  const paramDate = searchParams.get('startDate') || searchParams.get('date') || '';
+  const paramBudget = Number(searchParams.get('budget') || 0);
+  const paramPref = searchParams.get('preference') || '';
+
+  // Form State initialized strictly with user's provided values (blank by default)
   const [formData, setFormData] = useState({
-    destinationId: searchParams.get('destinationId') || '1',
-    destinationName: searchParams.get('destinationName') || searchParams.get('destination') || 'Taj Mahal & Royal Agra',
-    numberOfDays: searchParams.get('duration') ? Number(searchParams.get('duration')) : 3,
-    travelers: searchParams.get('travelers') ? Number(searchParams.get('travelers')) : 2,
+    destinationId: paramDestId || '',
+    destinationName: paramDestName || '',
+    numberOfDays: paramDays > 0 ? paramDays : '',
+    travelers: paramTravelers > 0 ? paramTravelers : '',
     currency: 'INR',
-    budget: searchParams.get('budget') ? Number(searchParams.get('budget')) : 12000,
-    travelPreference: searchParams.get('preference') || 'nature',
-    startDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+    budget: paramBudget > 0 ? paramBudget : '',
+    travelPreference: paramPref || 'nature',
+    startDate: paramDate || '',
     interests: ['nature', 'sightseeing', 'dining'],
     weatherAware: true,
     preferOutdoor: false,
@@ -47,7 +56,7 @@ export default function TripPlannerPage() {
   const [error, setError] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Load destinations from API
+  // Load destinations list without auto-generating any itinerary
   useEffect(() => {
     async function loadDestinations() {
       setLoadingDestinations(true);
@@ -55,48 +64,39 @@ export default function TripPlannerPage() {
         const list = await destinationService.getDestinations();
         if (list && list.length > 0) {
           setDestinations(list);
-          const paramDestId = searchParams.get('destinationId');
-          const paramDestName = searchParams.get('destinationName') || searchParams.get('destination');
+
+          let targetDestName = paramDestName || '';
+          let targetDestId = paramDestId || '';
 
           if (paramDestId) {
             const matched = list.find((d) => String(d.id) === String(paramDestId));
             if (matched) {
-              setFormData((prev) => ({
-                ...prev,
-                destinationId: String(matched.id),
-                destinationName: matched.name,
-              }));
-              triggerPlanGeneration(matched.id, matched.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
-              return;
+              targetDestName = matched.name;
+              targetDestId = String(matched.id);
             }
           } else if (paramDestName) {
             const matched = list.find((d) => d.name.toLowerCase().includes(paramDestName.toLowerCase()));
             if (matched) {
-              setFormData((prev) => ({
-                ...prev,
-                destinationId: String(matched.id),
-                destinationName: matched.name,
-              }));
-              triggerPlanGeneration(matched.id, matched.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
-              return;
+              targetDestName = matched.name;
+              targetDestId = String(matched.id);
             }
           }
 
-          // Default to first destination
-          const first = list[0];
-          setFormData((prev) => ({
-            ...prev,
-            destinationId: String(first.id),
-            destinationName: first.name,
-          }));
-          triggerPlanGeneration(first.id, first.name, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
-        } else {
-          // Fallback trigger with current form data
-          triggerPlanGeneration(formData.destinationId, formData.destinationName, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
+          // If params exist in URL, populate form inputs only (NEVER auto-generate itinerary)
+          if (targetDestName || targetDestId) {
+            setFormData((prev) => ({
+              ...prev,
+              destinationId: targetDestId,
+              destinationName: targetDestName,
+              numberOfDays: paramDays > 0 ? paramDays : prev.numberOfDays,
+              travelers: paramTravelers > 0 ? paramTravelers : prev.travelers,
+              budget: paramBudget > 0 ? paramBudget : prev.budget,
+              startDate: paramDate || prev.startDate,
+            }));
+          }
         }
       } catch (err) {
         console.warn('Failed to load destinations:', err.message);
-        triggerPlanGeneration(formData.destinationId, formData.destinationName, formData.numberOfDays, formData.travelPreference, formData.budget, formData.currency);
       } finally {
         setLoadingDestinations(false);
       }
@@ -104,23 +104,24 @@ export default function TripPlannerPage() {
     loadDestinations();
   }, [searchParams]);
 
-  const triggerPlanGeneration = async (destId, destName, days, pref, budgetVal, currVal) => {
+  const triggerPlanGeneration = async (destId, destName, days, travelerCount, sDate, pref, budgetVal, currVal) => {
+    if (!destName && !destId) return;
     setIsGenerating(true);
     setError('');
     try {
       const result = await tripService.generateAiItinerary({
-        destination: destName || 'Taj Mahal & Royal Agra',
-        destinationId: destId || 1,
-        destinationName: destName || 'Taj Mahal & Royal Agra',
-        numberOfDays: days || 3,
-        travelers: formData.travelers || 2,
-        budget: budgetVal || 12000,
-        currency: currVal || 'INR',
-        travelPreference: pref || 'nature',
+        destination: destName || formData.destinationName,
+        destinationId: destId || formData.destinationId,
+        destinationName: destName || formData.destinationName,
+        numberOfDays: Number(days) || Number(formData.numberOfDays) || 3,
+        travelers: Number(travelerCount) || Number(formData.travelers) || 2,
+        budget: Number(budgetVal) || Number(formData.budget) || 15000,
+        currency: currVal || formData.currency || 'INR',
+        travelPreference: pref || formData.travelPreference || 'nature',
         selectedTransport: selectedTransport || null,
         selectedHotel: selectedHotel || null,
         currentLocation: currentLocation || null,
-        startDate: formData.startDate,
+        startDate: sDate || formData.startDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
         weatherAware: formData.weatherAware,
         preferOutdoor: formData.preferOutdoor,
         preferIndoor: formData.preferIndoor,
@@ -152,6 +153,7 @@ export default function TripPlannerPage() {
   };
 
   const [isManualDestMode, setIsManualDestMode] = useState(false);
+  const [plannerMode, setPlannerMode] = useState('ai'); // 'ai' | 'manual'
 
   const POPULAR_DEST_CHIPS = [
     'Ooty', 'Goa', 'Kodaikanal', 'Kerala', 'Manali', 'Paris', 'Swiss Alps', 'Bali', 'Dubai', 'London', 'Tokyo', 'Taj Mahal & Agra'
@@ -159,11 +161,19 @@ export default function TripPlannerPage() {
 
   const handleDestinationChange = (e) => {
     const destId = e.target.value;
+    if (!destId) {
+      setFormData((prev) => ({
+        ...prev,
+        destinationId: '',
+        destinationName: '',
+      }));
+      return;
+    }
     const destObj = destinations.find((d) => String(d.id) === String(destId));
     setFormData((prev) => ({
       ...prev,
       destinationId: destId,
-      destinationName: destObj ? destObj.name : 'Custom Destination',
+      destinationName: destObj ? destObj.name : '',
     }));
   };
 
@@ -185,26 +195,107 @@ export default function TripPlannerPage() {
     }));
   };
 
+  // Build a complete editable custom itinerary directly from user's manual details
+  const handleCreateManualItinerary = (e) => {
+    if (e) e.preventDefault();
+    setError('');
+    
+    if (!formData.destinationName.trim()) {
+      setError('Please select or enter your destination before building an itinerary.');
+      return;
+    }
+
+    const daysCount = Number(formData.numberOfDays) || 3;
+    const start = new Date(formData.startDate || Date.now());
+    const days = [];
+
+    for (let i = 1; i <= daysCount; i++) {
+      const curDate = new Date(start);
+      curDate.setDate(start.getDate() + (i - 1));
+      days.push({
+        day: i,
+        date: curDate.toISOString().split('T')[0],
+        title: `Day ${i}: Custom Schedule for ${formData.destinationName}`,
+        dayTheme: `Exploration & Activities`,
+        morning: {
+          spot: `${formData.destinationName} Highlights & Landmark`,
+          activity: `Morning exploration of key attractions and scenic spots in ${formData.destinationName}.`,
+          time: '09:30 AM',
+        },
+        afternoon: {
+          spot: `${formData.destinationName} Heritage & Local Shopping`,
+          activity: `Explore cultural markets, botanical gardens, and local attractions.`,
+          time: '02:00 PM',
+        },
+        evening: {
+          spot: `${formData.destinationName} Sunset Promenade & Dining`,
+          activity: `Enjoy relaxing evening walk, sunset views, and local dining experience.`,
+          time: '06:30 PM',
+        },
+        customActivities: [],
+        foodSuggestions: {
+          lunch: { spot: 'Local Specialty Restaurant', dish: 'Regional Thali / Delicacy' },
+          dinner: { spot: 'Sunset Dine & Grill', dish: 'Signature Chef Dish' },
+        },
+        aiTravelTip: 'Carry comfortable walking shoes and keep a camera ready.',
+        dailyCostBreakdown: {
+          totalDayCost: Math.round((Number(formData.budget) || 15000) / daysCount),
+        },
+      });
+    }
+
+    const manualPlan = {
+      destination: formData.destinationName,
+      destinationName: formData.destinationName,
+      destinationId: formData.destinationId,
+      numberOfDays: daysCount,
+      travelers: Number(formData.travelers) || 2,
+      budget: Number(formData.budget) || 15000,
+      currency: formData.currency,
+      currencySymbol: formData.currency === 'USD' ? '$' : '₹',
+      travelPreference: formData.travelPreference,
+      startDate: formData.startDate || new Date().toISOString().split('T')[0],
+      summary: `Custom ${daysCount}-Day itinerary for ${formData.destinationName} customized manually for ${formData.travelers || 2} traveler(s).`,
+      totalEstimatedCost: Number(formData.budget) || 15000,
+      days: days,
+      itineraryItems: [],
+      isCustomEdited: true,
+    };
+
+    setGeneratedItinerary(manualPlan);
+    window.scrollTo({ top: 750, behavior: 'smooth' });
+  };
+
   const handleGenerateItinerary = async (e) => {
     if (e) e.preventDefault();
-    setIsGenerating(true);
     setError('');
     setSaveSuccess(false);
+
+    if (!formData.destinationName.trim() && !formData.destinationId) {
+      setError('Please select or enter your destination.');
+      return;
+    }
+    if (!formData.numberOfDays || Number(formData.numberOfDays) <= 0) {
+      setError('Please enter the number of days for your trip.');
+      return;
+    }
+
+    setIsGenerating(true);
 
     try {
       const result = await tripService.generateAiItinerary({
         destination: formData.destinationName,
         destinationId: formData.destinationId,
         destinationName: formData.destinationName,
-        numberOfDays: formData.numberOfDays,
-        travelers: formData.travelers,
-        budget: formData.budget,
-        currency: formData.currency,
-        travelPreference: formData.travelPreference,
+        numberOfDays: Number(formData.numberOfDays),
+        travelers: Number(formData.travelers) || 2,
+        budget: Number(formData.budget) || 15000,
+        currency: formData.currency || 'INR',
+        travelPreference: formData.travelPreference || 'nature',
         selectedTransport: selectedTransport || null,
         selectedHotel: selectedHotel || null,
         currentLocation: currentLocation || null,
-        startDate: formData.startDate,
+        startDate: formData.startDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
         weatherAware: formData.weatherAware,
         preferOutdoor: formData.preferOutdoor,
         preferIndoor: formData.preferIndoor,
@@ -234,13 +325,13 @@ export default function TripPlannerPage() {
 
       await tripService.createTrip({
         destinationId: parseInt(formData.destinationId, 10) || 1,
-        title: `${formData.destinationName} (${formData.numberOfDays} Days AI Plan)`,
+        title: `${formData.destinationName} (${formData.numberOfDays} Days Custom Plan)`,
         tripType: formData.travelPreference,
         startDate: formData.startDate,
         endDate: end.toISOString().split('T')[0],
         totalBudget: formData.budget,
         travelers: formData.travelers,
-        notes: `AI-generated ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}. Selected Stay: ${selectedHotel?.name || 'Standard accommodation'}.`,
+        notes: `Personalized ${formData.travelPreference} itinerary for ${formData.travelers} traveler(s). Selected Transport: ${selectedTransport?.title || 'Standard transit'}. Selected Stay: ${selectedHotel?.name || 'Standard accommodation'}.`,
         itineraryItems: generatedItinerary?.itineraryItems || [],
       });
 
@@ -397,13 +488,63 @@ export default function TripPlannerPage() {
             marginBottom: '2.5rem',
           }}
         >
+          {/* Mode Selector Tabs */}
+          <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '2rem', borderBottom: '1.5px solid #FFF5FB', paddingBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => setPlannerMode('ai')}
+              style={{
+                padding: '0.65rem 1.5rem',
+                borderRadius: '12px',
+                border: plannerMode === 'ai' ? '1.5px solid #EC7FA9' : '1px solid #F3D2E5',
+                background: plannerMode === 'ai' ? '#EC7FA9' : '#FFF5FB',
+                color: plannerMode === 'ai' ? '#ffffff' : '#BE5985',
+                fontWeight: '800',
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: plannerMode === 'ai' ? '0 4px 14px rgba(236, 127, 169, 0.25)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>🤖 AI Smart Planner</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPlannerMode('manual');
+                setIsManualDestMode(true);
+              }}
+              style={{
+                padding: '0.65rem 1.5rem',
+                borderRadius: '12px',
+                border: plannerMode === 'manual' ? '1.5px solid #EC7FA9' : '1px solid #F3D2E5',
+                background: plannerMode === 'manual' ? '#EC7FA9' : '#FFF5FB',
+                color: plannerMode === 'manual' ? '#ffffff' : '#BE5985',
+                fontWeight: '800',
+                fontSize: '0.92rem',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: plannerMode === 'manual' ? '0 4px 14px rgba(236, 127, 169, 0.25)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              <span>✍️ Manual Details & Custom Builder</span>
+            </button>
+          </div>
+
           <form onSubmit={handleGenerateItinerary}>
             {/* Row 1: Destination & Duration */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#BE5985', margin: 0 }}>
-                    1. Target Destination
+                    1. Target Destination {isManualDestMode ? '(Manual Input)' : '(Selected)'}
                   </label>
                   <button
                     type="button"
@@ -433,7 +574,7 @@ export default function TripPlannerPage() {
                       type="text"
                       value={formData.destinationName}
                       onChange={handleManualDestinationChange}
-                      placeholder="Type any custom destination (e.g. Kodaikanal, Dubai, London)..."
+                      placeholder="Type custom destination (e.g. Kodaikanal, Dubai, London, Bali)..."
                       style={{
                         width: '100%',
                         padding: '0.85rem 1rem',
@@ -482,10 +623,11 @@ export default function TripPlannerPage() {
                       fontSize: '1rem',
                       fontWeight: '600',
                       background: '#ffffff',
-                      color: '#2D1520',
+                      color: formData.destinationId ? '#2D1520' : '#7A5366',
                       outline: 'none',
                     }}
                   >
+                    <option value="">-- Choose a Destination --</option>
                     {destinations && destinations.length > 0 ? (
                       destinations.map((d) => (
                         <option key={d.id} value={d.id}>
@@ -509,24 +651,51 @@ export default function TripPlannerPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <label style={{ fontSize: '0.95rem', fontWeight: '800', color: '#BE5985' }}>
-                    2. Trip Duration
+                    2. Trip Duration (Days)
                   </label>
-                  <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#BE5985' }}>
-                    {formData.numberOfDays} {formData.numberOfDays === 1 ? 'Day' : 'Days'}
+                  <span style={{ fontSize: '1rem', fontWeight: '900', color: '#BE5985' }}>
+                    {formData.numberOfDays ? `${formData.numberOfDays} ${formData.numberOfDays === 1 ? 'Day' : 'Days'}` : 'Select or type'}
                   </span>
                 </div>
                 <input
-                  type="range"
+                  type="number"
                   min="1"
-                  max="14"
-                  value={formData.numberOfDays}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, numberOfDays: Number(e.target.value) }))}
-                  style={{ width: '100%', height: '8px', accentColor: '#EC7FA9', cursor: 'pointer', marginTop: '0.75rem' }}
+                  max="30"
+                  placeholder="e.g. 3"
+                  value={formData.numberOfDays || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, numberOfDays: e.target.value ? Number(e.target.value) : '' }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.85rem 1rem',
+                    borderRadius: '12px',
+                    border: '1.5px solid #F3D2E5',
+                    fontSize: '1rem',
+                    fontWeight: '600',
+                    background: '#ffffff',
+                    color: '#2D1520',
+                    outline: 'none',
+                  }}
                 />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#7A5366', marginTop: '0.4rem', fontWeight: '600' }}>
-                  <span>Quick Getaway (1-3)</span>
-                  <span>1 Week (7)</span>
-                  <span>Grand Tour (14)</span>
+                <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 4, 5, 7, 10].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setFormData((prev) => ({ ...prev, numberOfDays: d }))}
+                      style={{
+                        padding: '2px 8px',
+                        fontSize: '0.75rem',
+                        fontWeight: '700',
+                        borderRadius: '6px',
+                        border: '1px solid ' + (formData.numberOfDays === d ? '#BE5985' : '#F3D2E5'),
+                        background: formData.numberOfDays === d ? '#EC7FA9' : '#FFF5FB',
+                        color: formData.numberOfDays === d ? '#ffffff' : '#BE5985',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {d} {d === 1 ? 'Day' : 'Days'}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -576,10 +745,11 @@ export default function TripPlannerPage() {
                 </div>
                 <input
                   type="number"
-                  min="50"
-                  step="50"
-                  value={formData.budget}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, budget: Number(e.target.value) }))}
+                  min="0"
+                  step="500"
+                  placeholder="e.g. 15000"
+                  value={formData.budget || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, budget: e.target.value ? Number(e.target.value) : '' }))}
                   style={{
                     width: '100%',
                     padding: '0.85rem 1rem',
@@ -598,8 +768,8 @@ export default function TripPlannerPage() {
                   4. Number of Travelers
                 </label>
                 <select
-                  value={formData.travelers}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, travelers: Number(e.target.value) }))}
+                  value={formData.travelers || ''}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, travelers: e.target.value ? Number(e.target.value) : '' }))}
                   style={{
                     width: '100%',
                     padding: '0.85rem 1rem',
@@ -608,9 +778,10 @@ export default function TripPlannerPage() {
                     fontSize: '1rem',
                     fontWeight: '600',
                     background: '#ffffff',
-                    color: '#2D1520',
+                    color: formData.travelers ? '#2D1520' : '#7A5366',
                   }}
                 >
+                  <option value="">-- Select Travelers --</option>
                   <option value="1">1 Solo Traveler</option>
                   <option value="2">2 Travelers (Couple / Friends)</option>
                   <option value="3">3 Travelers (Small Group)</option>
@@ -625,7 +796,7 @@ export default function TripPlannerPage() {
                 </label>
                 <input
                   type="date"
-                  value={formData.startDate}
+                  value={formData.startDate || ''}
                   onChange={(e) => setFormData((prev) => ({ ...prev, startDate: e.target.value }))}
                   style={{
                     width: '100%',
@@ -681,15 +852,24 @@ export default function TripPlannerPage() {
               </div>
             </div>
 
-            {/* Submit Action */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F3D2E5', paddingTop: '1.5rem' }}>
+            {/* Submit Action Buttons: Both AI Planning & Manual Building */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', borderTop: '1px solid #F3D2E5', paddingTop: '1.5rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleCreateManualItinerary}
+                className="btn btn-secondary"
+                style={{ padding: '0.9rem 1.75rem', fontSize: '0.95rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <span>✍️ Build Itinerary Manually</span>
+              </button>
+
               <button
                 type="submit"
                 disabled={isGenerating}
                 className="btn btn-primary"
-                style={{ padding: '0.9rem 2.5rem', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ padding: '0.9rem 2.25rem', fontSize: '0.98rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
               >
-                <span>🤖 {isGenerating ? 'AI is Planning Your Trip...' : 'Generate AI Trip Plan'}</span>
+                <span>🤖 {isGenerating ? 'AI is Planning...' : 'Generate AI Trip Plan'}</span>
               </button>
             </div>
           </form>
@@ -707,13 +887,36 @@ export default function TripPlannerPage() {
           <div style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #86efac', padding: '1.25rem', borderRadius: '14px', marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <span style={{ fontSize: '1.5rem' }}>✅</span>
             <div>
-              <strong style={{ fontSize: '1.05rem' }}>AI Trip Saved Successfully!</strong>
+              <strong style={{ fontSize: '1.05rem' }}>Trip Saved Successfully!</strong>
               <p style={{ margin: '0.2rem 0 0', fontSize: '0.85rem' }}>Redirecting to your My Trips dashboard...</p>
             </div>
           </div>
         )}
 
-        {/* AI Itinerary View Component */}
+        {/* Helper guide when no itinerary is generated yet */}
+        {!generatedItinerary && !isGenerating && !error && (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '24px',
+              border: '1.5px dashed #F3D2E5',
+              padding: '3rem 2rem',
+              textAlign: 'center',
+              margin: '2rem 0',
+              boxShadow: '0 4px 16px rgba(190, 89, 133, 0.04)',
+            }}
+          >
+            <div style={{ fontSize: '3rem', marginBottom: '0.85rem' }}>✨</div>
+            <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#BE5985', margin: '0 0 0.5rem 0' }}>
+              Your Custom Itinerary Will Appear Here
+            </h3>
+            <p style={{ color: '#7A5366', maxWidth: '520px', margin: '0 auto', fontSize: '0.95rem', lineHeight: '1.6' }}>
+              Fill in your target destination, duration, budget, and travel vibe above, then click <strong>"🤖 Generate AI Trip Plan"</strong> to create your day-by-day smart schedule!
+            </p>
+          </div>
+        )}
+
+        {/* AI & Manual Itinerary View Component */}
         <AiItineraryView
           itinerary={generatedItinerary}
           isGenerating={isGenerating}
@@ -721,6 +924,7 @@ export default function TripPlannerPage() {
           onRegenerate={handleGenerateItinerary}
           onSave={handleSaveTrip}
           onProceedToBooking={handleProceedToBooking}
+          onUpdateItinerary={(updated) => setGeneratedItinerary(updated)}
           error={error}
         />
       </div>

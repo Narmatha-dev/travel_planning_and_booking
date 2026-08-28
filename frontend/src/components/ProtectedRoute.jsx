@@ -7,16 +7,18 @@ export default function ProtectedRoute({ children }) {
 
   if (loading) {
     return (
-      <div className="container" style={{ padding: '6rem 1rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '1.25rem', color: 'var(--primary-color, #2563eb)' }}>
-          Authenticating session...
+      <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', padding: '4rem 1rem' }}>
+        <div style={{ fontSize: '2.5rem', animation: 'spin 1s infinite' }}>✈️</div>
+        <div style={{ fontSize: '1.05rem', fontWeight: '800', color: '#BE5985' }}>
+          Verifying authenticated session...
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    const targetUrl = location.pathname + location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(targetUrl)}`} state={{ from: location }} replace />;
   }
 
   return children;

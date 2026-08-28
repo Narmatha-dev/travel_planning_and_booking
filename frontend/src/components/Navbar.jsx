@@ -129,6 +129,32 @@ function Navbar() {
             <span>{t('nav.tripPlanner', 'Trip Planner')}</span>
           </NavLink>
 
+          <NavLink
+            to="/ai-agent"
+            className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontWeight: '800',
+            }}
+          >
+            <span>🤖 AI Agent</span>
+            <span
+              style={{
+                background: 'linear-gradient(135deg, #BE5985 0%, #EC7FA9 100%)',
+                color: '#ffffff',
+                fontSize: '0.62rem',
+                fontWeight: '900',
+                padding: '1px 6px',
+                borderRadius: '9999px',
+                textTransform: 'uppercase',
+              }}
+            >
+              AI
+            </span>
+          </NavLink>
+
           {/* Direct link for Authenticated Users */}
           {isAuthenticated && (
             <NavLink
@@ -136,6 +162,29 @@ function Navbar() {
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
               <span>{t('nav.myTrips', 'My Trips')}</span>
+            </NavLink>
+          )}
+
+          {/* Admin Portal Link - Strictly visible ONLY to authenticated Administrators */}
+          {user?.role === 'admin' && (
+            <NavLink
+              to="/admin"
+              className={({ isActive }) => (isActive || location.pathname.startsWith('/admin') ? 'nav-link active' : 'nav-link')}
+              style={{
+                background: '#FFF5FB',
+                border: '1.5px solid #FFB8E0',
+                color: '#BE5985',
+                fontWeight: '800',
+                borderRadius: '9999px',
+                padding: '4px 12px',
+                fontSize: '0.82rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                boxShadow: '0 2px 8px rgba(190, 89, 133, 0.12)',
+              }}
+            >
+              <span>🛡️ Admin</span>
             </NavLink>
           )}
         </nav>
@@ -444,6 +493,11 @@ function Navbar() {
                 <span>{t('nav.tripPlanner', 'Trip Planner')}</span>
               </NavLink>
 
+              <NavLink to="/ai-agent" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)} style={{ color: '#BE5985', fontWeight: '800' }}>
+                <span>🤖</span>
+                <span>AI Travel Agent ✨</span>
+              </NavLink>
+
               {isAuthenticated && (
                 <>
                   <div style={{ height: '1px', background: '#F3D2E5', margin: '0.5rem 0' }} />
@@ -462,6 +516,16 @@ function Navbar() {
                   <NavLink to="/profile" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)}>
                     <span>👤</span>
                     <span>{t('nav.profile', 'Profile')}</span>
+                  </NavLink>
+                </>
+              )}
+
+              {user?.role === 'admin' && (
+                <>
+                  <div style={{ height: '1px', background: '#F3D2E5', margin: '0.5rem 0' }} />
+                  <NavLink to="/admin" className="mobile-nav-link" onClick={() => setMobileMenuOpen(false)} style={{ color: '#BE5985', fontWeight: '800' }}>
+                    <span>🛡️</span>
+                    <span>Admin Dashboard</span>
                   </NavLink>
                 </>
               )}
