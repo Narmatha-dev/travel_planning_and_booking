@@ -358,6 +358,10 @@ export default function BookingPage() {
 
   // Phase 9: Secure Order Creation & Real-Time Payment Verification Flow
   const handleAuthorizeAndPay = async (authPayload = {}) => {
+    if (!isAuthenticated) {
+      navigate('/login?redirect=/booking');
+      return;
+    }
     setSubmitting(true);
     setPaymentFailed(false);
     setError('');
@@ -408,26 +412,92 @@ export default function BookingPage() {
 
       // 2. Feature 4: Create Server-Side Payment Order (Real-time Step 1)
       setRealtimePaymentStage(2);
-      setLoadingMessage(
-        formData.paymentMethod === 'upi'
-          ? `Sending payment request to ${selectedUpiApp === 'qr' ? 'UPI QR Gateway' : selectedUpiApp.toUpperCase()}...`
-          : 'Connecting to 256-bit bank gateway...'
-      );
+      setLoadingMessage('Generating secure Razorpay payment order...');
 
       const activeSubMethod = formData.paymentMethod === 'upi' ? `upi_${selectedUpiApp}` : formData.paymentMethod;
       const orderSession = await paymentService.createPaymentOrder(bookingRecord.id, activeSubMethod);
 
-      // Brief realistic stage progression for smooth, trusted UX
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Load official Razorpay Checkout SDK
+      const isScriptLoaded = await paymentService.loadRazorpayScript();
 
-      // 3. Feature 5: Verify Payment with Server-Side Verification (Real-time Step 2 & 3)
+      if (isScriptLoaded && typeof window !== 'undefined' && window.Razorpay && !formData.simulateFailure) {
+        setShowAuthModal(false);
+        setSubmitting(false);
+
+        const options = {
+          key: orderSession.keyId || 'rzp_test_travelora_2026',
+          amount: Math.round((orderSession.amount || finalTotal) * 100),
+          currency: orderSession.currency || 'INR',
+          name: 'Travelora',
+          description: `Booking #${bookingRecord.booking_reference || bookingRecord.id} - ${bookingRecord.destination_name || 'Trip'}`,
+          image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=128',
+          order_id: orderSession.orderId && orderSession.orderId.startsWith('order_') ? orderSession.orderId : undefined,
+          prefill: {
+            name: formData.fullName || user?.full_name || 'Traveler',
+            email: formData.email || user?.email || 'traveler@example.com',
+            contact: formData.phoneNumber || user?.phone_number || '',
+          },
+          notes: {
+            bookingId: String(bookingRecord.id),
+            bookingReference: bookingRecord.booking_reference || '',
+          },
+          theme: {
+            color: '#BE5985',
+          },
+          handler: async function (response) {
+            try {
+              setSubmitting(true);
+              setRealtimePaymentStage(3);
+              setLoadingMessage('Verifying Razorpay payment signature with server...');
+
+              const verificationResult = await paymentService.verifyPayment({
+                bookingId: bookingRecord.id,
+                razorpay_order_id: response.razorpay_order_id || orderSession.orderId,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                paymentMethod: 'razorpay',
+                userId: user?.id,
+              });
+
+              setConfirmedPayment(verificationResult);
+              if (verificationResult.receipt) {
+                setDigitalReceipt(verificationResult.receipt);
+              }
+              setRealtimePaymentStage(4);
+              setCurrentStep(isCustomTrip ? 5 : 6);
+              window.scrollTo(0, 0);
+            } catch (err) {
+              setPaymentFailed(true);
+              setPaymentFailureError(err.response?.data?.message || err.message || 'Payment signature verification failed.');
+            } finally {
+              setSubmitting(false);
+              setLoadingMessage('');
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              setSubmitting(false);
+              setLoadingMessage('');
+              setPaymentFailed(true);
+              setPaymentFailureError('Payment was cancelled. Your booking reservation remains saved in pending status. Click Try Again to retry payment.');
+            },
+          },
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+          setPaymentFailed(true);
+          setPaymentFailureError(`Payment failed: ${resp.error?.description || 'Transaction could not be completed.'}`);
+          setSubmitting(false);
+          setLoadingMessage('');
+        });
+        rzp.open();
+        return;
+      }
+
+      // 3. Fallback verification for test simulation environments
       setRealtimePaymentStage(3);
-      setLoadingMessage(
-        formData.paymentMethod === 'upi'
-          ? `Verifying UPI PIN approval...`
-          : 'Verifying 3D Secure bank authorization token...'
-      );
-
+      setLoadingMessage('Verifying payment signature with server...');
       await new Promise((resolve) => setTimeout(resolve, 600));
 
       const verificationResult = await paymentService.verifyPayment({
@@ -456,7 +526,7 @@ export default function BookingPage() {
       setRealtimePaymentStage(0);
       if (err.response?.status === 402 || formData.simulateFailure) {
         setPaymentFailureError(
-          '❌ Payment was declined: The transaction was not authorized by your bank or UPI app. Your booking is saved.'
+          '❌ Payment was declined: The transaction was not authorized by your bank. Your booking is saved in pending state.'
         );
       } else {
         setPaymentFailureError(err.response?.data?.message || err.message || 'Payment processing failed. Please try again.');

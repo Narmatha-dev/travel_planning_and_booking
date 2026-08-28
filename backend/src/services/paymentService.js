@@ -29,18 +29,17 @@ const paymentService = {
       throw error;
     }
 
-    // 2. Verify booking ownership (Security Feature 13)
-    if (booking.user_id && parseInt(booking.user_id, 10) !== parseInt(userId, 10) && parseInt(userId, 10) !== 3) {
+    // 2. Verify booking ownership (Security)
+    if (booking.user_id && parseInt(booking.user_id, 10) !== parseInt(userId, 10)) {
       const error = new Error('Access denied: You do not have permission to pay for this booking');
       error.statusCode = 403;
       throw error;
     }
 
-    // 3. Verify booking status is payable
+    // 3. Verify booking status is payable (re-activate to pending if previously cancelled)
     if (booking.status === 'cancelled') {
-      const error = new Error('Cannot process payment for a cancelled booking');
-      error.statusCode = 400;
-      throw error;
+      await bookingModel.updateStatus(booking.id, 'pending');
+      booking.status = 'pending';
     }
 
     // Retrieve trusted payable amount from server-side record (never trust frontend amount)
@@ -66,7 +65,7 @@ const paymentService = {
     });
 
     // 5. Create / update pending payment record
-    const transactionId = `TXN-${orderSession.provider.toUpperCase()}-${orderSession.orderId.slice(-8)}`;
+    const transactionId = `TXN-RZP-${orderSession.orderId.slice(-8)}`;
     await paymentModel.createPayment({
       bookingId: booking.id,
       userId: parseInt(userId, 10),
@@ -75,7 +74,7 @@ const paymentService = {
       paymentStatus: 'pending',
       amount: payableAmount,
       currency,
-      paymentGateway: orderSession.provider.toUpperCase(),
+      paymentGateway: 'RAZORPAY',
       gatewayResponse: { orderId: orderSession.orderId, status: 'order_created' },
       paidAt: null,
       bookingReference: booking.booking_reference,
@@ -88,7 +87,7 @@ const paymentService = {
       amount: payableAmount,
       currency,
       keyId: orderSession.keyId,
-      provider: orderSession.provider,
+      provider: 'razorpay',
       isSandbox: orderSession.isSandbox,
       bookingId: booking.id,
       bookingReference: booking.booking_reference,
@@ -100,14 +99,17 @@ const paymentService = {
 
   /**
    * Feature 5: Server-side payment verification
-   * Cryptographically / securely verifies payment with provider before updating status.
+   * Cryptographically verifies Razorpay payment signature before updating status.
    */
   async verifyPayment({
     bookingId,
     orderId,
     paymentId,
     signature,
-    paymentMethod = 'credit_card',
+    razorpay_order_id,
+    razorpay_payment_id,
+    razorpay_signature,
+    paymentMethod = 'razorpay',
     simulateFailure = false,
     userId,
   }) {
@@ -124,21 +126,22 @@ const paymentService = {
       throw error;
     }
 
-    // Verify ownership
-    if (userId && booking.user_id && parseInt(booking.user_id, 10) !== parseInt(userId, 10) && parseInt(userId, 10) !== 3) {
+    // Strict booking ownership verification
+    if (userId && booking.user_id && parseInt(booking.user_id, 10) !== parseInt(userId, 10)) {
       const error = new Error('Access denied: Unauthorized booking verification');
       error.statusCode = 403;
       throw error;
     }
 
-    const verificationPaymentId = paymentId || `pay_${Date.now().toString(36)}`;
-    const verificationOrderId = orderId || `ORD-BK-${booking.id}`;
+    const verificationPaymentId = paymentId || razorpay_payment_id || `pay_${Date.now().toString(36)}`;
+    const verificationOrderId = orderId || razorpay_order_id || `ORD-BK-${booking.id}`;
+    const verificationSignature = signature || razorpay_signature;
 
-    // Verify with payment gateway abstraction
+    // Verify with payment gateway abstraction (HMAC-SHA256)
     const verification = await paymentGateway.verifyPayment({
       orderId: verificationOrderId,
       paymentId: verificationPaymentId,
-      signature,
+      signature: verificationSignature,
       payload: { simulateFailure },
     });
 
@@ -170,7 +173,7 @@ const paymentService = {
     }
 
     // Feature 5 & 8: Successful Verification
-    const transactionId = verification.transactionId || `TXN-ST-${verificationPaymentId.slice(-8)}`;
+    const transactionId = verification.transactionId || `TXN-RAZORPAY-${verificationPaymentId.slice(-8)}`;
     const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
     let paymentRecord;
@@ -194,7 +197,7 @@ const paymentService = {
         paymentStatus: 'completed',
         amount: parseFloat(booking.final_amount || booking.total_amount),
         currency: 'INR',
-        paymentGateway: 'STRIPE',
+        paymentGateway: 'RAZORPAY',
         gatewayResponse: { status: 'succeeded', transactionId, verifiedAt: now },
         paidAt: now,
         bookingReference: booking.booking_reference,

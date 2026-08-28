@@ -22,6 +22,15 @@ const authController = {
   }),
 
   /**
+   * POST /api/auth/admin/login
+   * Dedicated Admin Authentication
+   */
+  adminLogin: asyncHandler(async (req, res) => {
+    const result = await authService.adminLogin(req.body);
+    return successResponse(res, 'Administrator authentication successful', result, 200);
+  }),
+
+  /**
    * GET /api/auth/google
    * Initiates Google OAuth 2.0 flow
    */

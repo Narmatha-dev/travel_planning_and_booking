@@ -132,10 +132,76 @@ const authService = {
       throw error;
     }
 
-    // 4. Generate JWT
+    // 4. Strict Role Check: Normal user login should authenticate only Traveler/User accounts
+    if (user.role === 'admin') {
+      const error = new Error('This is an administrator account. Please sign in via the dedicated Admin Portal at /admin/login.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // 5. Generate JWT
     const token = this.generateToken(user);
 
     // Sanitize user object (exclude password hash)
+    const { password_hash, ...safeUser } = user;
+
+    return {
+      user: safeUser,
+      token,
+    };
+  },
+
+  /**
+   * Dedicated Login for Administrators
+   * Strictly enforces that the user possesses the 'admin' role
+   */
+  async adminLogin({ email, password }) {
+    // 1. Required field validation
+    if (!email || !password) {
+      const error = new Error('Please provide both administrative email and password');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 2. Find user in database
+    const user = await userModel.findByEmail(cleanEmail);
+    if (!user) {
+      const error = new Error('Invalid administrator credentials');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    // 3. Strict Admin Role Verification
+    if (user.role !== 'admin') {
+      const error = new Error('Access denied: You do not have administrator privileges to access this area.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (!user.is_active) {
+      const error = new Error('This administrator account has been deactivated. Please contact support.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // 4. Verify password
+    if (!user.password_hash) {
+      const error = new Error('Invalid administrator credentials');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      const error = new Error('Invalid administrator credentials');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    // 5. Generate JWT token with role
+    const token = this.generateToken(user);
     const { password_hash, ...safeUser } = user;
 
     return {

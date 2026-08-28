@@ -75,6 +75,14 @@ const adminController = {
     return successResponse(res, 'Package updated successfully', updated);
   }),
 
+  updatePackageStatus: asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { isAvailable, isActive } = req.body;
+    const isAvail = isAvailable !== undefined ? Boolean(isAvailable) : Boolean(isActive);
+    const updated = await adminService.updatePackageStatus(id, isAvail);
+    return successResponse(res, `Package ${isAvail ? 'activated' : 'deactivated'} successfully`, updated);
+  }),
+
   deletePackage: asyncHandler(async (req, res) => {
     const { id } = req.params;
     const result = await adminService.deletePackage(id);

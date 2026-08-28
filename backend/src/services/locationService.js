@@ -59,7 +59,24 @@ function fetchJson(url, headers = {}, timeoutMs = 4000) {
   });
 }
 
+/**
+ * Helper to format distance nicely (meters for < 1km, km for >= 1km)
+ */
+function formatDistance(distKm) {
+  const km = parseFloat(distKm);
+  if (isNaN(km) || km <= 0) return '0 m';
+  if (km < 1) {
+    const meters = Math.round(km * 1000);
+    return `${meters} m`;
+  }
+  if (km < 10) {
+    return `${km.toFixed(1)} km`;
+  }
+  return `${Math.round(km).toLocaleString('en-IN')} km`;
+}
+
 const locationService = {
+  formatDistance,
   /**
    * Reverse geocodes latitude and longitude into city, state, country, and formatted address
    */
@@ -219,53 +236,7 @@ const locationService = {
       }
     }
 
-    // 2. Try High-Performance OSRM Routing Engine (Roads & Highways turn-by-turn routing)
-    const osrmProfile = osrmProfileMap[mode] || 'driving';
-    try {
-      const osrmUrl = `http://router.project-osrm.org/route/v1/${osrmProfile}/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson`;
-      const osrmData = await fetchJson(osrmUrl, { 'User-Agent': 'TraveloraTravelPlanner/1.0' }, 4000);
-
-      if (osrmData && osrmData.routes && osrmData.routes[0]) {
-        const route = osrmData.routes[0];
-        const distKm = parseFloat((route.distance / 1000).toFixed(1));
-        let durationSec = Math.round(route.duration);
-
-        // Adjust for mode speeds (walking @ 4.5km/h, bicycling @ 15km/h, transit @ 30km/h + transfer)
-        if (mode === 'walking') {
-          durationSec = Math.round((distKm / 4.5) * 3600);
-        } else if (mode === 'bicycling') {
-          durationSec = Math.round((distKm / 15) * 3600);
-        } else if (mode === 'transit') {
-          durationSec = Math.round((distKm / 30) * 3600 + 600);
-        }
-
-        const hrs = Math.floor(durationSec / 3600);
-        const mins = Math.round((durationSec % 3600) / 60);
-        const durationText = hrs > 0 ? `${hrs} hr ${mins} min` : `${Math.max(1, mins)} min`;
-
-        const coordinates = route.geometry?.coordinates
-          ? route.geometry.coordinates.map(([lng, lat]) => [lat, lng])
-          : [
-              [oLat, oLng],
-              [dLat, dLng],
-            ];
-
-        return {
-          distance_km: distKm,
-          distance_text: `${distKm} km`,
-          duration_seconds: durationSec,
-          duration_text: durationText,
-          travel_mode: mode,
-          route_points: coordinates,
-          google_maps_directions_url: googleMapsDirUrl,
-          source: 'osrm_road_routing',
-        };
-      }
-    } catch (osrmErr) {
-      console.warn('[LocationService] OSRM routing failed or timed out:', osrmErr.message);
-    }
-
-    // 3. Fallback: Haversine distance with road winding and mode speed estimation
+    // 2. Compute Haversine straight line distance
     const R = 6371;
     const dLatRad = ((dLat - oLat) * Math.PI) / 180;
     const dLonRad = ((dLng - oLng) * Math.PI) / 180;
@@ -277,6 +248,58 @@ const locationService = {
         Math.sin(dLonRad / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const straightDist = R * c;
+
+    // 3. Try High-Performance OSRM Routing Engine for overland routes <= 2000 km
+    if (straightDist <= 2000) {
+      const osrmProfile = osrmProfileMap[mode] || 'driving';
+      try {
+        const osrmUrl = `http://router.project-osrm.org/route/v1/${osrmProfile}/${oLng},${oLat};${dLng},${dLat}?overview=full&geometries=geojson`;
+        const osrmData = await fetchJson(osrmUrl, { 'User-Agent': 'TraveloraTravelPlanner/1.0' }, 1500);
+
+        if (osrmData && osrmData.routes && osrmData.routes[0]) {
+          const route = osrmData.routes[0];
+          const distKm = parseFloat((route.distance / 1000).toFixed(1));
+          let durationSec = Math.round(route.duration);
+
+          if (mode === 'walking') {
+            durationSec = Math.round((distKm / 4.5) * 3600);
+          } else if (mode === 'bicycling') {
+            durationSec = Math.round((distKm / 15) * 3600);
+          } else if (mode === 'transit') {
+            durationSec = Math.round((distKm / 30) * 3600 + 600);
+          }
+
+          const hrs = Math.floor(durationSec / 3600);
+          const mins = Math.round((durationSec % 3600) / 60);
+          const durationText = hrs > 0 ? `${hrs} hr ${mins} min` : `${Math.max(1, mins)} min`;
+
+          const coordinates = route.geometry?.coordinates
+            ? route.geometry.coordinates.map(([lng, lat]) => [lat, lng])
+            : [
+                [oLat, oLng],
+                [dLat, dLng],
+              ];
+
+          const distanceText = formatDistance(distKm);
+          return {
+            distance_km: distKm,
+            distance_meters: Math.round(distKm * 1000),
+            distance_text: distanceText,
+            formatted_distance: distanceText,
+            duration_seconds: durationSec,
+            duration_text: durationText,
+            travel_mode: mode,
+            route_points: coordinates,
+            google_maps_directions_url: googleMapsDirUrl,
+            source: 'osrm_road_routing',
+          };
+        }
+      } catch (osrmErr) {
+        console.warn('[LocationService] OSRM routing skipped/timed out:', osrmErr.message);
+      }
+    }
+
+    // 4. Fallback: Haversine distance with road winding and mode speed estimation
     const roadDistKm = parseFloat((straightDist * 1.25).toFixed(1)); // road curvature factor
 
     // Estimated speed in km/h
@@ -292,10 +315,13 @@ const locationService = {
     const hrs = Math.floor(durationHours);
     const mins = Math.round((durationHours - hrs) * 60);
     const durationText = hrs > 0 ? `${hrs} hr ${mins} min` : `${Math.max(1, mins)} min`;
+    const distanceText = formatDistance(roadDistKm);
 
     return {
       distance_km: roadDistKm,
-      distance_text: `${roadDistKm} km`,
+      distance_meters: Math.round(roadDistKm * 1000),
+      distance_text: distanceText,
+      formatted_distance: distanceText,
       duration_seconds: durationSec,
       duration_text: durationText,
       travel_mode: mode,
@@ -307,6 +333,12 @@ const locationService = {
       google_maps_directions_url: googleMapsDirUrl,
       source: 'road_distance_estimation',
     };
+  },
+  /**
+   * Alias for calculateRoute
+   */
+  async getRouteDirections(params) {
+    return this.calculateRoute(params);
   },
 };
 

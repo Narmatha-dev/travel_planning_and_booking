@@ -1,22 +1,26 @@
 const express = require('express');
 const paymentController = require('../controllers/paymentController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// 1. Get public payment gateway config (GET /api/payments/config)
+// 1. Get public payment gateway config (GET /api/payments/config) - Public
 router.get('/config', paymentController.getGatewayConfig);
 
-// 2. Create payment order / session (POST /api/payments/create-order)
+// 2. Payment provider webhook (POST /api/payments/webhook) - Public
+router.post('/webhook', paymentController.handleWebhook);
+
+// Protected payment endpoints (require authenticated traveler)
+router.use(authMiddleware);
+
+// 3. Create payment order / session (POST /api/payments/create-order)
 router.post('/create-order', paymentController.createPaymentOrder);
 
-// 3. Verify payment transaction (POST /api/payments/verify)
+// 4. Verify payment transaction (POST /api/payments/verify)
 router.post('/verify', paymentController.verifyPayment);
 
-// 4. Retrieve digital booking & payment receipt (GET /api/payments/receipt/:identifier)
+// 5. Retrieve digital booking & payment receipt (GET /api/payments/receipt/:identifier)
 router.get('/receipt/:identifier', paymentController.getReceipt);
-
-// 5. Payment provider webhook (POST /api/payments/webhook)
-router.post('/webhook', paymentController.handleWebhook);
 
 // 6. Process payment (backward compatible - POST /api/payments/process)
 router.post('/process', paymentController.processPayment);

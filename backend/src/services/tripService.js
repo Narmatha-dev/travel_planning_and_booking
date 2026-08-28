@@ -51,10 +51,10 @@ const tripService = {
       daysCount = 4;
     }
 
-    // Lookup destination name from ID if numeric
-    let resolvedDestName = String(targetDest);
+    // Prefer explicit destination name, fallback to ID lookup
+    let resolvedDestName = destinationName || destination;
     let resolvedDestId = destinationId;
-    if (destinationId && !isNaN(destinationId)) {
+    if (!resolvedDestName && destinationId) {
       try {
         const dest = await destinationModel.findByIdOrSlug(destinationId);
         if (dest) {
@@ -62,6 +62,9 @@ const tripService = {
           resolvedDestId = dest.id;
         }
       } catch {}
+    }
+    if (!resolvedDestName) {
+      resolvedDestName = String(targetDest);
     }
 
     return aiTripService.generateAiItinerary({

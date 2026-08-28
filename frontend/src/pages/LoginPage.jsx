@@ -30,6 +30,11 @@ function LoginPage({ isGateway = false }) {
     }
   }, [errorParam]);
 
+  // Ensure login form starts with completely empty email and password
+  useEffect(() => {
+    setFormData({ email: '', password: '' });
+  }, []);
+
   // Interactive 3D Card tilt on mouse movement
   const handleMouseMove = (e) => {
     if (!cardRef.current) return;
@@ -233,68 +238,37 @@ function LoginPage({ isGateway = false }) {
             </p>
           </div>
 
-          {/* If already authenticated, show friendly session card with option to switch or continue */}
-          {isAuthenticated ? (
-            <div style={{ textAlign: 'center', padding: '1rem 0' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>👋</div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: '800', color: '#0f172a', margin: '0 0 0.5rem' }}>
-                You are currently signed in
-              </h3>
-              <p style={{ color: '#64748b', fontSize: '0.92rem', marginBottom: '1.75rem' }}>
-                Signed in as <strong>{user?.email || 'Traveler'}</strong> ({user?.role === 'admin' ? 'Administrator' : 'Traveler'})
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/home')}
-                  className="btn btn-primary full-width"
-                  style={{
-                    padding: '0.85rem',
-                    borderRadius: '12px',
-                    fontWeight: '800',
-                    fontSize: '0.96rem',
-                    background: '#EC7FA9',
-                    border: '1px solid #BE5985',
-                    color: '#ffffff',
-                    boxShadow: '0 4px 14px rgba(236, 127, 169, 0.35)',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ➔ Continue to {user?.role === 'admin' ? 'Admin Dashboard' : 'Home'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    authService.logout();
-                    window.location.reload();
-                  }}
-                  className="btn full-width"
-                  style={{
-                    padding: '0.75rem',
-                    borderRadius: '12px',
-                    fontWeight: '700',
-                    fontSize: '0.88rem',
-                    background: '#ffffff',
-                    color: '#BE5985',
-                    border: '1.5px solid #cbd5e1',
-                    cursor: 'pointer',
-                  }}
-                >
-                  🚪 Sign in with a different account
-                </button>
-              </div>
+          {(localError || authError) && (
+            <div
+              className="alert alert-error"
+              style={{
+                background: '#fee2e2',
+                color: '#991b1b',
+                padding: '0.75rem 1rem',
+                borderRadius: '12px',
+                marginBottom: '1.25rem',
+                fontSize: '0.88rem',
+                border: '1px solid #f87171',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <span>⚠️</span>
+              <span>{localError || authError}</span>
             </div>
-          ) : (
-            <>
-              <form className="auth-form" onSubmit={handleSubmit} style={{ marginTop: '0.5rem' }}>
+          )}
+
+          <form className="auth-form" onSubmit={handleSubmit} style={{ marginTop: '0.5rem' }} autoComplete="off">
             <label style={{ fontSize: '0.88rem', fontWeight: '700', color: '#1e293b' }}>
               {language === 'ta' ? 'மின்னஞ்சல் முகவரி' : 'Email Address'}
               <input
                 type="email"
                 name="email"
+                id="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder={language === 'ta' ? 'உங்கள் மின்னஞ்சலை உள்ளிடவும்' : 'Enter your email address'}
+                placeholder=""
                 autoComplete="off"
                 required
                 style={{
@@ -315,9 +289,10 @@ function LoginPage({ isGateway = false }) {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
+                  id="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder={language === 'ta' ? 'கடவுச்சொல்லை உள்ளிடவும்' : 'Enter your password'}
+                  placeholder=""
                   autoComplete="current-password"
                   required
                   style={{
@@ -430,8 +405,6 @@ function LoginPage({ isGateway = false }) {
               {language === 'ta' ? 'புதிய கணக்கை உருவாக்கவும்' : 'Create an account'}
             </Link>
           </p>
-            </>
-          )}
         </div>
       </div>
     </div>

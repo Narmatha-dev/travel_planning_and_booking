@@ -17,6 +17,15 @@ router.get('/popular', destinationController.getPopularDestinations);
 router.get('/nearby', destinationController.getNearbyDestinations);
 router.get('/nearby/:placeId', destinationController.getNearbyPlaceDetails);
 
+// 3b. Get Pan-India tourist destinations across all 7 regions
+router.get('/india', destinationController.getIndiaPlaces);
+
+// 3c. Worldwide Discovery Endpoints
+router.get('/countries', destinationController.getCountries);
+router.get('/continents', destinationController.getContinents);
+router.get('/map-data', destinationController.getMapMarkers);
+router.get('/image-lookup', destinationController.lookupImage);
+
 // 4. Add destination to favorites (Protected)
 router.post('/:id/favorite', authMiddleware, destinationController.addFavorite);
 

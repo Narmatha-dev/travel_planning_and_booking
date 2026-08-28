@@ -1,7 +1,11 @@
 const express = require('express');
 const bookingController = require('../controllers/bookingController');
+const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// Enforce JWT authentication on all booking operations
+router.use(authMiddleware);
 
 // 1. List user bookings / booking history (GET /api/bookings)
 router.get('/', bookingController.getUserBookings);

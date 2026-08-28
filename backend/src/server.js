@@ -46,6 +46,7 @@ app.use((req, res, next) => {
     'Referrer-Policy',
     'strict-origin-when-cross-origin'
   );
+  res.setHeader('Permissions-Policy', 'geolocation=(self)');
 
   next();
 });

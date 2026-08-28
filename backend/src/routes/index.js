@@ -23,16 +23,24 @@ const safetyRoutes = require('./safetyRoutes');
 const weatherRoutes = require('./weatherRoutes');
 const packingRoutes = require('./packingRoutes');
 const checklistRoutes = require('./checklistRoutes');
+const offlineRoutes = require('./offlineRoutes');
+const copilotRoutes = require('./copilotRoutes');
+const placesSearchRoutes = require('./placesSearchRoutes');
+const aiAgentRoutes = require('./aiAgentRoutes');
 
 const router = express.Router();
 
 // Mount route modules
 router.use('/health', healthRoutes);
 router.use('/auth', authRoutes);
+router.use('/ai-agent', aiAgentRoutes);
+router.use('/places', placesSearchRoutes);
 router.use('/location', locationRoutes);
 router.use('/weather', weatherRoutes);
 router.use('/packing', packingRoutes);
 router.use('/checklist', checklistRoutes);
+router.use('/offline', offlineRoutes);
+router.use('/copilot', copilotRoutes);
 router.use('/safety', safetyRoutes);
 router.use('/transport', transportRoutes);
 router.use('/hotels', hotelRoutes);
@@ -47,6 +55,7 @@ router.use('/share', shareRoutes);
 router.use('/rewards', rewardRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/recommendations', recommendationRoutes);
+router.use('/chat', chatbotRoutes);
 router.use('/chatbot', chatbotRoutes);
 router.use('/admin', adminRoutes);
 router.use('/analytics', analyticsRoutes);

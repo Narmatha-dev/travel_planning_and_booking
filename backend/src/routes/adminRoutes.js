@@ -31,6 +31,7 @@ router.delete('/destinations/:id', adminController.deleteDestination);
 router.get('/packages', adminController.getPackages);
 router.post('/packages', adminController.createPackage);
 router.put('/packages/:id', adminController.updatePackage);
+router.patch('/packages/:id/status', adminController.updatePackageStatus);
 router.delete('/packages/:id', adminController.deletePackage);
 
 // 6. Booking Lifecycle Management (Feature 8)

@@ -100,9 +100,10 @@ const bookingService = {
     const existing = await this.getBookingByIdOrReference(id);
 
     if (existing.status === 'cancelled') {
-      const error = new Error(`Booking #${existing.booking_reference} is already cancelled`);
-      error.statusCode = 400;
-      throw error;
+      return {
+        ...existing,
+        message: `Booking #${existing.booking_reference} is already cancelled. Refund is in process.`,
+      };
     }
 
     if (existing.status === 'completed') {

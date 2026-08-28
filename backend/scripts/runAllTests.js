@@ -36,6 +36,14 @@ const SCRIPTS = [
   { name: '32. Phase 21 & 22 Advanced Travel Analytics & Predictive Forecasting', file: 'testPhase22PredictiveAnalytics.js' },
   { name: '33. Phase 25 Travel Safety & Emergency Assistant', file: 'testPhase25Safety.js' },
   { name: '34. Phase 26 Weather-Based Smart Travel Planner', file: 'testPhase26Weather.js' },
+  { name: '35. Phase 27 Smart Packing Assistant', file: 'testPhase27Packing.js' },
+  { name: '36. Phase 28 Travel Document & Pre-Trip Checklist Manager', file: 'testPhase28Checklist.js' },
+  { name: '37. Phase 29 Offline Trip Mode & Storage Engine', file: 'testPhase29Offline.js' },
+  { name: '38. Phase 30 Final AI Travel Copilot Command Center', file: 'testPhase30Copilot.js' },
+  { name: '39. Pan-India Discovery & Route Upgrade', file: 'testIndiaUpgrade.js' },
+  { name: '40. Worldwide Global Destinations & Wikimedia Legal Photography', file: 'testGlobalDestinations.js' },
+  { name: '41. Google Places API (New) & Dynamic Worldwide Search', file: 'testDynamicPlaceSearch.js' },
+  { name: '42. Accurate Distance, Transparent Cost, Search & Image Authenticity', file: 'testAccurateDistanceAndCost.js' },
 ];
 
 const { fork } = require('child_process');

@@ -1,0 +1,112 @@
+{
+  "eiffel tower_france": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg/960px-Tour_Eiffel_Wikimedia_Commons_%28cropped%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Eiffel_Tower",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Eiffel Tower via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T07:03:08.379Z"
+  },
+  "mount fuji_japan": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f8/View_of_Mount_Fuji_from_%C5%8Cwakudani_20211202.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/View_of_Mount_Fuji_from_%C5%8Cwakudani_20211202.jpg/960px-View_of_Mount_Fuji_from_%C5%8Cwakudani_20211202.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Mount_Fuji",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Mount Fuji via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T07:03:08.897Z"
+  },
+  "manali_india": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/0/03/Manali_City.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/03/Manali_City.jpg/960px-Manali_City.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Manali,_Himachal_Pradesh",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Manali, Himachal Pradesh via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T08:56:23.950Z"
+  },
+  "zone 2 manali_india": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/2/2d/Manali_and_Ennore_1.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2d/Manali_and_Ennore_1.jpg/960px-Manali_and_Ennore_1.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Manali,_Chennai",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Manali, Chennai via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T08:56:26.478Z"
+  },
+  "taj mahal_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1d/Taj_Mahal_%28Edited%29.jpeg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/Taj_Mahal_%28Edited%29.jpeg/960px-Taj_Mahal_%28Edited%29.jpeg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Taj_Mahal",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Taj Mahal via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:21.102Z"
+  },
+  "paris_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg/960px-La_Tour_Eiffel_vue_de_la_Tour_Saint-Jacques%2C_Paris_ao%C3%BBt_2014_%282%29.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Paris",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Paris via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:21.579Z"
+  },
+  "tokyo_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b2/Skyscrapers_of_Shinjuku_2009_January.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Skyscrapers_of_Shinjuku_2009_January.jpg/960px-Skyscrapers_of_Shinjuku_2009_January.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Tokyo",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Tokyo via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:22.055Z"
+  },
+  "chennai_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/3/32/Chennai_Central.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/3/32/Chennai_Central.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail_unscaled",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Chennai",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Chennai via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:22.534Z"
+  },
+  "ooty_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/d/db/Ooty_lake.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/Ooty_lake.jpg/960px-Ooty_lake.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Ooty",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Ooty via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:22.927Z"
+  },
+  "goa_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fc/BeachFun.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/BeachFun.jpg/960px-BeachFun.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Goa",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Goa via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:23.304Z"
+  },
+  "munnar_": {
+    "imageUrl": "https://upload.wikimedia.org/wikipedia/commons/b/b9/Munnar_Overview.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=original",
+    "thumbnailUrl": "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Munnar_Overview.jpg/960px-Munnar_Overview.jpg?utm_source=en.wikipedia.org&utm_campaign=api&utm_content=thumbnail",
+    "imageSourceUrl": "https://en.wikipedia.org/wiki/Munnar",
+    "imageAuthor": "Wikimedia Contributor",
+    "imageLicense": "CC BY-SA 4.0",
+    "imageLicenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "attributionText": "Photo from Munnar via Wikipedia / Wikimedia Commons (CC BY-SA 4.0)",
+    "fetchedAt": "2026-08-25T09:32:23.672Z"
+  }
+}

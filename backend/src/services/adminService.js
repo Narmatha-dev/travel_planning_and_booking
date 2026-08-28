@@ -316,50 +316,142 @@ const adminService = {
   },
 
   async createPackage(data) {
-    const { destination_id, title, duration_days, duration_nights, base_price, package_type } = data;
-    if (!title || !base_price) {
-      const error = new Error('Package title and base price are required');
+    const {
+      title,
+      name,
+      destination_id,
+      destinationId,
+      description,
+      featured_image_url,
+      imageUrl,
+      duration_days,
+      durationDays,
+      duration_nights,
+      durationNights,
+      base_price,
+      basePrice,
+      price,
+      discount_price,
+      discountPrice,
+      max_group_size,
+      maxGroupSize,
+      travelers,
+      available_dates,
+      availableDates,
+      transport_type,
+      transportType,
+      hotel_type,
+      hotelType,
+      inclusions,
+      exclusions,
+      package_type,
+      packageType,
+      difficulty_level,
+      difficultyLevel,
+      is_available,
+      isAvailable,
+      status,
+    } = data;
+
+    const finalTitle = title || name;
+    const finalPrice = base_price || basePrice || price;
+
+    if (!finalTitle || !finalPrice) {
+      const error = new Error('Package Name and Price are required');
       error.statusCode = 400;
       throw error;
     }
-    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    try {
-      const [result] = await query(
-        `INSERT INTO packages (destination_id, title, slug, duration_days, duration_nights, base_price, package_type, is_available)
-         VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-        [destination_id || 1, title, slug, duration_days || 5, duration_nights || 4, base_price, package_type || 'standard']
-      );
-      return { id: result.insertId, title, slug, base_price };
-    } catch {
-      return { id: Date.now(), title, slug, base_price, created: true };
-    }
+
+    const isAvail = status !== undefined ? status === 'active' || status === 'Active' || status === 1 || status === true : (is_available !== undefined ? Boolean(is_available) : (isAvailable !== undefined ? Boolean(isAvailable) : true));
+
+    return packageModel.create({
+      destinationId: destinationId || destination_id || 1,
+      title: finalTitle,
+      description: description || '',
+      packageType: packageType || package_type || 'standard',
+      durationDays: parseInt(durationDays || duration_days || 4, 10),
+      durationNights: parseInt(durationNights || duration_nights || Math.max(1, (durationDays || duration_days || 4) - 1), 10),
+      basePrice: parseFloat(finalPrice),
+      discountPrice: discountPrice || discount_price ? parseFloat(discountPrice || discount_price) : null,
+      inclusions: Array.isArray(inclusions) ? inclusions : (typeof inclusions === 'string' ? inclusions.split(',').map(s => s.trim()).filter(Boolean) : ['Hotel Accommodation', 'Transport', 'Guided Sightseeing']),
+      exclusions: Array.isArray(exclusions) ? exclusions : (typeof exclusions === 'string' ? exclusions.split(',').map(s => s.trim()).filter(Boolean) : ['Personal Expenses', 'Flight Tickets']),
+      maxGroupSize: parseInt(maxGroupSize || max_group_size || travelers || 10, 10),
+      difficultyLevel: difficultyLevel || difficulty_level || 'easy',
+      isAvailable: isAvail,
+      featured_image_url: featured_image_url || imageUrl || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800',
+      availableDates: availableDates || available_dates || 'Year-round / Flexible',
+      transportType: transportType || transport_type || 'AC Private Cab / Flight',
+      hotelType: hotelType || hotel_type || '4-Star Premium Resort',
+    });
   },
 
   async updatePackage(id, data) {
-    const { title, base_price, is_available, package_type } = data;
-    try {
-      await query(
-        `UPDATE packages 
-         SET title = COALESCE(?, title),
-             base_price = COALESCE(?, base_price),
-             is_available = COALESCE(?, is_available),
-             package_type = COALESCE(?, package_type)
-         WHERE id = ?`,
-        [title, base_price, is_available, package_type, id]
-      );
-      return { id: parseInt(id, 10), updated: true };
-    } catch {
-      return { id: parseInt(id, 10), updated: true };
-    }
+    const {
+      title,
+      name,
+      destination_id,
+      destinationId,
+      description,
+      featured_image_url,
+      imageUrl,
+      duration_days,
+      durationDays,
+      duration_nights,
+      durationNights,
+      base_price,
+      basePrice,
+      price,
+      discount_price,
+      discountPrice,
+      max_group_size,
+      maxGroupSize,
+      travelers,
+      available_dates,
+      availableDates,
+      transport_type,
+      transportType,
+      hotel_type,
+      hotelType,
+      inclusions,
+      exclusions,
+      package_type,
+      packageType,
+      difficulty_level,
+      difficultyLevel,
+      is_available,
+      isAvailable,
+      status,
+    } = data;
+
+    const isAvail = status !== undefined ? (status === 'active' || status === 'Active' || status === 1 || status === true) : (is_available !== undefined ? Boolean(is_available) : (isAvailable !== undefined ? Boolean(isAvailable) : undefined));
+
+    return packageModel.update(id, {
+      destinationId: destinationId || destination_id,
+      title: title || name,
+      description,
+      packageType: packageType || package_type,
+      durationDays: durationDays || duration_days ? parseInt(durationDays || duration_days, 10) : undefined,
+      durationNights: durationNights || duration_nights ? parseInt(durationNights || duration_nights, 10) : undefined,
+      basePrice: (basePrice || base_price || price) !== undefined ? parseFloat(basePrice || base_price || price) : undefined,
+      discountPrice: (discountPrice || discount_price) !== undefined ? parseFloat(discountPrice || discount_price) : undefined,
+      inclusions: inclusions !== undefined ? (Array.isArray(inclusions) ? inclusions : inclusions.split(',').map(s => s.trim()).filter(Boolean)) : undefined,
+      exclusions: exclusions !== undefined ? (Array.isArray(exclusions) ? exclusions : exclusions.split(',').map(s => s.trim()).filter(Boolean)) : undefined,
+      maxGroupSize: (maxGroupSize || max_group_size || travelers) !== undefined ? parseInt(maxGroupSize || max_group_size || travelers, 10) : undefined,
+      difficultyLevel: difficultyLevel || difficulty_level,
+      isAvailable: isAvail,
+      featured_image_url: featured_image_url || imageUrl,
+      availableDates: availableDates || available_dates,
+      transportType: transportType || transport_type,
+      hotelType: hotelType || hotel_type,
+    });
+  },
+
+  async updatePackageStatus(id, isAvailable) {
+    return packageModel.updateAvailability(id, isAvailable);
   },
 
   async deletePackage(id) {
-    try {
-      await query('DELETE FROM packages WHERE id = ?', [id]);
-      return { id: parseInt(id, 10), deleted: true };
-    } catch {
-      return { id: parseInt(id, 10), deleted: true };
-    }
+    return packageModel.delete(id);
   },
 
   /**

@@ -49,6 +49,27 @@ const destinationService = {
   },
 
   /**
+   * Get list of countries with destination counts and flags
+   */
+  async getCountries() {
+    return destinationModel.getCountries();
+  },
+
+  /**
+   * Get list of continents with destination counts
+   */
+  async getContinents() {
+    return destinationModel.getContinents();
+  },
+
+  /**
+   * Get lightweight map markers for interactive world map
+   */
+  async getMapMarkers() {
+    return destinationModel.getMapMarkers();
+  },
+
+  /**
    * Remove from favorites
    */
   async removeFavorite(userId, destinationId) {
