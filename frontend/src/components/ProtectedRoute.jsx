@@ -2,10 +2,14 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAppContext();
+  const { user, token, isAuthenticated, loading } = useAppContext();
   const location = useLocation();
 
-  if (loading) {
+  // Robust session check supporting state and synchronous local storage token
+  const hasStoredToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('travel_auth_token'));
+  const isUserAuthenticated = isAuthenticated || Boolean(user && token) || hasStoredToken;
+
+  if (loading && !hasStoredToken) {
     return (
       <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '1rem', padding: '4rem 1rem' }}>
         <div style={{ fontSize: '2.5rem', animation: 'spin 1s infinite' }}>✈️</div>
@@ -16,7 +20,7 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isUserAuthenticated) {
     const targetUrl = location.pathname + location.search;
     return <Navigate to={`/login?redirect=${encodeURIComponent(targetUrl)}`} state={{ from: location }} replace />;
   }

@@ -1,10 +1,16 @@
 import { Navigate, Link } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import authService from '../services/authService';
 
 export default function AdminRoute({ children }) {
-  const { user, isAuthenticated, loading } = useAppContext();
+  const { user, token, isAuthenticated, loading } = useAppContext();
 
-  if (loading) {
+  const storedUser = authService.getCurrentUser();
+  const currentUser = user || storedUser;
+  const hasStoredToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('travel_auth_token'));
+  const isUserAuthenticated = isAuthenticated || Boolean(user && token) || hasStoredToken;
+
+  if (loading && !hasStoredToken) {
     return (
       <div style={{ textAlign: 'center', padding: '5rem 1rem' }}>
         <div style={{ fontSize: '2rem', animation: 'spin 1s infinite' }}>🔄</div>
@@ -13,11 +19,11 @@ export default function AdminRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isUserAuthenticated) {
     return <Navigate to="/admin/login?redirect=/admin" replace />;
   }
 
-  if (user?.role !== 'admin') {
+  if (currentUser?.role !== 'admin') {
     return (
       <section className="section page-section" style={{ minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem 1rem' }}>
         <div className="container" style={{ maxWidth: '560px' }}>
@@ -53,7 +59,7 @@ export default function AdminRoute({ children }) {
             </h2>
             <p style={{ color: '#7A5366', fontSize: '0.95rem', lineHeight: '1.6', marginBottom: '2rem' }}>
               The requested administrative workspace is restricted strictly to authorized platform administrators.
-              You are currently signed in as <strong>{user?.email || 'Traveler'}</strong> (Role: <span style={{ textTransform: 'capitalize', fontWeight: '800', color: '#EC7FA9' }}>{user?.role || 'user'}</span>).
+              You are currently signed in as <strong>{currentUser?.email || 'Traveler'}</strong> (Role: <span style={{ textTransform: 'capitalize', fontWeight: '800', color: '#EC7FA9' }}>{currentUser?.role || 'user'}</span>).
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.85rem', flexWrap: 'wrap' }}>
               <Link
