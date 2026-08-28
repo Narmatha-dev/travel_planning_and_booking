@@ -1,18 +1,39 @@
 const mysql = require('mysql2/promise');
 const config = require('./environment');
 
+// Construct pool configuration with support for cloud MySQL providers
+let poolConfig;
+
+if (config.database.url) {
+  poolConfig = {
+    uri: config.database.url,
+    waitForConnections: true,
+    connectionLimit: config.database.connectionLimit,
+    queueLimit: 0,
+    dateStrings: true,
+  };
+  if (config.database.ssl) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+} else {
+  poolConfig = {
+    host: config.database.host,
+    port: config.database.port,
+    user: config.database.user,
+    password: config.database.password,
+    database: config.database.name,
+    waitForConnections: true,
+    connectionLimit: config.database.connectionLimit,
+    queueLimit: 0,
+    dateStrings: true,
+  };
+  if (config.database.ssl) {
+    poolConfig.ssl = { rejectUnauthorized: false };
+  }
+}
+
 // Initialize connection pool
-const pool = mysql.createPool({
-  host: config.database.host,
-  port: config.database.port,
-  user: config.database.user,
-  password: config.database.password,
-  database: config.database.name,
-  waitForConnections: true,
-  connectionLimit: config.database.connectionLimit,
-  queueLimit: 0,
-  dateStrings: true,
-});
+const pool = mysql.createPool(poolConfig);
 
 /**
  * Executes a prepared SQL query with parameters.

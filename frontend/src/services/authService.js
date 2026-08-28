@@ -1,4 +1,4 @@
-import api from './api';
+import api, { getApiBaseUrl } from './api';
 
 const authService = {
   /**
@@ -44,7 +44,7 @@ const authService = {
    * Get Google OAuth redirect URL
    */
   getGoogleAuthUrl(redirectPath = '/') {
-    const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    const apiBase = getApiBaseUrl();
     return `${apiBase}/auth/google?redirect=${encodeURIComponent(redirectPath)}`;
   },
 

@@ -1,17 +1,26 @@
-# Node
+# Node Dependencies
 node_modules/
 frontend/node_modules/
 backend/node_modules/
 
-# Build output
+# Build Output
 frontend/dist/
 frontend/build/
 backend/dist/
 
-# Environment files
+# Environment Configuration & Secrets (Never commit secrets)
 .env
 .env.*
+.env.local
+backend/.env
+backend/.env.*
+backend/.env.local
+frontend/.env
+frontend/.env.*
+frontend/.env.local
 !.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Logs
 npm-debug.log*
@@ -20,14 +29,12 @@ yarn-error.log*
 logs/
 *.log
 
-# OS files
+# OS & Editor files
 .DS_Store
 Thumbs.db
-
-# Editor folders
 .vscode/
 .idea/
 
-# Temporary files
+# Temporary Files
 *.tmp
 *.temp

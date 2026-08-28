@@ -25,16 +25,22 @@ const environment = {
     expiresIn: process.env.JWT_EXPIRES_IN || '7d',
   },
   database: {
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT, 10) || 3306,
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    name: process.env.DB_NAME || 'travel_booking_db',
+    host: process.env.DB_HOST || process.env.DATABASE_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || process.env.DATABASE_PORT, 10) || 3306,
+    user: process.env.DB_USER || process.env.DATABASE_USER || 'root',
+    password: process.env.DB_PASSWORD || process.env.DATABASE_PASSWORD || '',
+    name: process.env.DB_NAME || process.env.DATABASE_NAME || 'travel_booking_db',
     connectionLimit: parseInt(process.env.DB_CONNECTION_LIMIT, 10) || 10,
+    ssl: process.env.DB_SSL === 'true' || process.env.DATABASE_SSL === 'true' || false,
+    url: process.env.DATABASE_URL || process.env.MYSQL_URL || null,
   },
   ai: {
     geminiApiKey: process.env.GEMINI_API_KEY || '',
     openaiApiKey: process.env.OPENAI_API_KEY || '',
+  },
+  razorpay: {
+    keyId: process.env.RAZORPAY_KEY_ID || '',
+    keySecret: process.env.RAZORPAY_KEY_SECRET || '',
   },
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',

@@ -1,7 +1,16 @@
 import axios from 'axios';
 
-// Base API URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+/**
+ * Normalizes the API Base URL from Vite environment variable (VITE_API_URL).
+ * Handles both "https://app.onrender.com" and "https://app.onrender.com/api".
+ */
+export function getApiBaseUrl() {
+  const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  const cleanUrl = rawUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 // Create configured Axios client
 const api = axios.create({
@@ -9,7 +18,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  timeout: 45000,
 });
 
 // Request Interceptor: Attach JWT Bearer Token if present
@@ -29,12 +38,10 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // If token expired or invalid, clear local storage
       const currentToken = localStorage.getItem('travel_auth_token');
       if (currentToken && !window.location.pathname.includes('/login')) {
         localStorage.removeItem('travel_auth_token');
         localStorage.removeItem('travel_auth_user');
-        // Dispatch custom event to notify AppContext if needed
         window.dispatchEvent(new Event('travel_auth_expired'));
       }
     }
